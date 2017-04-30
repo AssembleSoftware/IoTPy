@@ -1,0 +1,8 @@
+meetup() -> None
+{
+    out = source(function="ML.examples.meetup.source", initial_state=0); 
+    m = func(function="ML.KMeans.KMeansStream", parameters=[0, 0, 5]);
+    train = attribute(in=m, attribute="train");
+    model = train(in=out, function=train, num_features=2, min_window_size=5, max_window_size=30, step_size=2);
+    plot(in=out, function="ML.examples.meetup.plot", model=model, num_features=2, min_window_size=5, max_window_size=100, step_size=2);
+}

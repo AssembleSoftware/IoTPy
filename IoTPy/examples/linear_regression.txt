@@ -1,0 +1,7 @@
+linear_regression() -> None
+{
+    train = source(function="ML.examples.linear_regression.source", initial_state=0, time_interval=0.1);
+    m = func(function="ML.LinearRegression.LinearRegressionStream", parameters=[1, 1]);
+    f_train = attribute(in=m, attribute="train");
+    model = train(in=train, function=f_train, min_window_size=1, max_window_size=100, step_size=1, num_features=1);
+}

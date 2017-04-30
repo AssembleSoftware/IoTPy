@@ -1,0 +1,7 @@
+twitter() -> None
+{
+    out = source(function="ML.examples.twitter.source", push=1); 
+    model = train(in=out, function="ML.examples.twitter.train_function", num_features=1, min_window_size=1, max_window_size=10, step_size=1);
+    z = predict(in=out, model=model, function="ML.examples.twitter.predict_function", num_features=1);
+    plot(in=out, function="ML.examples.twitter.plot", model=model, num_features=1, min_window_size=1, max_window_size=10, step_size=1);
+}
