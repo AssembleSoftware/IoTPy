@@ -2,7 +2,7 @@ import os
 import ConfigParser
 import shutil
 
-filename = os.path.join(os.path.expanduser("~"), "streampy", "config.ini")
+filename = os.path.join(os.path.expanduser("~"), "IoTPy", "config.ini")
 if not os.path.isfile(filename):
     dir = os.path.dirname(filename)
     if not os.path.isdir():

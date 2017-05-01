@@ -88,7 +88,7 @@ setup(
     # have to be included in MANIFEST.in as well.
     package_data={
         '': ['templates.json'],
-        'StreamPy': ['examples/*.txt'],
+        'IoTPy': ['examples/*.txt'],
         '': ['config.ini'],
     },
 
