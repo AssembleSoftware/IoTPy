@@ -5,7 +5,7 @@ from tinydb import TinyDB, Query
 
 from multiprocessing import Lock
 
-filename = os.path.join(os.path.expanduser("~"), "IoTPy", "templates.json")
+filename = os.path.join(os.path.expanduser("~"), ".iotpy", "templates.json")
 
 if not os.path.isfile(filename):
     dir = os.path.dirname(filename)
