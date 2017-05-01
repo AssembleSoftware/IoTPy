@@ -5,8 +5,8 @@ import shutil
 filename = os.path.join(os.path.expanduser("~"), "IoTPy", "config.ini")
 if not os.path.isfile(filename):
     dir = os.path.dirname(filename)
-    if not os.path.isdir():
-        os.makedirs(os.path.dirname(filename))
+    if not os.path.isdir(dir):
+        os.makedirs(dir)
     source = os.path.join(os.path.dirname(__file__), "config.ini")
     shutil.copy(source, filename)
 
