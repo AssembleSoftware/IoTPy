@@ -10,7 +10,7 @@ import numpy as np
 
 # EPSILON is a small number used to prevent division by 0
 # and other numerical problems
-EPSILON = 1E-12
+from system_parameters import EPSILON
 
 """
 Named_Tuple
@@ -22,15 +22,8 @@ Named_Tuple
 """
 InList = namedtuple('InList', ['list', 'start', 'stop'])
 
-class Blackbox(object):
-    def __init__(self, in_streams, out_streams, name):
-        assert isinstance(in_streams, list) or isinstance(in_streams, tuple)
-        assert isinstance(out_streams, list) or isinstance(out_streams, tuple)
-        self.in_streams = in_streams
-        self.out_streams = out_streams
-        self.name = name
 
-class Agent(Blackbox):
+class Agent(object):
     """
     An agent is an automaton: a state-transition machine.
     An agent has only one important method: the method
@@ -84,12 +77,6 @@ class Agent(Blackbox):
         is the state-transition operation for this agent.
         An agent's state transition is specified by
         its transition function.
-    stream_manager : function
-        Each stream has management variables, such as whether
-        the stream is open or closed. After a state-transition
-        the agent executes the stream_manager function
-        to modify the management variables of the agent's output
-        and call streams.
     name : str, optional
         name of this agent
 
@@ -133,17 +120,23 @@ class Agent(Blackbox):
 
     def __init__(self, in_streams, out_streams, transition,
                  state=None, call_streams=None,
-                 name=None, stream_manager=None):
-        assert isinstance(in_streams, list)
-        assert isinstance(out_streams, list)
-        assert call_streams is None or isinstance(call_streams, list)
+                 name=None):
 
-        Blackbox.__init__(self, in_streams, out_streams, name)
-        #self.in_streams = in_streams
-        #self.out_streams = out_streams
-        #self.name = name
-        self.state = state
+        # Check types of inputs
+        assert isinstance(in_streams, list) or isinstance(in_streams, tuple)
+        assert isinstance(out_streams, list) or isinstance(in_streams, tuple)
+        assert (call_streams is None or isinstance(call_streams, list) or
+                isinstance(in_streams, tuple))
+
+        # Copy parameters into object attributes
+        self.in_streams = in_streams
+        self.out_streams = [] if out_streams is None else out_streams
         self.transition = transition
+        self.state = state
+        self.call_streams = call_streams
+        self.name = name
+        
+        
         # The default (i.e. when call_streams is None) is that
         # the agent executes a state transition when any
         # of its input streams is modified. If call_streams
@@ -152,26 +145,28 @@ class Agent(Blackbox):
         # modified.
         self.call_streams = in_streams if call_streams is None \
           else call_streams
-        self.stream_manager = stream_manager
+
         # Register this agent as a reader of its input streams.
         for s in self.in_streams:
-            s.reader(self)
+            s.register_reader(self)
+
         # Register this agent to be called when any of its call
         # streams is extended.
         for s in self.call_streams:
-            s.call(self)
+            s.register_subscriber(self)
+
         # Initially each element of in_lists is the
-        # empty InList: list = [], start=stop=0
+        # empty InList: list = [], start=0, stop=0
         self._in_lists = [InList([], 0, 0) for s in self.in_streams]
+
+        # self._in_lists_start_values[i] is the index into the i-th
+        # input stream's recent list that the agent starts reading.
+        # This attribute is modified in a state transition.
         self._in_lists_start_values = [0 for s in self.in_streams]
+
         # Initially each element of _out_lists is the empty list.
         self._out_lists = [[] for s in self.out_streams]
-        # When the agent is created, it executes a state transition
-        # reading the current values of its input streams. Note that
-        # even though the agent's call_streams may be empty, the agent
-        # executes a state transition when the agent is created.
-        if call_streams is None:
-            self.next()
+
 
     def next(self, stream_name=None):
         """Execute the next state transition.
@@ -221,10 +216,12 @@ class Agent(Blackbox):
         # PART 2
         #----------------------------------------------------------------
         # Execute the transition_function.
+
         # The transition function has two input parameters:
         # (1) The recent values of input streams of the agent,
         #     i.e., self._in_lists
         # (2) The state of the agent.
+
         # The transition function returns:
         # (1) The lists of values to be appended
         #     to its output streams (self._out_lists)
@@ -232,21 +229,25 @@ class Agent(Blackbox):
         # (3) For each input stream s, the new value of s.start[self].
         #     This agent will no longer read elements of the
         #     stream with indexes less than s.start[self].
-        result_of_transition = \
-          self.transition(self._in_lists, self.state)
+
+        # The result of the transition is:
+        #     self.transition(self._in_lists, self.state)
         self._out_lists, self.state, self._in_lists_start_values  = \
-          result_of_transition
+          self.transition(self._in_lists, self.state)
             
         #----------------------------------------------------------------
         # PART 3
         #----------------------------------------------------------------
         # Update data structures after the state transition.
-        # Extend output streams with new values generated in the
-        # state transition.
-
-        # For the j-th input stream in_streams[j], inform this stream
+        # Part 3a:
+        # For the j-th input stream, in_streams[j], inform this stream
         # that this agent will no longer read elements of the stream with
         # indices smaller than _in_lists_start_values[j].
+        # Part 3b:
+        # Extend the j-th output stream with values returned in the
+        # state transition.
+
+        # Part 3a
         assert(len(self.in_streams) == len(self._in_lists_start_values)),\
           'Error in agent named {0}. The number, {1}, of input start values returned'\
           ' by a state transition must equal, {2}, the number of input streams'.\
@@ -254,30 +255,22 @@ class Agent(Blackbox):
         for j in range(len(self.in_streams)):
             self.in_streams[j].set_start(self, self._in_lists_start_values[j])
 
-        # Checks
+        # Part 3b
         # If a parameter is None, convert it into the empty list.
         if not self._out_lists: self._out_lists = list()
-        if not self.out_streams: self.out_streams = list()
         assert len(self._out_lists) == len(self.out_streams), \
           'Error in agent named {0}. The number of output values, {1}, returned'\
           ' by a state transition must equal, {2}, the number of output streams.'\
           ' The output values are {3}'.format(
               self.name, len(self._out_lists), len(self.out_streams), self._out_lists)
-        # Finished checking self._out_lists and self.out_streams
-
         # Put each of the output lists computed in the state
         # transition into each of the output streams.
         for j in range(len(self.out_streams)):
             self.out_streams[j].extend(self._out_lists[j])
 
-        # Update stream management variables. 
-        if self.stream_manager is not None:
-            self.stream_manager(
-                self.out_streams,
-                self._in_lists, self._out_lists, self.state)
 
-
-def main():
+def test():
+    from compute_engine import compute_engine
     def copy(list_of_in_lists, state):
         return ([in_list.list[in_list.start:in_list.stop] for in_list in list_of_in_lists],
                 state, [in_list.stop for in_list in list_of_in_lists])
@@ -292,6 +285,7 @@ def main():
               name='A')
     
     input_stream_0.extend(range(10))
+    compute_engine.execute_single_step()
     assert(output_stream_0.stop == 10)
     assert(output_stream_1.stop == 0)
     assert(output_stream_0.recent[:10] == range(10))
@@ -299,6 +293,7 @@ def main():
     assert(input_stream_1.start == {A:0})
 
     input_stream_1.extend(range(10, 25, 1))
+    compute_engine.execute_single_step()
     assert(output_stream_0.stop == 10)
     assert(output_stream_1.stop == 15)
     assert(output_stream_0.recent[:10] == range(10))
@@ -308,7 +303,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    test()
     
         
         
