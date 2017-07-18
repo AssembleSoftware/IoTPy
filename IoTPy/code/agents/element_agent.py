@@ -20,16 +20,25 @@ Functions from stream to stream:
 Agents:
    1. element_map_agent is the agent used by map_stream.
    2. element_filter_agent is the agent used by filter_stream
+
+Testing:
+   The functions are tested by executing a single step of the
+   scheduler. The functions can also be tested using
+   compute(); however, since the compute threads execute
+   concurrently with the main thread, the assertions will have
+   to be weakened.
 """
 
 import sys
 import os
+sys.path.append(os.path.abspath("../"))
 
-from ..agent import Agent, InList
-from ..stream import Stream, StreamArray
-from ..stream import _no_value, _multivalue, _close
-from ..helper_functions.check_agent_parameter_types import *
-from ..helper_functions.recent_values import recent_values
+from agent import Agent, InList
+from stream import Stream, StreamArray
+from stream import _no_value, _multivalue
+from compute_engine import compute_engine
+from helper_functions.check_agent_parameter_types import *
+from helper_functions.recent_values import recent_values
 
 def element_map_agent(func, in_stream, out_stream, state=None, call_streams=None, name=None,
                       *args, **kwargs):
@@ -78,7 +87,7 @@ def element_map_agent(func, in_stream, out_stream, state=None, call_streams=None
         # If the new input data is empty then return an empty list for
         # the single output stream, and leave the state and the starting
         # point for the single input stream unchanged.
-        if not input_list or len(input_list) == 0:
+        if input_list is None or len(input_list) == 0:
             return ([[]], state, [in_list.start])
 
         if state is None:
@@ -95,14 +104,14 @@ def element_map_agent(func, in_stream, out_stream, state=None, call_streams=None
     return Agent([in_stream], [out_stream], transition, state, call_streams, name)
 
 
-def map_stream(function, in_stream, state=None, *args, **kwargs):
+def map_stream(func, in_stream, state=None, *args, **kwargs):
     """
     map_stream returns out_stream, a stream obtained by applying function to each
     element of the input stream, in_stream.
 
     Parameters
     ----------
-        function: function
+        func: function
            function from an element of the in_stream to an element of the out_stream.
         in_stream: Stream
            The single input stream of this agent
@@ -119,8 +128,8 @@ def map_stream(function, in_stream, state=None, *args, **kwargs):
 
     """
     
-    out_stream = Stream(function.__name__+in_stream.name)
-    element_map_agent(function, in_stream, out_stream, state,
+    out_stream = Stream(func.__name__+in_stream.name)
+    element_map_agent(func, in_stream, out_stream, state,
                       None, None,
                       *args, **kwargs)
     return out_stream
@@ -171,7 +180,7 @@ def element_filter_agent(func, in_stream, out_stream, state=None, call_streams=N
         # If the new input data is empty then return an empty list for
         # the single output stream, and leave the state and the starting
         # point for the single input stream unchanged.
-        if not input_list or len(input_list) == 0:
+        if input_list is None or len(input_list) == 0:
             return ([[]], state, [in_list.start])
 
         if state is None:
@@ -188,14 +197,14 @@ def element_filter_agent(func, in_stream, out_stream, state=None, call_streams=N
     # Create agent
     return Agent([in_stream], [out_stream], transition, state, call_streams, name)
 
-def filter_stream(function, in_stream, state=None, *args, **kwargs):
+def filter_stream(func, in_stream, state=None, *args, **kwargs):
     """
     filter_stream returns out_stream, a stream obtained by applying the filter function
     to the input stream, in_stream.
 
     Parameters
     ----------
-        function: function
+        func: function
            function from an element of the in_stream to Boolean.
         in_stream: Stream
            The single input stream of this agent
@@ -213,8 +222,8 @@ def filter_stream(function, in_stream, state=None, *args, **kwargs):
         map_stream
 
     """
-    out_stream = Stream(function.__name__+in_stream.name)
-    element_filter_agent(function, in_stream, out_stream, state, *args,
+    out_stream = Stream(func.__name__+in_stream.name)
+    element_filter_agent(func, in_stream, out_stream, state, *args,
                          **kwargs)
     return out_stream
 
@@ -222,69 +231,78 @@ def filter_stream(function, in_stream, state=None, *args, **kwargs):
 #------------------------------------------------------------------------------------------------
 #                                     ELEMENT AGENT TESTS
 #------------------------------------------------------------------------------------------------
-def test_element_agent():
+def test_element_agents():
+    m = Stream('m')
+    n = Stream('n')
+    o = Stream('o')
+    q = Stream('q')
+    r = Stream('r')
+    s = Stream('s')
+    t = Stream('t')
+    u = Stream('u')
     v = Stream('v')
     w = Stream('w')
     x = Stream('x')
     y = Stream('y')
     z = Stream('z')
-
+    
+    
+    #----------------------------------------------------------------    
     # Test simple map using element_map_agent
     # func operates on an element of the input stream and returns an element of
     # the output stream.
     def double(v): return 2*v
-    a = element_map_agent(func=double, in_stream=x, out_stream=y, name='a')
-    x.extend(range(3))
-    assert recent_values(y) == [0, 2, 4]
-    x.extend(range(3, 5, 1))
-    assert recent_values(y) == [0, 2, 4, 6, 8]
-    ymap = map_stream(function=double, in_stream=x)
-    assert recent_values(ymap) == recent_values(y)
 
+    a = element_map_agent(func=double, in_stream=x, out_stream=y, name='a')
+    ymap = map_stream(func=double, in_stream=x)
+    #----------------------------------------------------------------    
+
+    #----------------------------------------------------------------
     # Test filtering
     def filtering(v): return v > 2
-    yfilter = filter_stream(function=filtering, in_stream=x)
-    assert recent_values(yfilter) == [3, 4]
+        
+    yfilter = filter_stream(func=filtering, in_stream=x)
+    #----------------------------------------------------------------    
 
+    #----------------------------------------------------------------
     # Test map with state using element_map_agent
     # func operates on an element of the input stream and state and returns an
     # element of the output stream and the new state.
-    def f(u, state):
-        return u+state, state+2
+    def f(x, state):
+        return x+state, state+2
 
     b = element_map_agent(func=f, in_stream=x, out_stream=z, state=0, name='b')
-    assert recent_values(z) == [0, 3, 6, 9, 12]
-    bmap = map_stream(function=f, in_stream=x, state=0)
-    assert recent_values(bmap) == recent_values(z)
+    bmap = map_stream(func=f, in_stream=x, state=0)
+    #----------------------------------------------------------------
 
+    #----------------------------------------------------------------
     # Test map with call streams
     # The agent executes a state transition when a value is added to call_streams.
     c = element_map_agent(func=f, in_stream=x, out_stream=v, state=10,
                           call_streams=[w], name='c')
-    assert v.stop == 0
-    w.append(0)
-    assert recent_values(v) == [10, 13, 16, 19, 22]
+    #----------------------------------------------------------------
 
+    #----------------------------------------------------------------
     # Test _no_value
     # func returns _no_value to indicate that no value
     # is placed on the output stream.
     def f_no_value(v):
         """ Filters out odd values
-
         """
         if v%2:
             return _no_value
         else:
             return v
-            
+
     no_value_stream = Stream(name='no_value_stream')
     no_value_agent = element_map_agent(
         func=f_no_value, in_stream=x, out_stream=no_value_stream,
         name='no_value_agent')
-    assert recent_values(no_value_stream) == [0, 2, 4]
-    no_value_map = map_stream(function=f_no_value, in_stream=x)
-    assert recent_values(no_value_map) == recent_values(no_value_stream)
-    
+
+    no_value_map = map_stream(func=f_no_value, in_stream=x)
+    #----------------------------------------------------------------
+
+    #----------------------------------------------------------------
     # Test _multivalue
     # func returns _multivalue(output_list) to indicate that
     # the list of elements in output_list should be placed in the
@@ -299,76 +317,172 @@ def test_element_agent():
     multivalue_agent = element_map_agent(
         func=f_multivalue, in_stream=x, out_stream=multivalue_stream,
         name='multivalue_agent')
-    assert recent_values(multivalue_stream) == [0, 0, 2, 4, 4, 8]
-    multivalue_map = map_stream(function=f_multivalue, in_stream=x)
-    assert recent_values(multivalue_map) == recent_values(multivalue_stream)
+    multivalue_map = map_stream(func=f_multivalue, in_stream=x)
+    #----------------------------------------------------------------    
 
+    #----------------------------------------------------------------    
     # Test element_map_agent with args
-    def f_args(x, multiplicand, addition):
+    def function_with_args(x, multiplicand, addition):
         return x*multiplicand+addition
 
-    in_args = Stream('in_args')
-    out_args = Stream('out_args')
-    a_args = element_map_agent(f_args, in_args, out_args, None, None, 'a_args', 2, 10)
-    in_args.extend(range(3))
-    assert recent_values(out_args) == [10, 12, 14]
-    in_args.extend(range(3, 5, 1))
-    assert recent_values(out_args) == [10, 12, 14, 16, 18]
-    args_map = map_stream(f_args, in_args, None, 2, 10)
+    ## EXPLANATION FOR agent BELOW
+    ## agent_test_args = element_map_agent(
+    ##     func=function_with_args, in_stream = x, out_stream=r,
+    ##     state=None, call_streams=None, name='agent_test_args',
+    ##     multiplicand=2, addition=10)
 
+    agent_test_args = element_map_agent(
+        function_with_args, x, r,
+        None, None, 'agent_test_args',
+        2, 10)
+    stream_test_args = map_stream(function_with_args, x, None, 2, 10)
+    #----------------------------------------------------------------        
+
+    #----------------------------------------------------------------
     # Test element_map_agent with kwargs
-    in_kwargs = Stream('in_kwargs')
-    out_kwargs = Stream('out_kwargs')
+    agent_test_kwargs = element_map_agent(
+        func=function_with_args, in_stream = x, out_stream=u,
+        state=None, call_streams=None, name='agent_test_kwargs',
+        multiplicand=2, addition=10)
+    #----------------------------------------------------------------    
 
-    a_kwargs = element_map_agent(func=f_args, in_stream=in_kwargs,
-                                    out_stream=out_kwargs, name='a_args',
-                                    multiplicand=2, addition=10)
-
-    in_kwargs.extend(range(3))
-    assert recent_values(out_kwargs) == [10, 12, 14]
-    in_kwargs.extend(range(3, 5, 1))
-    assert recent_values(out_kwargs) == [10, 12, 14, 16, 18]
-
+    #----------------------------------------------------------------
     # Test element_map_agent with state and kwargs
     # func operates on an element of the input stream and state and returns an
     # element of the output stream and the new state.
     def f_map_args_kwargs(u, state, multiplicand, addend):
         return u*multiplicand+addend+state, state+2
 
-    out_stream_map_kwargs = Stream('out_stream_map_kwargs')
-
-    aa_map_kwargs_agent = element_map_agent(
-        func=f_map_args_kwargs, in_stream=x, out_stream=out_stream_map_kwargs,
-        state=0, name='aa_map_kwargs_agent',
+    agent_test_kwargs_and_state = element_map_agent(
+        func=f_map_args_kwargs, in_stream=x, out_stream=s,
+        state=0, name='agent_test_kwargs_and_state',
         multiplicand=2, addend=10)
+    #----------------------------------------------------------------
 
-    assert recent_values(out_stream_map_kwargs) == [10, 14, 18, 22, 26]
-
+    #----------------------------------------------------------------
     # Test element_map_agent with state and args
-    out_stream_map_args = Stream('out_stream_map_args')
-
     aa_map_args_agent = element_map_agent(
-        f_map_args_kwargs, x, out_stream_map_args,
+        f_map_args_kwargs, x, t,
         0, None, 'aa_map_args_agent',
         2, 10)
+    #----------------------------------------------------------------
 
-    assert recent_values(out_stream_map_kwargs) == [10, 14, 18, 22, 26]
+    #----------------------------------------------------------------
+    # Test element_filter_agent
+    def is_odd_number(v):
+        return v%2
+    element_filter_agent(func=is_odd_number, in_stream=x, out_stream=q)
+    #----------------------------------------------------------------
+
+    #----------------------------------------------------------------
+    # Test element_filter_stream
+    p = filter_stream(is_odd_number, x)
+    #----------------------------------------------------------------
 
 
-    # Test element_map_agent with state and args and kwargs
-    out_stream_map_args_kwargs = Stream('out_stream_map_args_kwargs')
+    #----------------------------------------------------------------
+    # Test cycles in the module connection graph
+    element_filter_agent(func=lambda v: v < 5, in_stream=o, out_stream=n)
+    element_map_agent(func=lambda v: v+2, in_stream=n, out_stream=o)
+    #----------------------------------------------------------------
+            
+    #----------------------------------------------------------------    
+    # PUT VALUES INTO STREAMS
+    #----------------------------------------------------------------
+    #   FIRST STEP        
+    x.extend(range(3))
+    n.append(0)
+    compute_engine.execute_single_step()
+    assert recent_values(x) == [0, 1, 2]
+    assert recent_values(y) == [0, 2, 4]
+    assert recent_values(ymap) == recent_values(y)
+    assert recent_values(yfilter) == []
+    assert recent_values(z) == [0, 3, 6]
+    assert recent_values(bmap) == recent_values(z)
+    assert recent_values(v) == []
+    assert recent_values(no_value_stream) == [0, 2]
+    assert recent_values(no_value_map) == recent_values(no_value_stream)
+    assert recent_values(multivalue_stream) == [0, 0, 2, 4]
+    assert recent_values(multivalue_map) == recent_values(multivalue_stream)
+    assert recent_values(r) == [10, 12, 14]
+    assert recent_values(stream_test_args) == recent_values(r)
+    assert recent_values(u) == recent_values(r)
+    assert recent_values(s) == [10, 14, 18]
+    assert recent_values(s) == recent_values(t)
+    assert recent_values(q) == [1]
+    assert recent_values(q) == recent_values(p)
+    assert recent_values(n) == [0, 2, 4]
+    assert recent_values(o) == [2, 4, 6]
+    #----------------------------------------------------------------
 
-    aa_map_args_kwargs_agent = element_map_agent(
-        f_map_args_kwargs, x, out_stream_map_args_kwargs,
-        0, None, 'aa_map_args_kwargs_agent',
-        2, addend=10)
+        
+    #----------------------------------------------------------------    
+    x.extend(range(3, 5, 1))
+    compute_engine.execute_single_step()
+    assert recent_values(x) == [0, 1, 2, 3, 4]
+    assert recent_values(y) == [0, 2, 4, 6, 8]
+    assert recent_values(ymap) == recent_values(y)
+    assert recent_values(yfilter) == [3, 4]
+    assert recent_values(z) == [0, 3, 6, 9, 12]
+    assert recent_values(bmap) == recent_values(z)
+    assert recent_values(no_value_stream) == [0, 2, 4]
+    assert recent_values(no_value_map) == recent_values(no_value_stream)
+    assert recent_values(multivalue_stream) == [0, 0, 2, 4, 4, 8]
+    assert recent_values(multivalue_map) == recent_values(multivalue_stream)
+    assert recent_values(r) == [10, 12, 14, 16, 18]
+    assert recent_values(stream_test_args) == recent_values(r)
+    assert recent_values(u) == recent_values(r)
+    assert recent_values(s) == [10, 14, 18, 22, 26]
+    assert recent_values(s) == recent_values(t)
+    assert recent_values(q) == [1, 3]
+    assert recent_values(q) == recent_values(p)
+    #----------------------------------------------------------------        
 
-    assert recent_values(out_stream_map_args_kwargs) == [10, 14, 18, 22, 26]
-
+    #----------------------------------------------------------------            
+    w.append(0)
+    compute_engine.execute_single_step()
+    assert recent_values(x) == [0, 1, 2, 3, 4]
+    assert recent_values(y) == [0, 2, 4, 6, 8]
+    assert recent_values(ymap) == recent_values(y)
+    assert recent_values(yfilter) == [3, 4]
+    assert recent_values(z) == [0, 3, 6, 9, 12]
+    assert recent_values(bmap) == recent_values(z)
+    assert recent_values(v) == [10, 13, 16, 19, 22]
+    assert recent_values(no_value_stream) == [0, 2, 4]
+    assert recent_values(no_value_map) == recent_values(no_value_stream)
+    assert recent_values(multivalue_stream) == [0, 0, 2, 4, 4, 8]
+    assert recent_values(multivalue_map) == recent_values(multivalue_stream)
+    assert recent_values(r) == [10, 12, 14, 16, 18]
+    assert recent_values(stream_test_args) == recent_values(r)
+    assert recent_values(u) == recent_values(r)
+    assert recent_values(s) == [10, 14, 18, 22, 26]
+    assert recent_values(s) == recent_values(t)
+    assert recent_values(q) == [1, 3]
+    assert recent_values(q) == recent_values(p)
     return
+    #----------------------------------------------------------------
+
+
+    #------------------------------------------------------------------------------------------------
+    #                                     ELEMENT AGENT TESTS FOR STREAM ARRAY
+    #------------------------------------------------------------------------------------------------
+
+    m = StreamArray('m')
+    n = StreamArray('n')
+    o = StreamArray('o')
+
+    element_map_agent(func=np.sin, in_stream=m, out_stream=n)
+    element_filter_agent(func=lambda v: v > 0.5, in_stream=n, out_stream=o)
+    input_array = np.linspace(0.0, 2*np.pi, 20)
+    m.extend(input_array)
+    compute_engine.execute_single_step()
+    expected_output = np.sin(input_array)
+    assert np.array_equal(recent_values(n), expected_output)
+    expected_output = expected_output[expected_output > 0.5]
+    assert np.array_equal(recent_values(o), expected_output)
     
 if __name__ == '__main__':
-    test_element_agent()
+    test_element_agents()
     
     
     

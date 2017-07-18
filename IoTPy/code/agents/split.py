@@ -30,13 +30,14 @@ Agents:
 """
 import sys
 import os
-# sys.path.append(os.path.abspath("../"))
+sys.path.append(os.path.abspath("../"))
 
-from ..agent import Agent, InList
-from ..stream import Stream, StreamArray
-from ..stream import _no_value, _multivalue, _close
-from ..helper_functions.check_agent_parameter_types import *
-from ..helper_functions.recent_values import recent_values
+from agent import Agent, InList
+from stream import Stream, StreamArray
+from stream import _no_value, _multivalue
+from compute_engine import compute_engine
+from helper_functions.check_agent_parameter_types import *
+from helper_functions.recent_values import recent_values
 
 #-----------------------------------------------------------------------
 # SPLIT: SINGLE INPUT STREAM, LIST OF OUTPUT STREAMS
@@ -80,7 +81,7 @@ def element_split_agent(func, in_stream, out_streams, state=None,
         # If the new input data is empty then return an empty list for
         # the single output stream, and leave the state and the starting
         # point for the single input stream unchanged.
-        if not input_list or len(input_list) == 0:
+        if input_list is None or len(input_list) == 0:
             return ([[]]*num_out_streams, state, [in_list.start])
 
         if state is None:
@@ -155,6 +156,7 @@ def separate_agent(in_stream, out_streams, name=None):
     """
     def f(x):
         j, v = x
+        j = int(j)
         lst = [_no_value] * len(out_streams)
         lst[j] = v
         return lst
@@ -210,7 +212,7 @@ def unzip_agent(in_stream, out_streams, name=None):
     Note
     ----
        Not used by any function in this module.
-       Used by external modules
+       Retained only for backward compatibility.
  
     """
     def f(lst):
@@ -296,12 +298,15 @@ def timed_unzip(in_stream, num_out_streams):
         f_time_unzip, in_stream, num_out_streams)
     return out_streams
             
-    
+
 
 #------------------------------------------------------------------------------------------------
-#                                     SPLIT TESTS
 #------------------------------------------------------------------------------------------------
-def test_element_agents():
+#                                     TEST SPLIT
+#------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------
+
+def test_split_agents():
     
     s = Stream('s')
     
@@ -330,6 +335,8 @@ def test_element_agents():
                                     num_out_streams=2, )
     r_args, t_args = split_stream(
         h_args, in_stream_split, 2, addend=1, multiplier=2)
+
+    compute_engine.execute_single_step()
     assert recent_values(r) == []
     assert recent_values(t) == []
     assert recent_values(r_split) == recent_values(r)
@@ -338,6 +345,7 @@ def test_element_agents():
     assert recent_values(t_args) == recent_values(t)
 
     in_stream_split.extend(range(5))
+    compute_engine.execute_single_step()
     assert recent_values(r) == [1, 2, 3, 4, 5]
     assert recent_values(t) == [0, 2, 4, 6, 8]
     assert recent_values(r_split) == recent_values(r)
@@ -346,10 +354,12 @@ def test_element_agents():
     assert recent_values(t_args) == recent_values(t)
 
     in_stream_split.append(10)
+    compute_engine.execute_single_step()
     assert recent_values(r) == [1, 2, 3, 4, 5, 11]
     assert recent_values(t) == [0, 2, 4, 6, 8, 20]
 
     in_stream_split.extend([20, 100])
+    compute_engine.execute_single_step()
     assert recent_values(r) == [1, 2, 3, 4, 5, 11, 21, 101]
     assert recent_values(t) == [0, 2, 4, 6, 8, 20, 40, 200]
     assert recent_values(r_split) == recent_values(r)
@@ -372,6 +382,7 @@ def test_element_agents():
     ee = element_split_agent(func=f_list, in_stream=x, out_streams=[rr, tt], name='ee',
                              list_of_functions=[f_0, f_1])
     x.extend(range(5))
+    compute_engine.execute_single_step()
     assert recent_values(rr) == [0, 2, 4, 6, 8]
     assert recent_values(tt) == [10, 11, 12, 13, 14]
 
@@ -388,21 +399,25 @@ def test_element_agents():
     e_state = element_split_agent(
         func=h_state, in_stream=in_stream_split_state,
          out_streams=[r_state, t_state], name='e', state=0)
-    
-    assert r_state.recent[:r_state.stop] == []
-    assert t_state.recent[:t_state.stop] == []
+
+    compute_engine.execute_single_step()
+    assert recent_values(r_state) == []
+    assert recent_values(t_state) == []
 
     in_stream_split_state.extend(range(5))
-    assert r_state.recent[:r_state.stop] == [0, 2, 4, 6, 8]
-    assert t_state.recent[:t_state.stop] == [0, 1, 4, 9, 16]
+    compute_engine.execute_single_step()
+    assert recent_values(r_state) == [0, 2, 4, 6, 8]
+    assert recent_values(t_state) == [0, 1, 4, 9, 16]
 
     in_stream_split_state.append(20)
-    assert r_state.recent[:r_state.stop] == [0, 2, 4, 6, 8, 25]
-    assert t_state.recent[:t_state.stop] == [0, 1, 4, 9, 16, 100]
+    compute_engine.execute_single_step()
+    assert recent_values(r_state) == [0, 2, 4, 6, 8, 25]
+    assert recent_values(t_state) == [0, 1, 4, 9, 16, 100]
 
     in_stream_split_state.extend([44, 93])
-    assert r_state.recent[:r_state.stop] == [0, 2, 4, 6, 8, 25, 50, 100]
-    assert t_state.recent[:t_state.stop] == [0, 1, 4, 9, 16, 100, 264, 651]
+    compute_engine.execute_single_step()
+    assert recent_values(r_state) == [0, 2, 4, 6, 8, 25, 50, 100]
+    assert recent_values(t_state) == [0, 1, 4, 9, 16, 100, 264, 651]
 
     # ------------------------------------
     # Test split with state and args
@@ -419,13 +434,15 @@ def test_element_agents():
         in_stream=in_stream_split_state_funcargs,
         out_streams=[rr_state, tt_state],
         name='ee_state_agent', state=0, increment=10)
-    
-    assert rr_state.stop == 0
-    assert tt_state.stop == 0
+
+    compute_engine.execute_single_step()
+    assert recent_values(rr_state) == []
+    assert recent_values(tt_state) == []
 
     in_stream_split_state_funcargs.extend(range(5))
-    assert rr_state.recent[:rr_state.stop] == [0, 11, 22, 33, 44]
-    assert tt_state.recent[:tt_state.stop] == [0, 10, 40, 90, 160]
+    compute_engine.execute_single_step() 
+    assert recent_values(rr_state) == [0, 11, 22, 33, 44]
+    assert recent_values(tt_state) == [0, 10, 40, 90, 160]
 
 #------------------------------------------------------------------------------------------------
 #                                     UNZIP AGENT TESTS
@@ -442,20 +459,18 @@ def test_element_agents():
  
  
     s_unzip.extend([(1,10), (2,15), (3,18)])
-    assert x_unzip.stop == 3
-    assert u_unzip.stop == 3
-    assert x_unzip.recent[:3] == [1, 2, 3]
-    assert u_unzip.recent[:3] == [10, 15, 18]
-    assert d_unzip_fn[0].recent[:3] == x_unzip.recent[:3]
-    assert d_unzip_fn[1].recent[:3] == u_unzip.recent[:3]
+    compute_engine.execute_single_step()
+    assert recent_values(x_unzip) == [1, 2, 3]
+    assert recent_values(u_unzip) == [10, 15, 18]
+    assert recent_values(d_unzip_fn[0]) == x_unzip.recent[:3]
+    assert recent_values(d_unzip_fn[1]) == u_unzip.recent[:3]
  
     s_unzip.extend([(37,96)])
-    assert x_unzip.stop == 4
-    assert u_unzip.stop == 4
-    assert x_unzip.recent[:4] == [1, 2, 3, 37]
-    assert u_unzip.recent[:4] == [10, 15, 18, 96]
-    assert d_unzip_fn[0].recent[:4] == x_unzip.recent[:4]
-    assert d_unzip_fn[1].recent[:4] == u_unzip.recent[:4]
+    compute_engine.execute_single_step()
+    assert recent_values(x_unzip) == [1, 2, 3, 37]
+    assert recent_values(u_unzip) == [10, 15, 18, 96]
+    assert recent_values(d_unzip_fn[0]) == x_unzip.recent[:4]
+    assert recent_values(d_unzip_fn[1]) == u_unzip.recent[:4]
 
 
     #------------------------------------------------------------------------------------------------
@@ -471,33 +486,69 @@ def test_element_agents():
     x_sep_func, u_sep_func = separate(s_separate, 2)
 
     s_separate.extend([(0,10), (1,15), (0,20)])
-    assert x_separate.stop == 2
-    assert u_separate.stop == 1
-    assert x_separate.recent[:2] == [10, 20]
-    assert u_separate.recent[:1] == [15]
+    compute_engine.execute_single_step()
+    assert recent_values(x_separate) == [10, 20]
+    assert recent_values(u_separate) == [15]
     assert x_sep_func.recent == x_separate.recent
     assert u_sep_func.recent == u_separate.recent
 
     s_separate.extend([(1,96)])
-    assert x_separate.stop == 2
-    assert u_separate.stop == 2
-    assert x_separate.recent[:2] == [10, 20]
-    assert u_separate.recent[:2] == [15, 96]
-    assert x_sep_func.recent == x_separate.recent
-    assert u_sep_func.recent == u_separate.recent
+    compute_engine.execute_single_step()
+    assert recent_values(x_separate) == [10, 20]
+    assert recent_values(u_separate) == [15, 96]
+    assert recent_values(x_sep_func) == recent_values(x_separate)
+    assert recent_values(u_sep_func) == recent_values(u_separate)
 
     # timed_unzip tests
     t_unzip = Stream()
+    t_unzip_0, t_unzip_1 = timed_unzip(in_stream=t_unzip, num_out_streams=2)
     t_unzip.extend(
         [(1, ["A", None]), (5, ["B", "a"]), (7, [None, "b"]),
          (9, ["C", "c"]), (10, [None, "d"])])
-    t_unzip_0, t_unzip_1 = timed_unzip(t_unzip, 2)
-    assert recent_values(t_unzip_0) == [(1, 'A'), (5, 'B'), (9, 'C')]
-    assert recent_values(t_unzip_1) == [(5, 'a'), (7, 'b'), (9, 'c'), (10, 'd')]    
-
     
+    compute_engine.execute_single_step()
+    assert recent_values(t_unzip_0) == [(1, 'A'), (5, 'B'), (9, 'C')]
+    assert recent_values(t_unzip_1) == [(5, 'a'), (7, 'b'), (9, 'c'), (10, 'd')]
+
+
+    #------------------------------------------------------------------------------------------------
+    #                               TEST SPLIT WITH STREAM_ARRAY
+    #------------------------------------------------------------------------------------------------
+    # Test element_split_agent with StreamArray
+    x = StreamArray('x')
+    y = StreamArray('y')
+    z = StreamArray('z')
+
+    def h_args(element, addend, multiplier):
+            return [element+addend, element*multiplier]
+
+    this_agent = element_split_agent(func=h_args, in_stream=x, out_streams=[y,z],
+                                     addend=1.0 , multiplier=2.0, name='this_agent')
+
+    add_to_x = np.linspace(0.0, 4.0, 5)
+    x.extend(add_to_x)
+    compute_engine.execute_single_step()
+    assert np.array_equal(recent_values(y), add_to_x+1.0)
+    assert np.array_equal(recent_values(z), add_to_x*2.0)
+
+    # Test separate with StreamArray
+    x = StreamArray('x', dimension=2)
+    y = StreamArray('y')
+    z = StreamArray('z')
+
+    separate_agent(x, [y,z])
+    x.append(np.array([1.0, 10.0]))
+    compute_engine.execute_single_step()
+    assert np.array_equal(recent_values(z), np.array([10.0]))
+    assert np.array_equal(recent_values(y), np.array([]))
+
+    x.extend(np.array([[0.0, 2.0], [1.0, 20.0], [0.0, 4.0]]))
+    compute_engine.execute_single_step()
+    assert np.array_equal(recent_values(z), np.array([10.0, 20.0]))
+    assert np.array_equal(recent_values(y), np.array([2.0, 4.0]))
+
 if __name__ == '__main__':
-    test_element_agents()
+    test_split_agents()
     
     
     

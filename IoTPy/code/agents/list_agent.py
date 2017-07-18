@@ -22,13 +22,16 @@ singular to single elements.
 """
 import sys
 import os
-# scriptpath = "../"
-# sys.path.append(os.path.abspath(scriptpath))
+scriptpath = "../"
+sys.path.append(os.path.abspath(scriptpath))
 
-from ..agent import Agent, InList
-from ..stream import Stream, StreamArray
-from ..stream import _no_value, _multivalue, _close
-from ..helper_functions.check_agent_parameter_types import *
+from agent import Agent, InList
+from stream import Stream, StreamArray
+from stream import _no_value, _multivalue
+from helper_functions.check_agent_parameter_types import *
+from helper_functions.recent_values import recent_values
+from compute_engine import compute_engine
+
 import types
 import inspect
 import numpy as np
@@ -118,6 +121,17 @@ def list_map_agent(func, in_stream, out_stream, state=None,
     # 6. Agent name
     return Agent([in_stream], [out_stream], transition, state, call_streams, name)
 
+def list_map(func, in_stream, state=None, args=[], kwargs={}):
+    out_stream = Stream(func.__name__+in_stream.name)
+    list_map_agent(func, in_stream, out_stream, state, None, None,
+                   *args, **kwargs)
+    return out_stream
+
+def array_map(func, in_stream, state=None, args=[], kwargs={}):
+    out_stream = StreamArray(func.__name__+in_stream.name)
+    list_map_agent(func, in_stream, out_stream, state, None, None,
+                   *args, **kwargs)
+    return out_stream
 
 
 #-----------------------------------------------------------------------
@@ -201,6 +215,11 @@ def list_sink_agent(func, in_stream, state=None,
     # 6. Agent name
     return Agent([in_stream], [], transition, state, call_streams, name)
 
+def list_sink(func, in_stream, state=None, args=[], kwargs={}):
+    out_stream = Stream(func.__name__+in_stream.name)
+    list_sink_agent(func, in_stream, state, None, None,
+                   *args, **kwargs)
+    return out_stream
 
 #-----------------------------------------------------------------------
 # MERGE: LIST OF INPUT STREAMS, SINGLE OUTPUT STREAM
@@ -284,6 +303,10 @@ def list_merge_agent(func, in_streams, out_stream, state=None,
     # 6. Agent name
     return Agent(in_streams, [out_stream], transition, state, call_streams, name)
 
+def list_merge(func, in_streams, state=None, args=[], kwargs={}):
+    out_stream = Stream(func.__name__)
+    list_merge_agent(func, in_streams, out_stream, state, None, None, *args, **kwargs)
+    return out_stream
 
 #-----------------------------------------------------------------------
 # SPLIT: SINGLE INPUT STREAM, LIST OF OUTPUT STREAMS
@@ -315,7 +338,7 @@ def list_split_agent(func, in_stream, out_streams, state=None,
     """
     # Check the types of the input lists for the transition.
     check_split_agent_arguments(func, in_stream, out_streams,
-    call_streams, name)
+                                call_streams, name)
     # Check the number of arguments in func, the transition function.
     check_num_args_in_func(state, name, func, args, kwargs)
     num_out_streams = len(out_streams)
@@ -376,6 +399,13 @@ def list_split_agent(func, in_stream, out_streams, state=None,
     # 6. Agent name
     return Agent([in_stream], out_streams, transition, state, call_streams, name)
     
+def list_split(func, in_stream, num_out_streams, state=None, args=[], kwargs={}):
+    out_streams = []
+    for i in range(num_out_streams):
+        out_streams.append(Stream(func.__name__+in_stream.name+str(i)))
+    list_split_agent(func, in_stream, out_streams, state,
+                     None, None, *args, **kwargs)
+    return out_streams
 
 #-----------------------------------------------------------------------
 # MANY: LIST OF INPUT STREAMS, LIST OF OUTPUT STREAMS
@@ -460,6 +490,13 @@ def list_many_agent(func, in_streams, out_streams, state=None,
     # 6. Agent name
     return Agent(in_streams, out_streams, transition, state, call_streams, name)
 
+def list_many(func, in_streams, num_out_streams, state=None, args=[], kwargs={}):
+    out_streams = []
+    for i in range(num_out_streams):
+        out_streams.append(Stream(func.__name__+str(i)))
+    list_many_agent(func, in_streams, out_streams, state,
+                     None, None, *args, **kwargs)
+    return out_streams
 
 #------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------
@@ -467,6 +504,10 @@ def list_many_agent(func, in_streams, out_streams, state=None,
 #------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------
 def test_list_agents():
+    n = Stream('n')
+    o = Stream('o')
+    p = Stream('p')
+    q = Stream('q')
     r = Stream('r')
     s = Stream('s')
     t = Stream('t')
@@ -478,17 +519,17 @@ def test_list_agents():
     z = Stream('z')
 
 
-    # Check simple map
+    #-------------------------------------------------------------------
+    # Test simple map
     def simple(lst):
         return [2*v for v in lst]
     a = list_map_agent(func=simple, in_stream=x, out_stream=y, name='a')
-    x.extend(range(5))
-    assert x.stop == 5
-    assert x.recent[:5] == range(5)
-    assert y.stop == 5
-    assert y.recent[:5] == [0, 2, 4, 6, 8]
+    yy = list_map(simple, x)
+    #-------------------------------------------------------------------
 
-    # Check map with state
+
+    #-------------------------------------------------------------------
+    # Test map with state
     # Function that operates on an element and state and returns an
     # element and state.
     def f(input_list, state):
@@ -499,57 +540,51 @@ def test_list_agents():
         return output_list, state
         
     b = list_map_agent(func=f, in_stream=x, out_stream=z, state=0, name='b')
-    assert z.stop == 5
-    assert z.recent[:5] == [0, 3, 6, 9, 12]
+    zz = list_map(f, x, 0)
+    #-------------------------------------------------------------------
 
-    # Check map with call streams
+
+    #-------------------------------------------------------------------
+    # Test map with call streams
     c = list_map_agent(func=f, in_stream=x, out_stream=v, state=10,
                           call_streams=[w], name='c')
-    assert v.stop == 0
-    w.append(0)
-    assert v.stop == 5
-    assert v.recent[:5] == [10, 13, 16, 19, 22]
+    #-------------------------------------------------------------------
 
-    # Check sink
-    def p(input_list):
-        for v in input_list:
-            print v
-    #sink_agent = list_sink_agent(func=p, in_stream=x, name='sink_agent')
 
-    # Check sink with state
-    def add(input_list, state):
-        return sum(input_list)+state
-    sink_with_state_agent = list_sink_agent(
-        func=add, in_stream=x, state=0, name='sink_with_state_agent')
-    assert sink_with_state_agent.state == 10
+    #-------------------------------------------------------------------
+    # Test sink with state
+    def sink_with_state(input_list, output_list):
+        return output_list.extend(input_list)
 
-    # Check merge
+    out_list = []
+    sink_agent = list_sink_agent(
+        func=sink_with_state, in_stream=x,
+        name='sink_agent', state=out_list)
+    out_list_stream = []
+    list_sink(sink_with_state, x, out_list_stream)
+    #-------------------------------------------------------------------
+
+    #-------------------------------------------------------------------
+    # Test merge
     # Function that operates on a list of lists
     def g(list_of_lists):
         return [sum(snapshot) for snapshot in zip(*list_of_lists)]
     d = list_merge_agent(func=g, in_streams=[x,u], out_stream=s, name='d')
-    assert s.stop == 0
-    u.extend([10, 15, 18])
-    assert s.stop == 3
-    assert s.recent[:3] == [10, 16, 20]
-    u.append(37)
-    assert s.stop == 4
-    assert s.recent[:4] == [10, 16, 20, 40]
-    u.extend([96, 95])
-    assert s.stop == 5
-    assert s.recent[:5] == [10, 16, 20, 40, 100]
+    ss = list_merge(g, [x,u])
+    #-------------------------------------------------------------------
 
-    # Check split
+
+    #-------------------------------------------------------------------
+    # Test split
     def h(input_list):
         return [[element+1 for element in input_list],
                 [element*2 for element in input_list]]
     e = list_split_agent(func=h, in_stream=x, out_streams=[r, t], name='e')
-    assert r.stop == 5
-    assert t.stop == 5
-    assert r.recent[:5] == [1, 2, 3, 4, 5]
-    assert t.recent[:5] == [0, 2, 4, 6, 8]
-
-    # Check split with state
+    rr, tt = list_split(h, x, num_out_streams=2)
+    #-------------------------------------------------------------------
+    
+    #-------------------------------------------------------------------
+    # Test split with state
     def h_state(input_list, state):
         length = len(input_list)
         output_list_0 = [[]]*length
@@ -560,56 +595,124 @@ def test_list_agents():
             state += 1
         return ([output_list_0, output_list_1], state)
 
-    r_state = Stream(name='r_state')
-    t_state = Stream(name='t_state')
-    x_state = Stream(name='x_state')
-    e_state = list_split_agent(
-        func=h_state, in_stream=x_state, out_streams=[r_state, t_state], name='e_state', state=0)
-    assert r_state.stop == 0
-    assert t_state.stop == 0
-    x_state.extend(range(5))
-    assert r_state.stop == 5
-    assert r_state.recent[:r_state.stop] == [0, 2, 4, 6, 8]
-    assert t_state.stop == 5
-    assert t_state.recent[:5] == [0, 1, 4, 9, 16]
-    x_state.extend(range(5,10,1))
-    assert r_state.stop == 10
-    assert r_state.recent[:r_state.stop] == [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
-    assert t_state.stop == 10
-    assert t_state.recent[:t_state.stop] == [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
+    list_split_agent(
+        func=h_state, in_stream=x, out_streams=[p, q], state=0)
+    pp, qq = list_split(h_state, x, num_out_streams=2, state=0)
+    #-------------------------------------------------------------------
 
-    # Check many
+
+    #-------------------------------------------------------------------
+    # Test many
     def f_many(list_of_lists):
         snapshots = zip(*list_of_lists)
         return [[max(snapshot) for snapshot in snapshots],
                 [min(snapshot) for snapshot in snapshots]]
-    u_stream = Stream(name='u_stream')
-    v_stream = Stream(name='v_stream')
-    w_stream = Stream(name='w_stream')
-    x_stream = Stream(name='x_stream')
     many_agent = list_many_agent(
-        func=f_many, in_streams=[u_stream, v_stream], out_streams=[w_stream, x_stream],
+        func=f_many, in_streams=[x, u], out_streams=[n, o],
         name='many_agent')
-    assert w_stream.stop == 0
-    assert x_stream.stop == 0
-    u_stream.extend([5, 9, 11, 8])
-    assert w_stream.stop == 0
-    assert x_stream.stop == 0
-    v_stream.extend([20, 1, -3, 17, 10])
-    assert w_stream.stop == 4
-    assert x_stream.stop == 4
-    assert w_stream.recent[:w_stream.stop] == [20, 9, 11, 17]
-    assert x_stream.recent[:x_stream.stop] == [5, 1, -3, 8]
-    v_stream.extend([20, -100])
-    assert w_stream.stop == 4
-    assert x_stream.stop == 4
-    assert w_stream.recent[:w_stream.stop] == [20, 9, 11, 17]
-    assert x_stream.recent[:x_stream.stop] == [5, 1, -3, 8]
-    u_stream.extend([14, 5, -200, 70])
-    assert w_stream.stop == 7
-    assert x_stream.stop == 7
-    assert w_stream.recent[:w_stream.stop] == [20, 9, 11, 17, 14, 20, -100]
-    assert x_stream.recent[:x_stream.stop] == [5, 1, -3, 8, 10, 5, -200]
+    nn, oo = list_many(func=f_many, in_streams=[x, u], num_out_streams=2)
+    #-------------------------------------------------------------------
+
+
+
+    #-------------------------------------------------------------------
+    #-------------------------------------------------------------------
+    x.extend(range(5))
+    compute_engine.execute_single_step()
+    assert recent_values(x) == range(5)
+    assert recent_values(y) == [0, 2, 4, 6, 8]
+    assert recent_values(z) == [0, 3, 6, 9, 12]
+    assert recent_values(v) == []
+    assert out_list == range(5)
+    assert out_list == out_list_stream
+    assert recent_values(s) == []
+    assert recent_values(r) == [1, 2, 3, 4, 5]
+    assert recent_values(t) == [0, 2, 4, 6, 8]
+    assert recent_values(p) == [0, 2, 4, 6, 8]
+    assert recent_values(q) == [0, 1, 4, 9, 16]
+    assert recent_values(n) == []
+    assert recent_values(o) == []
+    assert recent_values(y) == recent_values(yy)
+    assert recent_values(z) == recent_values(zz)
+    assert recent_values(s) == recent_values(ss)
+    assert recent_values(r) == recent_values(rr)
+    assert recent_values(t) == recent_values(tt)
+    assert recent_values(p) == recent_values(pp)
+    assert recent_values(q) == recent_values(qq)
+    assert recent_values(n) == recent_values(nn)
+    assert recent_values(o) == recent_values(oo)
+
+
+                
+    #-------------------------------------------------------------------    
+
+    
+    #-------------------------------------------------------------------
+    w.append(0)
+    compute_engine.execute_single_step()
+
+    assert recent_values(x) == range(5)
+    assert recent_values(y) == [0, 2, 4, 6, 8]
+    assert recent_values(z) == [0, 3, 6, 9, 12]
+    assert recent_values(v) == [10, 13, 16, 19, 22]
+    assert out_list == range(5)
+    assert recent_values(s) == []
+    assert recent_values(r) == [1, 2, 3, 4, 5]
+    assert recent_values(t) == [0, 2, 4, 6, 8]
+    assert recent_values(p) == [0, 2, 4, 6, 8]
+    assert recent_values(q) == [0, 1, 4, 9, 16]
+    assert recent_values(n) == []
+    assert recent_values(o) == []
+    assert recent_values(y) == recent_values(yy)
+    assert recent_values(z) == recent_values(zz)
+    assert recent_values(s) == recent_values(ss)
+    assert recent_values(r) == recent_values(rr)
+    assert recent_values(t) == recent_values(tt)
+    assert recent_values(p) == recent_values(pp)
+    assert recent_values(q) == recent_values(qq)
+    assert recent_values(n) == recent_values(nn)
+    assert recent_values(o) == recent_values(oo)
+    #-------------------------------------------------------------------
+
+    
+    #-------------------------------------------------------------------
+    u.extend([10, 15, 18])
+    compute_engine.execute_single_step()
+    assert recent_values(s) == [10, 16, 20]
+    assert recent_values(n) == [10, 15, 18]
+    assert recent_values(o) == [0, 1, 2]
+
+    u.append(37)
+    compute_engine.execute_single_step()
+    assert recent_values(s) == [10, 16, 20, 40]
+    assert recent_values(n) == [10, 15, 18, 37]
+    assert recent_values(o) == [0, 1, 2, 3]
+
+    u.extend([96, 95])
+    compute_engine.execute_single_step()
+    assert recent_values(x) == range(5)
+    assert recent_values(y) == [0, 2, 4, 6, 8]
+    assert recent_values(z) == [0, 3, 6, 9, 12]
+    assert recent_values(v) == [10, 13, 16, 19, 22]
+    assert out_list == range(5)
+    assert recent_values(s) == [10, 16, 20, 40, 100]
+    assert recent_values(r) == [1, 2, 3, 4, 5]
+    assert recent_values(t) == [0, 2, 4, 6, 8]
+    assert recent_values(p) == [0, 2, 4, 6, 8]
+    assert recent_values(q) == [0, 1, 4, 9, 16]
+    assert recent_values(n) == [10, 15, 18, 37, 96]
+    assert recent_values(o) == [0, 1, 2, 3, 4]
+    
+    assert recent_values(y) == recent_values(yy)
+    assert recent_values(z) == recent_values(zz)
+    assert recent_values(s) == recent_values(ss)
+    assert recent_values(r) == recent_values(rr)
+    assert recent_values(t) == recent_values(tt)
+    assert recent_values(p) == recent_values(pp)
+    assert recent_values(q) == recent_values(qq)
+    assert recent_values(n) == recent_values(nn)
+    assert recent_values(o) == recent_values(oo)
+
 
     #------------------------------------------------------------------
     #------------------------------------------------------------------
@@ -623,13 +726,22 @@ def test_list_agents():
         return input_array+1
     a_np_agent = list_map_agent(func=f_np, in_stream=a_stream_array, out_stream=b_stream_array,
                                 name='a_np_agent')
-    assert b_stream_array.stop == 0
+    bb_stream_array = array_map(f_np, a_stream_array)
+
+    compute_engine.execute_single_step()
+    assert np.array_equal(recent_values(b_stream_array), np.array([], dtype=np.float64))
+    assert np.array_equal(recent_values(b_stream_array),recent_values(bb_stream_array))
+
     a_stream_array.extend(np.arange(5.0))
-    assert np.array_equal(b_stream_array.recent[:b_stream_array.stop],
-                          np.arange(5.0)+1)
+    compute_engine.execute_single_step()
+    assert np.array_equal(recent_values(b_stream_array), np.arange(5.0)+1)
+    assert np.array_equal(recent_values(b_stream_array),recent_values(bb_stream_array))
+
+    
     a_stream_array.extend(np.arange(5.0, 10.0, 1.0))
-    assert np.array_equal(b_stream_array.recent[:b_stream_array.stop],
-                          np.arange(10.0)+1)
+    compute_engine.execute_single_step()
+    assert np.array_equal(recent_values(b_stream_array), np.arange(10.0)+1)
+    assert np.array_equal(recent_values(b_stream_array),recent_values(bb_stream_array))
 
     # Test list map with state on StreamArray (dimension is 0)
     c_stream_array = StreamArray(name='c_stream_array')
@@ -639,13 +751,22 @@ def test_list_agents():
     b_np_agent = list_map_agent(func=f_np_state, in_stream=c_stream_array,
                                 out_stream=d_stream_array, state = 0.0,
                                 name='b_np_agent')
-    assert d_stream_array.stop == 0
+    dd_stream_array = array_map(f_np_state, c_stream_array, state=0.0)
+    compute_engine.execute_single_step()
+    assert np.array_equal(recent_values(d_stream_array), np.array([], dtype=np.float64))
+    assert np.array_equal(recent_values(d_stream_array),recent_values(dd_stream_array))
+
     c_stream_array.extend(np.arange(5.0))
+    compute_engine.execute_single_step()
     assert np.array_equal(
         d_stream_array.recent[:d_stream_array.stop], np.cumsum(np.arange(5.0)))
+    assert np.array_equal(recent_values(d_stream_array),recent_values(dd_stream_array))
+
     c_stream_array.extend(np.arange(5.0, 10.0, 1.0))
+    compute_engine.execute_single_step()
     assert np.array_equal(
         d_stream_array.recent[:d_stream_array.stop], np.cumsum(np.arange(10.0)))
+    assert np.array_equal(recent_values(d_stream_array),recent_values(dd_stream_array))
 
     # Test list map with positive integer dimension on StreamArray
     e_stream_array = StreamArray(name='e_stream_array', dimension=3)
@@ -659,8 +780,11 @@ def test_list_agents():
     c_np_agent = list_map_agent(func=f_np_dimension, in_stream=e_stream_array,
                                 out_stream=f_stream_array, name='c_np_agent')
     e_stream_array.extend(np.array([[1.0, 2.0, 3.0]]))
+    compute_engine.execute_single_step()
     assert np.array_equal(f_stream_array.recent[:f_stream_array.stop], np.array([[3.0, 3.0]]))
+
     e_stream_array.extend(np.array([[4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]))
+    compute_engine.execute_single_step()
     assert np.array_equal(f_stream_array.recent[:f_stream_array.stop],
                           np.array([[3.0, 3.0], [9.0, 6.0], [15.0, 9.0]]))
 
@@ -675,10 +799,13 @@ def test_list_agents():
     a_array = np.array([[[1.0, 2.0],[3.0, 4.0]],
                                     [[5.0, 6.0],[7.0, 8.0]]])
     g_stream_array.extend(a_array)
+    compute_engine.execute_single_step()
     assert np.array_equal(h_stream_array.recent[:h_stream_array.stop],
                           a_array*2)
+
     b_array = np.array([[[9.0, 10.0], [11.0, 12.0]]])
     g_stream_array.extend(b_array)
+    compute_engine.execute_single_step()
     assert np.array_equal(h_stream_array.recent[:h_stream_array.stop],
                           np.vstack((a_array, b_array))*2)
 
@@ -697,11 +824,15 @@ def test_list_agents():
                                 out_stream=j_stream_array, name='e_np_agent')
     c_array = np.array([(1, [2.0, 3.0, 4.0])], dtype=dt_0)
     assert j_stream_array.stop == 0
+
     i_stream_array.extend(c_array)
+    compute_engine.execute_single_step()
     assert np.array_equal(j_stream_array.recent[:j_stream_array.stop],
                           f_datatype(c_array))
+
     d_array = np.array([(10, [6.0, 7.0, 8.0]), (20, [10.0, 11.0, 12.0])], dtype=dt_0)
     i_stream_array.extend(d_array)
+    compute_engine.execute_single_step()
     assert np.array_equal(j_stream_array.recent[:j_stream_array.stop],
                           f_datatype(np.hstack((c_array, d_array))))
 
@@ -721,15 +852,20 @@ def test_list_agents():
                                 out_stream=l_stream_array, name='f_np_agent')
     e_array = np.array([[(1, [2.0, 3.0, 4.0]), (2, [5.0, 6.0, 7.0])]], dtype=dt_0)
     assert l_stream_array.stop == 0
+
     k_stream_array.extend(e_array)
+    compute_engine.execute_single_step()
     assert np.array_equal(l_stream_array.recent[:l_stream_array.stop],
                           f_datatype_int_dimension(e_array))
+
     f_array = np.array([[(3, [8.0, 9.0, 10.0]), (4, [11.0, 12.0, 13.0])],
                         [(5, [-1.0, 0.0, 1.0]), (6, [-2.0, 2.0, -2.0])]],
                        dtype=dt_0)
     k_stream_array.extend(f_array)
+    compute_engine.execute_single_step()
     assert np.array_equal(l_stream_array.recent[:l_stream_array.stop],
                           f_datatype_int_dimension(np.vstack((e_array, f_array))))
+
 
     # Test list map with a datatype and a dimension which is a tuple
     m_stream_array = StreamArray(name='m_stream_array', dtype=dt_0, dimension=(2,2))
@@ -737,6 +873,7 @@ def test_list_agents():
     g_np_agent = list_map_agent(func=f_datatype_int_dimension, in_stream=m_stream_array,
                                 out_stream=n_stream_array, name='g_np_agent')
     assert n_stream_array.stop == 0
+
     g_array = np.array([
         # zeroth 2x2 array
         [[(1, [2.0, 3.0, 4.0]), (2, [5.0, 6.0, 7.0])],
@@ -746,20 +883,23 @@ def test_list_agents():
          [(7, [18.0, 19.0, 20.0]), (8, [21.0, 22.0, 23.0])]]
          ], dtype=dt_0)
     m_stream_array.extend(g_array)
+    compute_engine.execute_single_step()
     assert np.array_equal(n_stream_array.recent[:n_stream_array.stop],
                           f_datatype_int_dimension(g_array))
+
     h_array = np.array([
         [[(9, [0.0, 1.0, -1.0]), (10, [2.0, 2.0, -4.0])],
          [(11, [80.0, -71.0, -9.0]), (15, [0.0, 0.0, 0.0])]]
          ], dtype=dt_0)
     m_stream_array.extend(h_array)
+    compute_engine.execute_single_step()
     assert np.array_equal(n_stream_array.recent[:n_stream_array.stop],
                           f_datatype_int_dimension(np.vstack((g_array, h_array))))
 
     # Test list merge with StreamArray and no dimension and no data type
     a_in_0 = StreamArray(name='a_in_0')
     a_in_1 = StreamArray(name='a_in_1')
-    a_out = StreamArray(name='out')
+    a_out = StreamArray(name='a_out')
     def a_merge(list_of_lists):
         array_0, array_1 = list_of_lists
         return array_0 + array_1
@@ -767,19 +907,26 @@ def test_list_agents():
                                 out_stream=a_out, name='a_s_agent')
     
     assert a_out.stop == 0
+
+    #a_in_0.extend(np.array([1.0, 2.0, 3.0]))
     a_in_0.extend(np.array([1.0, 2.0, 3.0]))
+    compute_engine.execute_single_step()
     assert a_out.stop == 0
+
     a_in_0.extend(np.array([4.0, 5.0, 6.0]))
+    compute_engine.execute_single_step()
     assert a_out.stop == 0
 
     a_in_1.extend(np.array([10.0, 20.0]))
+    compute_engine.execute_single_step()
     assert np.array_equal(a_out.recent[:a_out.stop],
                           np.array([11.0, 22.0]))
+
     a_in_1.extend(np.array([30.0, 40.0]))
+    compute_engine.execute_single_step()
     assert np.array_equal(a_out.recent[:a_out.stop],
                           np.array([11.0, 22.0, 33.0, 44.0]))
 
-    
     
     # Test list merge with StreamArray and no dimension and data type
     a_in_dt_0 = StreamArray(name='a_in_dt_0', dtype=dt_0)
@@ -795,19 +942,24 @@ def test_list_agents():
     a_s_dt_agent = list_merge_agent(func=a_merge_dtype, in_streams=[a_in_dt_0, a_in_dt_1],
                                 out_stream=a_out_dt, name='a_s_dt_agent')
     a_in_dt_0.extend(np.array([(1, [1.0, 2.0, 3.0])], dtype=dt_0))
+    compute_engine.execute_single_step()
     assert a_out_dt.stop == 0
+
     a_in_dt_1.extend(np.array([(2, [10.0, 20.0, 30.0])], dtype=dt_0))
+    compute_engine.execute_single_step()
     assert np.array_equal(a_out_dt.recent[:a_out_dt.stop],
                           np.array([(2, [11.0, 22.0, 33.0])], dtype=dt_0))
 
     a_in_dt_0.extend(np.array([(5, [21.0, 23.0, 32.0]),
                                (9, [27.0, 29.0, 31.0])], dtype=dt_0))
+    compute_engine.execute_single_step()
     assert np.array_equal(a_out_dt.recent[:a_out_dt.stop],
                           np.array([(2, [11.0, 22.0, 33.0])], dtype=dt_0))
 
     a_in_dt_1.extend(np.array([(6, [19.0, 17.0, 8.0]),
                                (8, [13.0, 11.0, 9.0]),
                                (10, [3.0, 1.0, 5.0])], dtype=dt_0))
+    compute_engine.execute_single_step()
     assert np.array_equal(a_out_dt.recent[:a_out_dt.stop],
                           np.array([(2, [11.0, 22.0, 33.0]),
                                     (6, [40.0, 40.0, 40.0]),
@@ -833,6 +985,7 @@ def test_list_agents():
     
     b_array_0 = np.array([[1.0, 9.0]])
     b_in.extend(b_array_0)
+    compute_engine.execute_single_step()
     assert np.array_equal(b_out_0.recent[:b_out_0.stop],
                           np.array([[9.0, 1.0]]))
     assert np.array_equal(b_out_1.recent[:b_out_1.stop],
@@ -840,6 +993,7 @@ def test_list_agents():
 
     b_array_1 = np.array([[98.0, 2.0]])
     b_in.extend(b_array_1)
+    compute_engine.execute_single_step()
     assert np.array_equal(b_out_0.recent[:b_out_0.stop],
                           np.array([[9.0, 1.0], [98.0, 2.0]]))
     assert np.array_equal(b_out_1.recent[:b_out_1.stop],
@@ -847,6 +1001,7 @@ def test_list_agents():
 
     b_array_3 = np.array([[10.0, 20.0], [3.0, 37.0], [55.0, 5.0]])
     b_in.extend(b_array_3)
+    compute_engine.execute_single_step()
     assert np.array_equal(b_out_0.recent[:b_out_0.stop],
                           np.array([[9.0, 1.0], [98.0, 2.0],
                                     [20.0, 10.0], [37.0, 3.0],
@@ -875,7 +1030,9 @@ def test_list_agents():
     c_array_0_0 = np.arange(3.0)*3
     c_array_1_0 = np.arange(3.0)
     c_in_0.extend(c_array_0_0)
+    compute_engine.execute_single_step()
     c_in_1.extend(c_array_1_0)
+    compute_engine.execute_single_step()
     assert np.array_equal(c_out_0.recent[:c_out_0.stop],
                    np.array([0.0, 4.0, 8.0]))
     assert np.array_equal(c_out_1.recent[:c_out_1.stop],
@@ -885,6 +1042,7 @@ def test_list_agents():
     c_array_1_1 = np.array([4.0, 5.0, 6.0])
     c_in_0.extend(c_array_0_1)
     c_in_1.extend(c_array_1_1)
+    compute_engine.execute_single_step()
     assert np.array_equal(c_out_0.recent[:c_out_0.stop],
                    np.array([0.0, 4.0, 8.0, 104.0]))
     assert np.array_equal(c_out_1.recent[:c_out_1.stop],
@@ -927,7 +1085,9 @@ def test_list_agents():
     d_array_0_0 = np.array([[1.0, 2.0]])
     d_array_1_0 = np.array([[0.0, 10.0]])
     d_in_0.extend(d_array_0_0)
+    compute_engine.execute_single_step()
     d_in_1.extend(d_array_1_0)
+    compute_engine.execute_single_step()
     assert np.array_equal(d_out_0.recent[:d_out_0.stop],
                    np.array([[1.0, 12.0]]))
     assert np.array_equal(d_out_1.recent[:d_out_1.stop],
@@ -938,6 +1098,7 @@ def test_list_agents():
     d_array_1_1 = np.array([[2.0, 4.0]])
     d_in_0.extend(d_array_0_1)
     d_in_1.extend(d_array_1_1)
+    compute_engine.execute_single_step()
     assert np.array_equal(d_out_0.recent[:d_out_0.stop],
                    np.array([[1.0, 12.0], [6.0, 12.0]]))
     assert np.array_equal(d_out_1.recent[:d_out_1.stop],
@@ -947,6 +1108,7 @@ def test_list_agents():
     d_array_1_2 = np.array([[-10.0, -20.0]])
     d_in_0.extend(d_array_0_2)
     d_in_1.extend(d_array_1_2)
+    compute_engine.execute_single_step()
     assert np.array_equal(d_out_0.recent[:d_out_0.stop],
                    np.array([[1.0, 12.0], [6.0, 12.0], [10.0, 10.0]]))
     assert np.array_equal(d_out_1.recent[:d_out_1.stop],
@@ -977,6 +1139,7 @@ def test_list_agents():
     e_in_0.extend(e_array_0_0)
     e_array_1_0 = np.array([[[1.0, 2.0], [3.0, 4.0]]])
     e_in_1.extend(e_array_1_0)
+    compute_engine.execute_single_step()
     assert np.array_equal(e_out_0.recent[:e_out_0.stop],
                    np.array([[[11.0, 22.0], [33.0, 44.0]]]))
     assert np.array_equal(e_out_1.recent[:e_out_1.stop],
@@ -986,6 +1149,7 @@ def test_list_agents():
     e_array_0_1 = np.array([[[11.0, 13.0], [17.0, 19.0]],
                            [[2.0, 4.0], [6.0, 8.0]]])
     e_in_0.extend(e_array_0_1)
+    compute_engine.execute_single_step()
     assert np.array_equal(e_out_0.recent[:e_out_0.stop],
                    np.array([[[11.0, 22.0], [33.0, 44.0]]]))
     assert np.array_equal(e_out_1.recent[:e_out_1.stop],
@@ -995,6 +1159,7 @@ def test_list_agents():
     e_array_1_1 = np.array([[[1.0, 2.0], [3.0, 4.0]],
                             [[5.0, 6.0], [7.0, 8.0]]])
     e_in_1.extend(e_array_1_1)
+    compute_engine.execute_single_step()
     assert np.array_equal(e_out_0.recent[:e_out_0.stop],
                    np.array([[[11.0, 22.0], [33.0, 44.0]],
                              [[12.0, 15.0], [20.0, 23.0]],
@@ -1006,9 +1171,11 @@ def test_list_agents():
     e_array_1_2 = np.array([[[11.0, 12.0], [13.0, 14.0]],
                             [[15.0, 16.0], [17.0, 18.0]]])
     e_in_1.extend(e_array_1_2)
+    compute_engine.execute_single_step()
     e_array_0_2 = np.array([[[-10.0, -11.0], [12.0, 16.0]],
                             [[-14.0, -15.0], [-16.0, -17.0]]])
     e_in_0.extend(e_array_0_2)
+    compute_engine.execute_single_step()
     assert np.array_equal(e_out_0.recent[:e_out_0.stop],
                    np.array([[[11.0, 22.0], [33.0, 44.0]],
                              [[12.0, 15.0], [20.0, 23.0]],
@@ -1046,19 +1213,21 @@ def test_list_agents():
                                     out_stream=out_stream_map_kwargs_stream,
                                     name='map_args_agent',
                                     kwargs={'multiplicand':2})
-    
+    compute_engine.execute_single_step()
     assert out_stream_map_args_stream.recent[:out_stream_map_args_stream.stop] == \
       []
     assert out_stream_map_kwargs_stream.recent[:out_stream_map_kwargs_stream.stop] == \
       []
 
     in_stream_map_args_stream.extend(range(5))
+    compute_engine.execute_single_step()
     assert out_stream_map_args_stream.recent[:out_stream_map_args_stream.stop] == \
       [0, 2, 4, 6, 8]
     assert out_stream_map_kwargs_stream.recent[:out_stream_map_kwargs_stream.stop] == \
       [0, 2, 4, 6, 8]
 
     in_stream_map_args_stream.append(5)
+    compute_engine.execute_single_step()
     assert out_stream_map_args_stream.recent[:out_stream_map_args_stream.stop] == \
       [0, 2, 4, 6, 8, 10]
     assert out_stream_map_kwargs_stream.recent[:out_stream_map_kwargs_stream.stop] == \
@@ -1085,7 +1254,7 @@ def test_list_agents():
         func=f_np_args_kwargs, in_stream=a_stream_array_args,
         out_stream=c_stream_array_args_kwargs, name='a_np_agent_args_kwargs',
         args=[2], kwargs={'addend':10})
-
+    compute_engine.execute_single_step()
     assert np.array_equal(
         b_stream_array_args.recent[:b_stream_array_args.stop],
         np.array([]))
@@ -1094,12 +1263,14 @@ def test_list_agents():
         np.array([]))
         
     a_stream_array_args.extend(np.arange(5.0))
+    compute_engine.execute_single_step()
     assert np.array_equal(b_stream_array_args.recent[:b_stream_array_args.stop],
                           np.arange(5.0)+1)
     assert np.array_equal(c_stream_array_args_kwargs.recent[:c_stream_array_args_kwargs.stop],
                           np.arange(5.0)*2 + 10)
 
     a_stream_array_args.extend(np.arange(5.0, 10.0, 1.0))
+    compute_engine.execute_single_step()
     assert np.array_equal(b_stream_array_args.recent[:b_stream_array_args.stop],
                           np.arange(10.0)+1)
     assert np.array_equal(c_stream_array_args_kwargs.recent[:c_stream_array_args_kwargs.stop],
