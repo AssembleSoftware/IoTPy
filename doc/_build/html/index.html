@@ -1,0 +1,2610 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Welcome to AssembleSoftware documentation! &mdash; Model 1.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="Model 1.0 documentation" href="#"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="#" class="icon icon-home"> Model
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">Welcome to AssembleSoftware documentation!</a></li>
+<li><a class="reference internal" href="#core">Core</a></li>
+<li><a class="reference internal" href="#module-agent">Agent</a></li>
+<li><a class="reference internal" href="#module-Buffer">Buffer</a></li>
+<li><a class="reference internal" href="#module-compute_engine">Compute Engine</a></li>
+<li><a class="reference internal" href="#module-run_agents">Run Agents</a></li>
+<li><a class="reference internal" href="#module-stream">Stream</a></li>
+<li><a class="reference internal" href="#agent-types">Agent Types</a></li>
+<li><a class="reference internal" href="#module-source">Source</a></li>
+<li><a class="reference internal" href="#module-sink">Sink</a></li>
+<li><a class="reference internal" href="#module-timed_agent">Timed Agent</a></li>
+<li><a class="reference internal" href="#module-op">Op</a></li>
+<li><a class="reference internal" href="#module-multi">Multi</a></li>
+<li><a class="reference internal" href="#module-merge">Merge</a></li>
+<li><a class="reference internal" href="#module-split">Split</a></li>
+<li><a class="reference internal" href="#multiprocessing">Multiprocessing</a></li>
+<li><a class="reference internal" href="#module-Component">Component</a></li>
+<li><a class="reference internal" href="#make-process">Make Process</a></li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">Model</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="#">Docs</a> &raquo;</li>
+        
+      <li>Welcome to AssembleSoftware documentation!</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="welcome-to-assemblesoftware-documentation">
+<h1>Welcome to AssembleSoftware documentation!</h1>
+<div class="toctree-wrapper compound">
+</div>
+</div>
+<div class="section" id="core">
+<h1>Core</h1>
+<p>The following modules are all in FINAL/core.</p>
+</div>
+<div class="section" id="module-agent">
+<span id="agent"></span><h1>Agent</h1>
+<p>This module contains the Agent class. The Agent
+and Stream classes are the building blocks of
+PythonStreams.</p>
+<dl class="class">
+<dt id="agent.Agent">
+<em class="property">class </em><code class="descclassname">agent.</code><code class="descname">Agent</code><span class="sig-paren">(</span><em>in_streams</em>, <em>out_streams</em>, <em>transition</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name=None</em><span class="sig-paren">)</span></dt>
+<dd><p>An agent is an automaton: a state-transition machine.
+An agent has only one important method: the method
+next() that makes the agent execute a state transition.</p>
+<p>An agent has lists of:
+(1) input streams,
+(2) output streams and
+(3) call streams.
+Streams are described in Stream.py.</p>
+<p>During a state transition an agent:
+(1) May read values from its input streams. (Note that</p>
+<blockquote>
+<div>reading values in a stream does not change the
+stream.)</div></blockquote>
+<ol class="arabic simple" start="2">
+<li>Append values to the tails of its output streams.</li>
+<li>Change the agent’s own state.</li>
+</ol>
+<p>When a call stream is modified the agent’s next() method
+is called which causes the agent to execute a state transition.</p>
+<p>The default is that every input stream is also a call stream,
+i.e., the agent executes a state transition when any of its
+input streams is modified. For performance reasons, we
+may not want the agent to execute state transitions each time
+any of its input streams is modified; we may want the agent to
+execute state transitions periodically — for example, every
+second. In this case, the call streams will be different from
+the input streams. A call stream that has a value appended to
+it every second will cause the agent to execute a state
+transition every second.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>in_streams</strong> (<em>list of streams</em>) – The list of the agent’s input streams. This list may be empty.</li>
+<li><strong>out_streams</strong> (<em>list of streams</em>) – The list of the agent’s output streams. This list may be empty.</li>
+<li><strong>call_streams</strong> (<em>list of streams</em>) – When a new value is added to a stream in this list
+a state transition is invoked.
+This the usual way (but not the only way) in which
+state transitions occur. A state transiton for an
+agent ag can also be executed by calling ag.next()</li>
+<li><strong>state</strong> (<em>object</em>) – The state of the agent. The state is updated after
+a transition.</li>
+<li><strong>transition</strong> (<em>function</em>) – This function is called by next() which
+is the state-transition operation for this agent.
+An agent’s state transition is specified by
+its transition function.</li>
+<li><strong>name</strong> (<em>str</em><em>, </em><em>optional</em>) – name of this agent</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="agent.Agent._in_lists">
+<code class="descname">_in_lists</code></dt>
+<dd><p><em>list of InList</em> – InList defines the slice of a list.
+The j-th element of _in_lists is an InList
+that defines the slice of the j-th input stream
+that can be read by this agent in a state
+transition. For example, if
+listj = _in_lists[j].lists
+startj = _in_lists[j].start
+stopj = _in_lists[j].stop
+Then this agent can read the slice:</p>
+<blockquote>
+<div>listj[startj:stopj]</div></blockquote>
+<p>of the jth input stream. This slice is a slice
+of the most recent values of the stream.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="agent.Agent._out_lists">
+<code class="descname">_out_lists</code></dt>
+<dd><p><em>list</em> – The j-th element of _out_lists is the list of
+values to be appended to the j-th output
+stream after the state transition.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="agent.Agent.next">
+<code class="descname">next</code><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd><dl class="docutils">
+<dt>Execute a state transition. The method has 3 parts:</dt>
+<dd><ol class="first last lowerroman">
+<li><p class="first">set up the data structures to execute
+a state transition,</p>
+</li>
+<li><p class="first">call the transition function to:
+(a) get the values to be appended to output streams,
+(b) get the next state, and
+(c) update ‘start’ indices for each input stream.</p>
+<blockquote>
+<div><p>The agent no longer accesses elements of its input
+streams with indices earlier (i.e. smaller) than
+‘start’.</p>
+</div></blockquote>
+</li>
+<li><p class="first">update data structures after the transition.</p>
+</li>
+</ol>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descname">next</code><span class="sig-paren">(</span><em>stream_name=None</em><span class="sig-paren">)</span></dt>
+<dd><p>Execute the next state transition.</p>
+<p>This function does the following:
+Part 1: set up data structures for the state transition.
+Part 2: execute the state transition by calling self.transition
+Part 3: update data structures after the transition.</p>
+<p>This method can be called by any agent and is
+called whenever a value is appended to any
+stream in call_streams</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>stream_name</strong> (<em>str</em><em>, </em><em>optional</em>) – A new value was appended to the stream with name
+stream_name as a result of which this agent
+executes a state transition.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-Buffer">
+<span id="buffer"></span><h1>Buffer</h1>
+<dl class="class">
+<dt id="Buffer.Buffer">
+<em class="property">class </em><code class="descclassname">Buffer.</code><code class="descname">Buffer</code><span class="sig-paren">(</span><em>max_size</em>, <em>name=None</em><span class="sig-paren">)</span></dt>
+<dd><p>A circular buffer</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-compute_engine">
+<span id="compute-engine"></span><h1>Compute Engine</h1>
+<dl class="class">
+<dt id="compute_engine.ComputeEngine">
+<em class="property">class </em><code class="descclassname">compute_engine.</code><code class="descname">ComputeEngine</code><span class="sig-paren">(</span><em>name=None</em><span class="sig-paren">)</span></dt>
+<dd><p>Manages the queue of agents scheduled for execution.
+When an agent has new data on which to operate, the
+agent is placed on a queue called
+q_agents.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>input_queue</strong> (<em>multiprocessing.Queue</em>) – Elements for input streams of this thread are put
+in this queue.</li>
+<li><strong>name_to_stream</strong> (<em>dict</em>) – key: stream name
+value: stream</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="compute_engine.ComputeEngine.q_agents">
+<code class="descname">q_agents</code></dt>
+<dd><p><em>Queue.Queue() or multiprocessing.Queue()</em> – The queue of agents scheduled for execution.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="compute_engine.ComputeEngine.scheduled_agents">
+<code class="descname">scheduled_agents</code></dt>
+<dd><p><em>Set</em> – An agent is in the set if and only if it is
+in the queue. This set is used to ensure that
+each agent appears at most once in the queue.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="compute_engine.ComputeEngine.get">
+<code class="descname">get</code><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd><p>Waits until q_agents is non-empty,
+and then gets and returns the agent at the head
+of the queue.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>a</strong> – The agent at the head of the queue of scheduled
+agents.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="#agent.Agent" title="agent.Agent">Agent</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="compute_engine.ComputeEngine.put">
+<code class="descname">put</code><span class="sig-paren">(</span><em>a</em><span class="sig-paren">)</span></dt>
+<dd><p>Puts the agent a into q_agents if the
+agent is not already in the queue.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>a</strong> (<a class="reference internal" href="#agent.Agent" title="agent.Agent"><em>Agent</em></a>) – </td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-run_agents">
+<span id="run-agents"></span><h1>Run Agents</h1>
+<dl class="class">
+<dt id="run_agents.ComputeEngine">
+<em class="property">class </em><code class="descclassname">run_agents.</code><code class="descname">ComputeEngine</code><span class="sig-paren">(</span><em>name=None</em><span class="sig-paren">)</span></dt>
+<dd><p>Manages the queue of agents scheduled for execution.
+When an agent has new data on which to operate, the
+agent is placed on a queue called
+q_agents.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>name</strong> (<em>str</em><em> (</em><em>optional</em><em>)</em>) – name used only for debugging.</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="run_agents.ComputeEngine.q_agents">
+<code class="descname">q_agents</code></dt>
+<dd><p><em>Queue.Queue()</em> – The queue of agents scheduled for execution.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="run_agents.ComputeEngine.scheduled_agents">
+<code class="descname">scheduled_agents</code></dt>
+<dd><p><em>Set</em> – An agent is in the set if and only if it is
+in q_agents. This set is used to ensure that
+each agent appears at most once in the queue.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="run_agents.ComputeEngine.lock">
+<code class="descname">lock</code></dt>
+<dd><p><em>threading.RLock()</em> – Controls access to q_agents and scheduled_agents.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="run_agents.ComputeEngine.stopped">
+<code class="descname">stopped</code></dt>
+<dd><p><em>bool</em> – Set to True to stop the thread that runs
+agents.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="run_agents.ComputeEngine.run_agents_thread">
+<code class="descname">run_agents_thread</code></dt>
+<dd><p><em>threading.Thread</em> – The thread that gets the next agent from q_agents
+and executes the (next step of the) agent.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="run_agents.ComputeEngine.get">
+<code class="descname">get</code><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd><p>Waits until q_agents is non-empty,
+and then gets and returns the agent at the head
+of the queue.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>a</strong> – The agent at the head of the queue of scheduled
+agents.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="#agent.Agent" title="agent.Agent">Agent</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="run_agents.ComputeEngine.put">
+<code class="descname">put</code><span class="sig-paren">(</span><em>a</em><span class="sig-paren">)</span></dt>
+<dd><p>Puts the agent a into q_agents if the
+agent is not already in the queue.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>a</strong> (<a class="reference internal" href="#agent.Agent" title="agent.Agent"><em>Agent</em></a>) – </td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="run_agents.ComputeEngine.step">
+<code class="descname">step</code><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd><p>Execute agents until no agents are
+available for execution.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-stream">
+<span id="stream"></span><h1>Stream</h1>
+<p>This module contains the Stream class. The
+Stream and Agent classes are the building blocks
+of PythonStreams.
+(Version 1.4 August 16, 2017. Created by: Mani Chandy)</p>
+<dl class="class">
+<dt id="stream.Stream">
+<em class="property">class </em><code class="descclassname">stream.</code><code class="descname">Stream</code><span class="sig-paren">(</span><em>name='NoName'</em>, <em>initial_value=[]</em>, <em>num_in_memory=32768</em><span class="sig-paren">)</span></dt>
+<dd><p>A stream is a sequence of values. Agents can:
+(1) Append values to the tail of stream.
+(2) Read a stream.
+(3) Subscribe to be notified when a stream is</p>
+<blockquote>
+<div>modified.</div></blockquote>
+<p>(See Agent.py for details of agents.)</p>
+<p>An agent is either asleep (inactive)
+or awake (active). An agent sleeps until it is
+woken up by a notification from a stream to which
+the agent has subscribed.</p>
+<p>When an agent wakes up it executes a method called
+next(). The agent may read and write streams while it
+executes this method. When execution of the method
+terminates, the agent goes back to sleep. The method
+is called “next” because waking up the agent causes
+it to execute its next step.</p>
+<p>The ONLY way in which a stream can be
+modified is that values can be appended to its
+tail. The length of a stream (number of elements
+in its sequence) can stay the same or increase,
+but never decrease. If at some point, the length
+of a stream is k, then from that point onwards, the
+first k elements of the stream remain unchanged.</p>
+<p>Any number of agents can read or subscribe to the
+same stream. A stream is modified by exactly one
+agent. An agent can reade, write and subscribe
+to the same stream. An agent may subscribe
+to a stream without reading the stream’s values; for
+example the agent may subscribe to a clock stream
+so that the agent is woken up whenever the clock
+stream has a new value.</p>
+<p>The most recent values of a stream are stored either
+in a list or a NumPy array. For the array case see
+the class StreamArray.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> (<em>str</em><em>, </em><em>optional</em>) – name of the stream. Though the name is optional
+a name helps with debugging.
+default : ‘NoName’</li>
+<li><strong>initial_value</strong> (<em>list</em><em> or </em><em>array</em><em>, </em><em>optional</em>) – The list (or array) of initial values in the
+stream.
+default : []</li>
+<li><strong>num_in_memory</strong> (<em>int</em><em> (</em><em>positive</em><em>)</em>) – If the length of a stream is less than or equal
+to num_in_memory then readers can read the entire
+stream. If the stream length exceeds num_in_memory
+then readers of the stream can read the latest
+num_in_memory elements of the stream.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="stream.Stream.recent">
+<code class="descname">recent</code></dt>
+<dd><p><em>list or NumPy array.</em> – A list or array whose elements up to stop contain
+the most recent elements of the stream.
+recent is a buffer that is written and read by
+agents.
+recent[:stop] contains the most recent elements of
+the stream. The elements of recent[stop:] are garbage.
+The length of recent is: 2*num_in_memory
+Twice num_in_memory is used for reasons explained
+in the implementation.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="stream.Stream.stop">
+<code class="descname">stop</code></dt>
+<dd><p><em>int</em> –</p>
+<dl class="docutils">
+<dt>index into the list recent.</dt>
+<dd>0 &lt;= s.stop &lt; len(s.recent)</dd>
+</dl>
+<p>s.recent[:s.stop] contains the s.stop most recent
+values of stream s.
+s.recent[s.stop:] contains arbitrary (garbage) values.
+The length of a stream is the number of elements in it.
+If the length of stream s is more than num_in_memory
+then:   s.stop &gt;= s.num_in_memory
+else s.stop is the length of the stream.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="stream.Stream.offset">
+<code class="descname">offset</code></dt>
+<dd><p><em>int (nonnegative)</em> – recent is a list or array of a given length whereas
+a stream can grow to an arbitrary length.
+offset maps a value in a stream to a value in recent.
+For a stream s:</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>s.recent[i] = s[i + s.offset]</dt>
+<dd>for i in range(s.stop)</dd>
+</dl>
+</div></blockquote>
+<p>The length of a stream s (i.e. the number of elements in
+it) is s.offset + s.stop.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="stream.Stream.start">
+<code class="descname">start</code></dt>
+<dd><p><em>dict</em> – key = reader
+value = start index of the reader
+The next element of stream s that reader r will read is
+in:</p>
+<blockquote>
+<div>s.recent[s.start[r]]</div></blockquote>
+<p>The usual case is that a reader r starts reading a stream s
+when the stream is created, and reads at a rate that keeps
+up with the rate that the stream is written. In this case
+r will have read s.offset + s.start[r] elements.
+If r reads s at a rate that is so slow that the size of the
+buffer, recent, is too small, then r may miss reading some
+elements.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="stream.Stream.num_elements_lost">
+<code class="descname">num_elements_lost</code></dt>
+<dd><p><em>dict</em> – key = reader
+value = int
+The value is the number of elements in the stream that the
+reader missed reading because it read slower than the stream
+was being written. If the buffer, recent, gets full
+before a reader has read the first elements of the buffer
+then these elements are over-written and the reader
+misses reading them.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="stream.Stream.subscribers_set">
+<code class="descname">subscribers_set</code></dt>
+<dd><p><em>set</em> – the set of subscribers for this stream.
+Subscribers are agents that are notified when
+the stream is modified.
+When a new subscriber r is added, s.start[r] = 0.</p>
+</dd></dl>
+
+<p class="rubric">Notes</p>
+<ol class="arabic simple">
+<li>SUBSCRIBING TO A STREAM</li>
+</ol>
+<p>An agent is an object that implements a method next().
+If agent x is a subscriber to a stream s then x.next()
+is invoked when s is modified.</p>
+<p>The only reason for an agent x to subscribe to a stream is
+to be “woken up” by the call: x.next(). An agent can read
+or write a stream without subscribing for it.</p>
+<dl class="docutils">
+<dt>An agent x subscribes to a stream s by executing</dt>
+<dd>s.call(x).</dd>
+</dl>
+<p>An agent x unsubscribes from a stream s by
+executing:</p>
+<blockquote>
+<div>s.delete_caller(x)</div></blockquote>
+<p>When a stream is modified, all agents that are subscribers
+of the stream are put on a queue called the compute_engine queue.
+The compute_engine wakes up each agent in its queue in turn.</p>
+<ol class="arabic simple" start="2">
+<li>READING A STREAM</li>
+</ol>
+<p>An agent can read a stream only after it registers
+with the stream as a reader. An agents r registers
+with a stream s by executing:</p>
+<blockquote>
+<div>s.reader(r)</div></blockquote>
+<p>An agent r deletes its registration for reading s
+by executing:</p>
+<blockquote>
+<div>s.delete_reader(r)</div></blockquote>
+<p>In most (but not all) cases, a reader r of a stream
+s wants to be woken up when s is modified. So, the
+default case is when a reader of a stream is woken
+up when the stream is modified. In some cases, however,
+a reader of a stream does not want to be woken up when
+the stream is modified, but wants to be woken up only
+when some other event - such as the next clock tick -
+occurs.</p>
+<p>An agent that reads a stream is also a subscriber to
+that stream unless the agent has a call-stream.
+Default: an agent has no call-stream.</p>
+<blockquote>
+<div>In this case the agent is woken up whenever any of
+its input streams is modified.</div></blockquote>
+<dl class="docutils">
+<dt>Case: the agent has one or more call streams.</dt>
+<dd>The agent is woken up only when one of its call
+streams is modified.</dd>
+</dl>
+<p>An agent r registered to read a stream s can read
+the stream from its next value at index s.start[r]
+to the end of the stream at index s.stop.</p>
+<p>Reader r informs stream s that it will only
+read values with indexes greater than or
+equal to j in the list, recent,  by executing</p>
+<blockquote>
+<div>s.set_start(r, j)</div></blockquote>
+<p>which causes s.start[r] to be set to j.</p>
+<ol class="arabic simple" start="3">
+<li>WRITING A STREAM</li>
+</ol>
+<p>When an agent is created it is passed a list
+of streams that it can write.</p>
+<p>An agent adds a single element v to a stream s
+by executing:</p>
+<blockquote>
+<div>s.append(v)</div></blockquote>
+<p>An agent adds the sequence of values in a list
+l to a stream s by executing:</p>
+<blockquote>
+<div>s.extend(l)</div></blockquote>
+<p>The operations append and extend of streams are
+analogous to operations with the same names on
+lists.</p>
+<dl class="method">
+<dt id="stream.Stream.append">
+<code class="descname">append</code><span class="sig-paren">(</span><em>value</em><span class="sig-paren">)</span></dt>
+<dd><p>Append a single value to the end of the
+stream.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="stream.Stream.call">
+<code class="descname">call</code><span class="sig-paren">(</span><em>agent</em><span class="sig-paren">)</span></dt>
+<dd><p>Register a subscriber for this stream.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="stream.Stream.delete_caller">
+<code class="descname">delete_caller</code><span class="sig-paren">(</span><em>agent</em><span class="sig-paren">)</span></dt>
+<dd><p>Delete a subscriber for this stream.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="stream.Stream.delete_reader">
+<code class="descname">delete_reader</code><span class="sig-paren">(</span><em>reader</em><span class="sig-paren">)</span></dt>
+<dd><p>Delete this reader from this stream.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="stream.Stream.delete_subscriber">
+<code class="descname">delete_subscriber</code><span class="sig-paren">(</span><em>agent</em><span class="sig-paren">)</span></dt>
+<dd><p>Delete a subscriber for this stream.
+Same as delete_caller()</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="stream.Stream.extend">
+<code class="descname">extend</code><span class="sig-paren">(</span><em>value_list</em><span class="sig-paren">)</span></dt>
+<dd><p>Extend the stream by value_list.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>value_list</strong> (<em>list</em>) – </td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="stream.Stream.get_contents_after_column_value">
+<code class="descname">get_contents_after_column_value</code><span class="sig-paren">(</span><em>column_number</em>, <em>value</em><span class="sig-paren">)</span></dt>
+<dd><p>Assumes that the stream consists of rows where the
+number of elements in each row exceeds column_number. Also
+assumes that values in the column with index column_number
+are in increasing order.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>Returns the rows in the stream for which:</dt>
+<dd>row[column_number] &gt;= value</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="stream.Stream.get_elements_after_index">
+<code class="descname">get_elements_after_index</code><span class="sig-paren">(</span><em>index</em><span class="sig-paren">)</span></dt>
+<dd><p>index is a pointer to an element in the stream.
+(Example: stream has 38 elements, num_in_memory is
+10, and index is 35.)
+Case 1: if index is greater than the length of
+the stream the function returns the tuple:</p>
+<blockquote>
+<div>(length of stream, empty list)</div></blockquote>
+<p>Case 2: index is at most the stream length.
+The function returns the tuple (p, l) where p
+is a pointer into the stream and l is stream[p:].
+p is the max of index and the index of the earliest
+element of the stream in main memory.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="stream.Stream.get_index_for_column_value">
+<code class="descname">get_index_for_column_value</code><span class="sig-paren">(</span><em>column_number</em>, <em>value</em><span class="sig-paren">)</span></dt>
+<dd><p>Similar to get_contents_after_column_value except that the
+value returned is an index into recent rather than the sequence
+of rows.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="stream.Stream.get_last_n">
+<code class="descname">get_last_n</code><span class="sig-paren">(</span><em>n</em><span class="sig-paren">)</span></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>n</strong> (<em>positive integer</em>) – </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
+<li><em>The list of the last n elements of the stream. If the</em></li>
+<li><em>number of elements in the stream is less than n, then</em></li>
+<li><em>it returns all the elements in the stream.</em></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Requirement: n &gt;= self.min_history</p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="stream.Stream.get_latest">
+<code class="descname">get_latest</code><span class="sig-paren">(</span><em>default_for_empty_stream=0</em><span class="sig-paren">)</span></dt>
+<dd><p>Returns the latest element in the stream.
+If the stream is empty then it returns the empty list</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="stream.Stream.get_latest_n">
+<code class="descname">get_latest_n</code><span class="sig-paren">(</span><em>n</em><span class="sig-paren">)</span></dt>
+<dd><p>Same as get_last_n()</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="stream.Stream.is_empty">
+<code class="descname">is_empty</code><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd><blockquote>
+<div>True if and only if this stream is empty.</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="stream.Stream.register_reader">
+<code class="descname">register_reader</code><span class="sig-paren">(</span><em>r</em>, <em>start_index=0</em><span class="sig-paren">)</span></dt>
+<dd><p>A newly registered reader starts reading recent
+from index start, i.e., reads  recent[start_index:s.stop]
+If reader has already been registered with this stream
+its start value is updated to start_index.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="stream.Stream.register_subscriber">
+<code class="descname">register_subscriber</code><span class="sig-paren">(</span><em>agent</em><span class="sig-paren">)</span></dt>
+<dd><p>Register a subscriber for this stream.
+Same as call()</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="stream.Stream.set_start">
+<code class="descname">set_start</code><span class="sig-paren">(</span><em>reader</em>, <em>starting_value</em><span class="sig-paren">)</span></dt>
+<dd><p>The reader tells the stream that it is only accessing
+elements of the list recent with index start or higher.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="stream.StreamArray">
+<em class="property">class </em><code class="descclassname">stream.</code><code class="descname">StreamArray</code><span class="sig-paren">(</span><em>name='NoName'</em>, <em>dimension=0</em>, <em>dtype=&lt;type 'float'&gt;</em>, <em>initial_value=None</em>, <em>num_in_memory=32768</em><span class="sig-paren">)</span></dt>
+<dd><dl class="method">
+<dt id="stream.StreamArray.append">
+<code class="descname">append</code><span class="sig-paren">(</span><em>value</em><span class="sig-paren">)</span></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>value</strong> (<em>numpy array</em>) – The value appended to the StreamArray</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>See self._create_recent() for a description of
+the elements of the stream.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="stream.StreamArray.extend">
+<code class="descname">extend</code><span class="sig-paren">(</span><em>output_array</em><span class="sig-paren">)</span></dt>
+<dd><p>See extend() for the class Stream.
+Extend the stream by an numpy ndarray.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>output_array</strong> (<em>np.ndarray</em>) – </td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>See self._create_recent() for a description of
+the elements of the stream.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="stream._no_value">
+<em class="property">class </em><code class="descclassname">stream.</code><code class="descname">_no_value</code></dt>
+<dd><p>_no_value is the message sent on a stream to indicate that no
+value is sent on the stream at that point. _no_value is used
+instead of None because you may want an agent to send a message
+with value None and for the agent receiving that message to
+take some specific action.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="stream._multivalue">
+<em class="property">class </em><code class="descclassname">stream.</code><code class="descname">_multivalue</code><span class="sig-paren">(</span><em>lst</em><span class="sig-paren">)</span></dt>
+<dd><p>When _multivalue([x1, x2, x3,…]) is sent on a stream, the
+actual values sent are the messages x1, then x2, then x3,….
+as opposed to a single instance of the class _multivalue.
+See examples_element_wrapper for examples using _multivalue.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="agent-types">
+<h1>Agent Types</h1>
+<p>The following modules are all in FINAL/agent_types.</p>
+</div>
+<div class="section" id="module-source">
+<span id="source"></span><h1>Source</h1>
+<p>This module consists of sources. A source is a function that puts
+data from a data source, such as a sensor, into the queue called
+scheduler.input_queue.</p>
+<p>Each source function is executed in a separate thread. A
+function returns a 2-tuple: (1) thread and (2) ready, a
+threading.Event. ready.wait() waits until the thread is ready for
+execution.</p>
+<dl class="docutils">
+<dt>Functions in the module:</dt>
+<dd><ol class="first last arabic simple">
+<li>func_to_q:</li>
+<li>q_to_streams: Used in ../multiprocessing</li>
+<li>q_to_streams_general: Used in ../multiprocessing</li>
+<li><dl class="first docutils">
+<dt>source_function: puts data generated by a function into the</dt>
+<dd>queue read by the scheduler.</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>source_file: puts data from a file into the queue read by the</dt>
+<dd>scheduler.</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>source_list: puts data from a list into the queue read by the</dt>
+<dd>scheduler.</dd>
+</dl>
+</li>
+</ol>
+</dd>
+</dl>
+<dl class="function">
+<dt id="source.func_to_q">
+<code class="descclassname">source.</code><code class="descname">func_to_q</code><span class="sig-paren">(</span><em>func</em>, <em>q</em>, <em>state=None</em>, <em>sleep_time=0</em>, <em>num_steps=None</em>, <em>name='source_to_q'</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>Value returned by func is appended to the queue q</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>func</strong> (<em>function on state</em><em>, </em><em>args</em><em>, </em><em>kwargs</em>) – Value returned by func is appended to the queue q</li>
+<li><strong>q</strong> (<em>Queue.Queue</em><em>(</em><em>) or </em><em>multiprocessing.Queue</em><em>(</em><em>)</em>) – </li>
+<li><strong>sleep_time</strong> (<em>int</em><em> or </em><em>float</em><em> (</em><em>optional</em><em>)</em>) – The thread sleeps for this amount of time (seconds) before
+successive calls to func.</li>
+<li><strong>num_steps</strong> (<em>int</em><em> (</em><em>optional</em><em>)</em>) – The number of calls to func before this thread
+terminates. If num_steps is None then this thread does not
+terminate.</li>
+<li><strong>name</strong> (<em>str</em><em> (</em><em>optional</em><em>)</em>) – Name of the string is helpful in debugging.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>thread</strong> (<em>threading.Thread()</em>) – The thread that repeatedly calls function.</li>
+<li><strong>ready</strong> (<em>threading.Event()</em>) – ready is set to signal that the thread is ready for
+execution.</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="source.q_to_streams">
+<code class="descclassname">source.</code><code class="descname">q_to_streams</code><span class="sig-paren">(</span><em>q</em>, <em>streams</em>, <em>name='thread_q_to_streams'</em><span class="sig-paren">)</span></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>q</strong> (<em>Queue.Queue</em><em> or </em><em>multiprocessing.Queue</em>) – messages arriving on q are tuples (stream_name, message content).
+The message content is appended to the stream with the specified
+name</li>
+<li><strong>streams</strong> (<em>list of Stream</em>) – Each stream in this list must have a unique name.</li>
+<li><strong>name</strong> (<em>str</em><em> (</em><em>optional</em><em>)</em>) – The name of this thread. Useful for debugging.</li>
+<li><strong>Variables</strong> – </li>
+<li><strong>---------</strong> – </li>
+<li><strong>name_to_stream</strong> (<em>dict. key: stream_name. value: stream</em>) – </li>
+<li><strong>ready</strong> (<em>threading.Event. Set to indicate thread is ready.</em>) – </li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="source.q_to_streams_general">
+<code class="descclassname">source.</code><code class="descname">q_to_streams_general</code><span class="sig-paren">(</span><em>q</em>, <em>func</em>, <em>name='thread_q_to_streams'</em><span class="sig-paren">)</span></dt>
+<dd><p>Identical to q_to_streams except that a stream is identified by the
+descriptor attached to each message in the queue. The descriptor need
+not be a name; for instance, the descriptor could be a 2-tuple
+consisting of (1) the name of an array of streams and (2) an index
+into the array. Note that for q_to_streams the descriptor must be a
+name.</p>
+<p>func is a function that returns a stream given a stream
+descriptor. In the case of q_to_streams we don’t need func because
+the stream is identified by its name.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>q</strong> (<em>Queue.Queue</em><em> or </em><em>multiprocessing.Queue</em>) – messages arriving on q are tuples (stream_name, message content).
+The message content is appended to the stream with the specified
+name</li>
+<li><strong>func</strong> (<em>function</em>) – function from stream_descriptor to a stream</li>
+<li><strong>name</strong> (<em>str</em><em> (</em><em>optional</em><em>)</em>) – The name of this thread. Useful for debugging.</li>
+<li><strong>Variables</strong> – </li>
+<li><strong>---------</strong> – </li>
+<li><strong>ready</strong> (<em>threading.Event. Set to indicate thread is ready.</em>) – </li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="source.source_function">
+<code class="descclassname">source.</code><code class="descname">source_function</code><span class="sig-paren">(</span><em>func</em>, <em>stream_name</em>, <em>time_interval=0</em>, <em>num_steps=None</em>, <em>window_size=1</em>, <em>state=None</em>, <em>name='source_f'</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>Calls func and places values returned by the function, with
+stream_name, on the scheduler queue. The scheduler then takes
+these values and appends them to the queue with the specified name.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>func</strong> (<em>function on state</em><em>, </em><em>args</em><em>, </em><em>kwargs</em>) – This function is called and the 2-tuple consisting of (1)
+the result of this function and (2) stream_name is
+appended to the queue of the scheduler.</li>
+<li><strong>stream_name</strong> (<em>str</em><em> or </em><em>pickleable</em><em>, </em><em>i.e.</em><em>, </em><em>linearizable</em><em>, </em><em>object.</em>) – The name of the stream to which elements will be appended.</li>
+<li><strong>time_interval</strong> (<em>float</em><em> or </em><em>int</em><em> (</em><em>optional</em><em>)</em><em>, </em><em>time in seconds</em>) – An element is placed on the output stream every time_interval
+seconds.</li>
+<li><strong>num_steps</strong> (<em>int</em><em> (</em><em>optional</em><em>)</em>) – source_fun terminates after num_steps: the number of steps.
+At each step a window_size number of elements is placed on the
+out_stream.
+If num_steps is None then source_fun terminates
+only when an exception is raised.</li>
+<li><strong>window_size</strong> (<em>int</em><em> (</em><em>optional</em><em>)</em>) – At each step a window_size number of elements is placed on the
+out_stream.</li>
+<li><strong>state</strong> (<em>object</em><em> (</em><em>optional</em><em>)</em>) – The state of the function; an argument of the parameter func.</li>
+<li><strong>name</strong> (<em>str</em><em> or </em><em>picklable</em><em>, </em><em>i.e.</em><em>, </em><em>linearizable</em><em>, </em><em>object</em><em> (</em><em>optional</em><em>)</em>) – The name of the thread. Useful in debugging.</li>
+<li><strong>args</strong> (<em>list</em>) – Positional arguments of func</li>
+<li><strong>kwargs</strong> (<em>dict</em>) – Keyword arguments of func</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<div><dl class="docutils">
+<dt>thread: threading.Thread</dt>
+<dd>The thread created by this function. The thread must
+be started and thread.join() may have to be called to
+ensure that the thread terminates execution.</dd>
+<dt>ready: threading.Event</dt>
+<dd>Signals (sets the event, ready) when the thread is
+ready to operate.</dd>
+<dt>name: str</dt>
+<dd>The name of the thread</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="source.source_file">
+<code class="descclassname">source.</code><code class="descname">source_file</code><span class="sig-paren">(</span><em>func</em>, <em>stream_name</em>, <em>filename</em>, <em>time_interval=0</em>, <em>num_steps=None</em>, <em>window_size=1</em>, <em>state=None</em>, <em>name='source_file'</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>Places lines in the file with name filename on the queue read by
+the scheduler. See source_f()</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>func</strong> (<em>function</em>) – This function is applied to each line read from the file and
+the 2-tuple consisting of result of this function, and
+stream_name, is appended to the input queue of the
+scheduler. The arguments of func are a line of the file, the
+state if any, and <a href="#id1"><span class="problematic" id="id2">*</span></a>args, <a href="#id3"><span class="problematic" id="id4">**</span></a>kwargs.</li>
+<li><strong>stream_name</strong> (<em>str</em><em> or </em><em>pickleable</em><em>, </em><em>i.e.</em><em>, </em><em>linearizable</em><em>, </em><em>object.</em>) – The name of the output stream to which elements are appended.</li>
+<li><strong>filename</strong> (<em>str</em>) – The name of the file that is read.</li>
+<li><strong>time_interval</strong> (<em>float</em><em> or </em><em>int</em><em> (</em><em>optional</em><em>)</em>) – The next line of the file is read every time_interval seconds.</li>
+<li><strong>num_steps</strong> (<em>int</em><em> (</em><em>optional</em><em>)</em>) – <dl class="docutils">
+<dt>file_to_stream terminates after num_steps taken.</dt>
+<dd>If num_steps is None then the
+file_to_stream terminates when the entire file is read.</dd>
+<dt>window_size: int (optional)</dt>
+<dd>At each step, window_size number of lines are read from the
+file and placed on out_stream after function is applied to them.</dd>
+</dl>
+</li>
+<li><strong>state</strong> (<em>object</em><em> (</em><em>optional</em><em>)</em>) – The state of the function; an argument of func.</li>
+<li><strong>args</strong> (<em>list</em>) – Positional arguments of func</li>
+<li><strong>kwargs</strong> (<em>dict</em>) – Keyword arguments of func</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<div><dl class="docutils">
+<dt>thread: threading.Thread</dt>
+<dd>The thread created by this function. The thread must
+be started and thread.join() may have to be called to
+ensure that the thread terminates execution.</dd>
+<dt>ready: threading.Event</dt>
+<dd>Signals (sets the event, ready) when the thread is
+ready to operate.</dd>
+<dt>name: str</dt>
+<dd>The name of the thread The thread must
+be started and thread.join() may have to be called to
+ensure that the thread terminates execution.</dd>
+</dl>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="source.source_list">
+<code class="descclassname">source.</code><code class="descname">source_list</code><span class="sig-paren">(</span><em>in_list</em>, <em>stream_name</em>, <em>time_interval=0</em>, <em>num_steps=None</em>, <em>window_size=1</em>, <em>name='source_list'</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-sink">
+<span id="sink"></span><h1>Sink</h1>
+<p>This module consist of sink functions. A sink is a function that reads a
+single stream and that carries out operations on an actuator or other
+object such as a list, file, queue, circular buffer, printer or display.</p>
+<dl class="docutils">
+<dt>Functions in the module:</dt>
+<dd><ol class="first last arabic simple">
+<li>sink_element</li>
+<li>sink</li>
+<li>stream_to_list</li>
+<li>stream_to_file</li>
+<li>stream_to_queue</li>
+<li>stream_to_buffer</li>
+<li>sink_window</li>
+<li>sink_list</li>
+<li>sink_list_f</li>
+</ol>
+</dd>
+<dt>Agents:</dt>
+<dd><ol class="first last arabic simple">
+<li>sink_element is the agent used by sink.</li>
+</ol>
+</dd>
+<dt>Sink functions:</dt>
+<dd><ol class="first last arabic simple">
+<li>sink has input arguments: function, input stream, state, and
+positional and keyword arguments. It applies the function to
+each element of the input stream. Typically, this function has
+the side effect of modifying some object such as an actuator.</li>
+<li>stream_to_list has input arguments: function, input stream,
+target list and state. It applies the function to each element
+of the input stream and puts the result of the function call on
+the target list.</li>
+<li>stream_to_file: has arguments function, input stream, filename,
+and state. It applies the function to each element of the input
+stream and puts the result of the function call on the file
+called filename.</li>
+<li>stream_to_queue: has arguments function, input stream, queue,
+and state. It applies the function to each element of the input
+stream and puts the result of the function call on the queue.</li>
+</ol>
+</dd>
+<dt>Agents:</dt>
+<dd><ol class="first last arabic simple">
+<li>sink_element is the agent used by sink.</li>
+</ol>
+</dd>
+</dl>
+<p>Uses:
+stream_to_list, stream_to_file, stream_to_queue use sink.
+sink uses sink_element</p>
+<dl class="function">
+<dt id="sink.sink_element">
+<code class="descclassname">sink.</code><code class="descname">sink_element</code><span class="sig-paren">(</span><em>func</em>, <em>in_stream</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>This agent applies func to its single input stream. It has no output streams.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>func</strong> (<em>function</em>) – function from an element of the in_stream and args and kwargs
+to None (no return).</li>
+<li><strong>in_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single input stream of this agent</li>
+<li><strong>state</strong> (<em>object</em>) – The state of the agent</li>
+<li><strong>call_streams</strong> (<em>list of Stream</em>) – The list of call_streams. A new value in any stream in this
+list causes a state transition of this agent.</li>
+<li><strong>name</strong> (<em>Str</em>) – Name of the agent created by this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="sink.sink">
+<code class="descclassname">sink.</code><code class="descname">sink</code><span class="sig-paren">(</span><em>func</em>, <em>in_stream</em>, <em>state=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sink.stream_to_list">
+<code class="descclassname">sink.</code><code class="descname">stream_to_list</code><span class="sig-paren">(</span><em>in_stream</em>, <em>target_list</em>, <em>element_function=None</em>, <em>state=None</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sink.stream_to_file">
+<code class="descclassname">sink.</code><code class="descname">stream_to_file</code><span class="sig-paren">(</span><em>in_stream</em>, <em>filename</em>, <em>element_function=None</em>, <em>state=None</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sink.stream_to_queue">
+<code class="descclassname">sink.</code><code class="descname">stream_to_queue</code><span class="sig-paren">(</span><em>in_stream</em>, <em>queue</em>, <em>element_function=None</em>, <em>state=None</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sink.stream_to_buffer">
+<code class="descclassname">sink.</code><code class="descname">stream_to_buffer</code><span class="sig-paren">(</span><em>in_stream</em>, <em>target_buffer</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sink.sink_window">
+<code class="descclassname">sink.</code><code class="descname">sink_window</code><span class="sig-paren">(</span><em>func</em>, <em>in_stream</em>, <em>window_size</em>, <em>step_size=1</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>func</strong> (<em>function</em>) – function on a single element of the input stream that
+returns None and has a side effect such as writing a
+file or appending to a queue.</li>
+<li><strong>in_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single input stream of this agent
+(This function has no out_streams.)</li>
+<li><strong>window_size</strong> (<em>int</em>) – Positive integer. The size of the moving window</li>
+<li><strong>step_size</strong> (<em>int</em>) – Positive integer. The step size of the moving window</li>
+<li><strong>state</strong> (<em>object</em>) – The state of the agent</li>
+<li><strong>call_streams</strong> (<em>list of Stream</em>) – The list of call_streams. A new value in any stream in this
+list causes a state transition of this agent.</li>
+<li><strong>name</strong> (<em>Str</em>) – Name of the agent created by this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="sink.sink_list">
+<code class="descclassname">sink.</code><code class="descname">sink_list</code><span class="sig-paren">(</span><em>func</em>, <em>in_stream</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>This agent applies func to its single input stream. It has no output streams.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>func</strong> (<em>function</em>) – function from a list (a slice of the in_stream)  to None (no output).</li>
+<li><strong>in_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single input stream of this agent</li>
+<li><strong>state</strong> (<em>object</em>) – The state of the agent</li>
+<li><strong>call_streams</strong> (<em>list of Stream</em>) – The list of call_streams. A new value in any stream in this
+list causes a state transition of this agent.</li>
+<li><strong>name</strong> (<em>Str</em>) – Name of the agent created by this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="sink.sink_list_f">
+<code class="descclassname">sink.</code><code class="descname">sink_list_f</code><span class="sig-paren">(</span><em>func</em>, <em>in_stream</em>, <em>state=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-timed_agent">
+<span id="timed-agent"></span><h1>Timed Agent</h1>
+<p>This module has timed_zip and timed_window which are described
+in the manual documentation.</p>
+<dl class="function">
+<dt id="timed_agent.timed_zip_agent">
+<code class="descclassname">timed_agent.</code><code class="descname">timed_zip_agent</code><span class="sig-paren">(</span><em>in_streams</em>, <em>out_stream</em>, <em>call_streams=None</em>, <em>name=None</em><span class="sig-paren">)</span></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>in_streams</strong> (<em>list of Stream</em>) – The list of input streams of the agent</li>
+<li><strong>out_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single output stream of the agent</li>
+<li><strong>call_streams</strong> (<em>list of Stream</em>) – The list of call_streams. A new value in any stream in this
+list causes a state transition of this agent.</li>
+<li><strong>name</strong> (<em>Str</em>) – Name of the agent created by this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Each stream in in_streams must be a stream of tuples or lists
+or NumPy arrays where element[0] is a time and where time is
+a total order. Each stream in in_stream must be strictly
+monotonically increasing in time.</p>
+<p>out_stream merges the in_streams in order of time. An element
+of out_stream is a list where element[0] is a time T and
+element[1] is a list consisting of all elements of in in_streams
+that have time T.</p>
+<p class="rubric">Examples</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="timed_agent.timed_zip">
+<code class="descclassname">timed_agent.</code><code class="descname">timed_zip</code><span class="sig-paren">(</span><em>list_of_streams</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="timed_agent.timed_window">
+<code class="descclassname">timed_agent.</code><code class="descname">timed_window</code><span class="sig-paren">(</span><em>func</em>, <em>in_stream</em>, <em>out_stream</em>, <em>window_duration</em>, <em>step_time</em>, <em>window_start_time=0</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name=None</em>, <em>args=[]</em>, <em>kwargs={}</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="timed_agent.timed_window_function">
+<code class="descclassname">timed_agent.</code><code class="descname">timed_window_function</code><span class="sig-paren">(</span><em>func</em>, <em>in_stream</em>, <em>window_duration</em>, <em>step_time</em>, <em>state=None</em>, <em>args=[]</em>, <em>kwargs={}</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="timed_agent.test_timed_zip_agents">
+<code class="descclassname">timed_agent.</code><code class="descname">test_timed_zip_agents</code><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="timed_agent.test_timed_window">
+<code class="descclassname">timed_agent.</code><code class="descname">test_timed_window</code><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-op">
+<span id="op"></span><h1>Op</h1>
+<p>This module consists of functions that operate on a single input stream
+to produce a single output stream. These stream-functions encapsulate
+functions that operate on standard data types such as integers.</p>
+<dl class="docutils">
+<dt>Functions in the module:</dt>
+<dd><ol class="first last arabic simple">
+<li>map_element</li>
+<li>filter_element</li>
+<li>map_list</li>
+<li>map_window</li>
+<li>map_window_list</li>
+<li>timed_window</li>
+</ol>
+</dd>
+<dt>In addition functions that return streams are:</dt>
+<dd>map_element_f (version of map_element)
+filter_element_f (version of filter_element)
+map_window_f (version of map_window)
+map_list_f (version of map_list)
+map_array_f (stream array version of map_list)
+timed_window_f (version of timed_window)</dd>
+</dl>
+<dl class="function">
+<dt id="op.map_element">
+<code class="descclassname">op.</code><code class="descname">map_element</code><span class="sig-paren">(</span><em>func</em>, <em>in_stream</em>, <em>out_stream</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>This agent maps the function func from its single input stream to its
+single output stream.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>func</strong> (<em>function</em>) – function from an element of the in_stream to an element of the out_stream.</li>
+<li><strong>in_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a><em> or </em><a class="reference internal" href="#stream.StreamArray" title="stream.StreamArray"><em>StreamArray</em></a>) – The single input stream of this agent</li>
+<li><strong>out_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a><em> or </em><a class="reference internal" href="#stream.StreamArray" title="stream.StreamArray"><em>StreamArray</em></a>) – The single output stream of the agent</li>
+<li><strong>state</strong> (<em>object</em>) – The state of the agent</li>
+<li><strong>call_streams</strong> (<em>list of Stream</em>) – The list of call_streams. A new value in any stream in this
+list causes a state transition of this agent.</li>
+<li><strong>name</strong> (<em>Str</em>) – Name of the agent created by this function.</li>
+<li><strong>**kwargs</strong> (<em>*args</em><em>,</em>) – <p>Positional and keyword parameters, if any, for func.</p>
+</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<div><ul class="simple">
+<li>Agent</li>
+<li>check_map_agent_arguments</li>
+<li>check_num_args_in_func</li>
+</ul>
+</div></blockquote>
+<blockquote>
+<div>map_element_f</div></blockquote>
+<p class="rubric">Examples</p>
+<p>With
+map_element(func=lambda x:2*x, in_stream=u, out_stream=v)
+then:</p>
+<blockquote>
+<div>v[i] = 2*u[i], for all i in streams u, v</div></blockquote>
+<p>With
+def f(x, state): return 2*x+state, state+10
+map_element(func=f, in_stream=u, out_stream=v, state=0)
+then:</p>
+<blockquote>
+<div>state[i] = 10*i
+v[i] = 2*u[i] + state[i]</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="op.filter_element">
+<code class="descclassname">op.</code><code class="descname">filter_element</code><span class="sig-paren">(</span><em>func</em>, <em>in_stream</em>, <em>out_stream</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>This agent uses the boolean function func to filter its single input stream
+to produce a single output stream.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>func</strong> (<em>function</em>) – function from an element of the in_stream to Boolean.</li>
+<li><strong>in_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single input stream of this agent</li>
+<li><strong>out_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single output stream of the agent</li>
+<li><strong>state</strong> (<em>object</em>) – The state of the agent</li>
+<li><strong>call_streams</strong> (<em>list of Stream</em>) – The list of call_streams. A new value in any stream in this
+list causes a state transition of this agent.</li>
+<li><strong>name</strong> (<em>Str</em>) – Name of the agent created by this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<div><ul class="simple">
+<li>Agent</li>
+<li>check_map_agent_arguments</li>
+<li>check_num_args_in_func</li>
+</ul>
+</div></blockquote>
+<blockquote>
+<div>filter_element_f</div></blockquote>
+<p class="rubric">Example</p>
+<p>With
+filter_element(func=lambda x: x % 2, in_stream=u, out_stream=v)
+then:</p>
+<blockquote>
+<div>stream v consists of the elements of stream u that are odd.
+The even elements are filtered out.</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="op.map_list">
+<code class="descclassname">op.</code><code class="descname">map_list</code><span class="sig-paren">(</span><em>func</em>, <em>in_stream</em>, <em>out_stream</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>This is the same as map_element except that in map_list
+func is from a list to a list whereas in map_element
+func is from an element to an element.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>func</strong> (<em>function</em>) – function from a list (a slice of the in_stream) to
+a list (a slice of the out_stream).</li>
+<li><strong>in_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single input stream of this agent</li>
+<li><strong>out_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single output streams of the agent</li>
+<li><strong>state</strong> (<em>object</em>) – The state of the agent</li>
+<li><strong>call_streams</strong> (<em>list of Stream</em>) – The list of call_streams. A new value in any stream in this
+list causes a state transition of this agent.</li>
+<li><strong>name</strong> (<em>str</em>) – Name of the agent created by this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="op.map_window">
+<code class="descclassname">op.</code><code class="descname">map_window</code><span class="sig-paren">(</span><em>func</em>, <em>in_stream</em>, <em>out_stream</em>, <em>window_size</em>, <em>step_size=1</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>func</strong> (<em>function</em>) – function from a single element of the input stream to a
+single element of the output stream</li>
+<li><strong>in_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single input stream of this agent</li>
+<li><strong>out_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single output streams of the agent</li>
+<li><strong>window_size</strong> (<em>int</em>) – Positive integer. The size of the moving window</li>
+<li><strong>step_size</strong> (<em>int</em>) – Positive integer. The step size of the moving window</li>
+<li><strong>state</strong> (<em>object</em>) – The state of the agent</li>
+<li><strong>call_streams</strong> (<em>list of Stream</em>) – The list of call_streams. A new value in any stream in this
+list causes a state transition of this agent.</li>
+<li><strong>name</strong> (<em>Str</em>) – Name of the agent created by this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="op.map_window_list">
+<code class="descclassname">op.</code><code class="descname">map_window_list</code><span class="sig-paren">(</span><em>func</em>, <em>in_stream</em>, <em>out_stream</em>, <em>window_size</em>, <em>step_size=1</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>Same as map_window except that func in map_window_list returns a list
+and the out_stream is extended (not appended) with the list.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="op.timed_window">
+<code class="descclassname">op.</code><code class="descname">timed_window</code><span class="sig-paren">(</span><em>func</em>, <em>in_stream</em>, <em>out_stream</em>, <em>window_duration</em>, <em>step_time</em>, <em>window_start_time=0</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>func</strong> (<em>function</em>) – function from a window (list) of timed elements
+of the input timed stream to a single timed
+element of the output stream</li>
+<li><strong>in_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single timed input stream</li>
+<li><strong>out_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single timed output stream</li>
+<li><strong>window_duration</strong> (<em>number</em><em> (</em><em>int</em><em> or </em><em>float</em><em>)</em>) – The duration, in units of time, of this window</li>
+<li><strong>step_time</strong> (<em>number</em><em> (</em><em>int</em><em> or </em><em>float</em><em>)</em>) – The length of time that the window is moved forward
+at each step.</li>
+<li><strong>state</strong> (<em>object</em>) – The state of the agent</li>
+<li><strong>call_streams</strong> (<em>list of Stream</em>) – The list of call_streams. A new value in any stream in this
+list causes a state transition of this agent.</li>
+<li><strong>name</strong> (<em>Str</em>) – Name of the agent created by this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-multi">
+<span id="multi"></span><h1>Multi</h1>
+<dl class="function">
+<dt id="multi.multi_element">
+<code class="descclassname">multi.</code><code class="descname">multi_element</code><span class="sig-paren">(</span><em>func</em>, <em>in_streams</em>, <em>out_streams</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>func</strong> (<em>function</em>) – function from an input list and args and kwargs to
+an output list</li>
+<li><strong>in_streams</strong> (<em>list of Stream</em>) – The input streams of the agent</li>
+<li><strong>out_streams</strong> (<em>list of Stream</em>) – The output streams of the agent</li>
+<li><strong>state</strong> (<em>object</em>) – The state of the agent</li>
+<li><strong>call_streams</strong> (<em>list of Stream</em>) – The list of call_stream. A new value in any stream in this
+list causes a state transition of this agent.</li>
+<li><strong>name</strong> (<em>str</em>) – Name of the agent created by this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="multi.multi_element_f">
+<code class="descclassname">multi.</code><code class="descname">multi_element_f</code><span class="sig-paren">(</span><em>func</em>, <em>in_streams</em>, <em>num_out_streams</em>, <em>state=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="multi.multi_list">
+<code class="descclassname">multi.</code><code class="descname">multi_list</code><span class="sig-paren">(</span><em>func</em>, <em>in_streams</em>, <em>out_streams</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>func</strong> (<em>function</em>) – function from an input list to an output list</li>
+<li><strong>in_streams</strong> (<em>list of Stream</em>) – The input streams of the agent</li>
+<li><strong>out_streams</strong> (<em>list of Stream</em>) – The output streams of the agent</li>
+<li><strong>state</strong> (<em>object</em>) – The state of the agent</li>
+<li><strong>call_streams</strong> (<em>list of Stream</em>) – The list of call_stream. A new value in any stream in this
+list causes a state transition of this agent.</li>
+<li><strong>name</strong> (<em>Str</em>) – Name of the agent created by this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="multi.multi_list_f">
+<code class="descclassname">multi.</code><code class="descname">multi_list_f</code><span class="sig-paren">(</span><em>func</em>, <em>in_streams</em>, <em>num_out_streams</em>, <em>state=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="multi.multi_window">
+<code class="descclassname">multi.</code><code class="descname">multi_window</code><span class="sig-paren">(</span><em>func</em>, <em>in_streams</em>, <em>out_streams</em>, <em>window_size</em>, <em>step_size</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>func</strong> (<em>function</em>) – function from a list of windows with one window for each input stream
+to an output list containing a single element for each output stream.</li>
+<li><strong>in_streams</strong> (<em>list of Stream</em>) – The list of input streams of the agent</li>
+<li><strong>out_streams</strong> (<em>list of Stream</em>) – The list of output streams of the agent</li>
+<li><strong>window_size</strong> (<em>int</em>) – Positive integer. The size of the moving window</li>
+<li><strong>step_size</strong> (<em>int</em>) – Positive integer. The step size of the moving window</li>
+<li><strong>state</strong> (<em>object</em>) – The state of the agent</li>
+<li><strong>call_streams</strong> (<em>list of Stream</em>) – The list of call_streams. A new value in any stream in this
+list causes a state transition of this agent.</li>
+<li><strong>name</strong> (<em>Str</em>) – Name of the agent created by this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="multi.multi_window_f">
+<code class="descclassname">multi.</code><code class="descname">multi_window_f</code><span class="sig-paren">(</span><em>func</em>, <em>in_streams</em>, <em>num_out_streams</em>, <em>window_size</em>, <em>step_size</em>, <em>state=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-merge">
+<span id="merge"></span><h1>Merge</h1>
+<p>This module consists of functions that merge multiple input streams
+into a single output stream.</p>
+<dl class="docutils">
+<dt>Functions in the module:</dt>
+<dd><ol class="first arabic simple">
+<li>zip_map ———-</li>
+<li>zip_map_f</li>
+<li>zip_stream ———-</li>
+<li>zip_stream_f</li>
+<li>merge_asynch ———-</li>
+</ol>
+<p class="last">6. merge_asynch_f
+5. mix ———-
+6. mix_f
+7. blend ———-
+8. blend_f
+9. merge_window ———-
+10. merge_window_f
+11. merge_list
+12. merge_list_f
+13. timed_zip ———-
+14. timed_zip_f
+15. timed_mix ———–
+16. timed_mix_f</p>
+</dd>
+</dl>
+<p>The output stream of a merge agent is declared before calling the
+agent whereas the merge functions return the output stream.</p>
+<dl class="docutils">
+<dt>Agents:</dt>
+<dd>1. merge_element is the agent used by zip_stream and zip_map.
+This agent zips its input streams and then executes a function
+on the zipped stream to produce a single output stream.
+The merge function operates on a list (one element per input stream)
+to produce a single elemnt of the output stream.
+2. merge_asynch is the agent used by mix. It puts elements that
+appear in its input streams, in the order in which they appear, on
+its output stream.
+3. blend is the agent used by blend_f. It is merge_asynch
+followed by a map.
+4. merge_window has the same structure as merge_element except that
+a window on each of the input streams is merged into a single
+element of the output stream (whereas in merge_element a single
+element — not a window — from each input stream is merged to
+form a single element of the output stream). The function in
+merge_window operates on a list of windows, i.e. a list of lists,
+with one window per input stream, to produce a single element of
+the output stream. The sizes of all windows are the same and all
+window step sizes are the same.
+5. merge_list is similar to merge_element except that the merge
+function is a function from a list of lists (one list per input
+stream) to a single list (for the output stream).
+6. timed_zip zips timed streams to produce a timed output stream.
+The elements of the output stream are pairs (t, lst) where lst is
+a list of elements, one from each input stream, where each element
+has timestamp t.</dd>
+<dt>Merge functions:</dt>
+<dd><ol class="first arabic simple">
+<li>zip_stream is similar to zip in Python except that it operates on
+streams rather than lists. It is the function version of merge_element</li>
+<li>zip_map is map_stream(zip_stream()), i.e., first zip then map the
+result. This is the same as merge_element_f, and I use the
+name zip_map because it’s more appropriate.</li>
+<li>mix is an asynchronous merge of the input streams. The elements of the
+output stream identify the input streams that generated the
+elements.</li>
+</ol>
+<p class="last">4. blend_f is an asynch merge followed by a map. It is a functional
+version of blend.
+5. merge_window_f is the functional form of the merge_window agent.
+6. merge_list_f is the functional form of the merge_list agent.
+7. timed_zip_f is the functional form of timed_zip.</p>
+</dd>
+</dl>
+<dl class="function">
+<dt id="merge.zip_map">
+<code class="descclassname">merge.</code><code class="descname">zip_map</code><span class="sig-paren">(</span><em>func</em>, <em>in_streams</em>, <em>out_stream</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name='zip_map'</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>func</strong> (<em>function</em>) – function from a list (and possibly state,
+args and kwargs) to a single element of
+the output stream. The list has one element
+from each input stream.</li>
+<li><strong>in_streams</strong> (<em>list of Stream</em>) – The list of input streams of the agent</li>
+<li><strong>out_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single output stream of the agent</li>
+<li><strong>state</strong> (<em>object</em>) – The state of the agent</li>
+<li><strong>call_streams</strong> (<em>list of Stream</em>) – The list of call_streams. A new value in any stream in this
+list causes a state transition of this agent.</li>
+<li><strong>name</strong> (<em>str</em>) – Name of the agent created by this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="merge.zip_map_f">
+<code class="descclassname">merge.</code><code class="descname">zip_map_f</code><span class="sig-paren">(</span><em>func</em>, <em>in_streams</em>, <em>state=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>zip_map returns out_stream, a stream obtained by applying function,
+with the specified state, args and kwargs, to the elements
+obtained by zipping the input streams.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>in_streams</strong> (<em>list of Stream</em>) – The list of input streams that are zipped</li>
+<li><strong>state</strong> (<em>object</em>) – function operates on a state, args, and kwargs</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>out_stream</strong> – The output stream generated by zip_map</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#stream.Stream" title="stream.Stream">Stream</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<div><ul class="simple">
+<li>merge_element</li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="merge.zip_stream">
+<code class="descclassname">merge.</code><code class="descname">zip_stream</code><span class="sig-paren">(</span><em>in_streams</em>, <em>out_stream</em><span class="sig-paren">)</span></dt>
+<dd><p>zip_stream returns out_stream, a stream obtained by zipping the
+input streams. zip_stream is similar to zip.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>in_streams</strong> (<em>list of Stream</em>) – The list of input streams that are zipped</li>
+<li><strong>state</strong> (<em>object</em>) – function operates on a state, args, and kwargs</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>out_stream</strong> – The output stream generated by zip_stream</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#stream.Stream" title="stream.Stream">Stream</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<div><ul class="simple">
+<li>merge_element</li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="merge.zip_stream_f">
+<code class="descclassname">merge.</code><code class="descname">zip_stream_f</code><span class="sig-paren">(</span><em>in_streams</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="merge.merge_asynch">
+<code class="descclassname">merge.</code><code class="descname">merge_asynch</code><span class="sig-paren">(</span><em>func</em>, <em>in_streams</em>, <em>out_stream</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name='merge_asynch'</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>func</strong> (<em>function</em>) – function from a pair (i, v) where i is the
+index into a stream in the list in_streams,
+and v is an element in that stream. The
+function returns an element of the output
+stream.</li>
+<li><strong>in_streams</strong> (<em>list of Stream</em>) – The list of input streams of the agent</li>
+<li><strong>out_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single output stream of the agent</li>
+<li><strong>state</strong> (<em>object</em>) – The state of the agent</li>
+<li><strong>call_streams</strong> (<em>list of Stream</em>) – The list of call_streams. A new value in any stream in this
+list causes a state transition of this agent.</li>
+<li><strong>name</strong> (<em>str</em>) – Name of the agent created by this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="merge.merge_asynch_f">
+<code class="descclassname">merge.</code><code class="descname">merge_asynch_f</code><span class="sig-paren">(</span><em>func</em>, <em>in_streams</em>, <em>state=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="merge.mix">
+<code class="descclassname">merge.</code><code class="descname">mix</code><span class="sig-paren">(</span><em>in_streams</em>, <em>out_stream</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="merge.mix_f">
+<code class="descclassname">merge.</code><code class="descname">mix_f</code><span class="sig-paren">(</span><em>in_streams</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="merge.blend">
+<code class="descclassname">merge.</code><code class="descname">blend</code><span class="sig-paren">(</span><em>func</em>, <em>in_streams</em>, <em>out_stream</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name='blend'</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><blockquote>
+<div>Parameters</div></blockquote>
+<blockquote>
+<div><dl class="docutils">
+<dt>func: function</dt>
+<dd>function from an input list and args and kwargs to
+an output list</dd>
+<dt>in_streams: list of Stream</dt>
+<dd>The list of input streams of the agent</dd>
+<dt>out_stream: Stream</dt>
+<dd>The single output stream of the agent</dd>
+<dt>state: object</dt>
+<dd>The state of the agent</dd>
+<dt>call_streams: list of Stream</dt>
+<dd>The list of call_streams. A new value in any stream in this
+list causes a state transition of this agent.</dd>
+<dt>name: str</dt>
+<dd>Name of the agent created by this function.</dd>
+</dl>
+</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">The agent created by this function.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">Agent.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="merge.blend_f">
+<code class="descclassname">merge.</code><code class="descname">blend_f</code><span class="sig-paren">(</span><em>func</em>, <em>in_streams</em>, <em>state=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="merge.merge_window">
+<code class="descclassname">merge.</code><code class="descname">merge_window</code><span class="sig-paren">(</span><em>func</em>, <em>in_streams</em>, <em>out_stream</em>, <em>window_size</em>, <em>step_size</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name='merge_window'</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>func</strong> (<em>function</em>) – function from a list of windows with one window per input stream
+to a single element of the output stream.</li>
+<li><strong>in_streams</strong> (<em>list of Stream</em>) – The list of input streams of the agent</li>
+<li><strong>out_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single output streams of the agent</li>
+<li><strong>window_size</strong> (<em>int</em>) – Positive integer. The size of the moving window</li>
+<li><strong>step_size</strong> (<em>int</em>) – Positive integer. The step size of the moving window</li>
+<li><strong>state</strong> (<em>object</em>) – The state of the agent</li>
+<li><strong>call_streams</strong> (<em>list of Stream</em>) – The list of call_streams. A new value in any stream in this
+list causes a state transition of this agent.</li>
+<li><strong>name</strong> (<em>Str</em>) – Name of the agent created by this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="merge.merge_window_f">
+<code class="descclassname">merge.</code><code class="descname">merge_window_f</code><span class="sig-paren">(</span><em>func</em>, <em>in_streams</em>, <em>window_size</em>, <em>step_size</em>, <em>state=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="merge.merge_list">
+<code class="descclassname">merge.</code><code class="descname">merge_list</code><span class="sig-paren">(</span><em>func</em>, <em>in_streams</em>, <em>out_stream</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>func</strong> (<em>function</em>) – function from a list of lists (one list per input stream) to an output list</li>
+<li><strong>in_streams</strong> (<em>list of Stream</em>) – The list of input streams of the agent</li>
+<li><strong>out_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single output stream of the agent</li>
+<li><strong>state</strong> (<em>object</em>) – The state of the agent</li>
+<li><strong>call_streams</strong> (<em>list of Stream</em>) – The list of call_streams. A new value in any stream in this
+list causes a state transition of this agent.</li>
+<li><strong>name</strong> (<em>Str</em>) – Name of the agent created by this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="merge.merge_list_f">
+<code class="descclassname">merge.</code><code class="descname">merge_list_f</code><span class="sig-paren">(</span><em>func</em>, <em>in_streams</em>, <em>state=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="merge.timed_zip">
+<code class="descclassname">merge.</code><code class="descname">timed_zip</code><span class="sig-paren">(</span><em>in_streams</em>, <em>out_stream</em>, <em>call_streams=None</em>, <em>name=None</em><span class="sig-paren">)</span></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>in_streams</strong> (<em>list of Stream</em>) – The list of input streams of the agent</li>
+<li><strong>out_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single output stream of the agent</li>
+<li><strong>call_streams</strong> (<em>list of Stream</em>) – The list of call_streams. A new value in any stream in this
+list causes a state transition of this agent.</li>
+<li><strong>name</strong> (<em>Str</em>) – Name of the agent created by this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Each stream in in_streams must be a stream of tuples or lists
+or NumPy arrays where element[0] is a time and where time is
+a total order. Each stream in in_stream must be strictly
+monotonically increasing in time.</p>
+<p>out_stream merges the in_streams in order of time. An element
+of out_stream is a list where element[0] is a time T and
+element[1] is a list consisting of all elements of in in_streams
+that have time T.</p>
+<p class="rubric">Examples</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="merge.timed_zip_f">
+<code class="descclassname">merge.</code><code class="descname">timed_zip_f</code><span class="sig-paren">(</span><em>list_of_streams</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="merge.timed_mix">
+<code class="descclassname">merge.</code><code class="descname">timed_mix</code><span class="sig-paren">(</span><em>in_streams</em>, <em>out_stream</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="merge.timed_mix_f">
+<code class="descclassname">merge.</code><code class="descname">timed_mix_f</code><span class="sig-paren">(</span><em>in_streams</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-split">
+<span id="split"></span><h1>Split</h1>
+<p>This module consists of functions that split a single input stream
+into multiple output streams.</p>
+<dl class="docutils">
+<dt>Functions in the module:</dt>
+<dd><ol class="first last arabic simple">
+<li>split_element</li>
+<li>split_element_f</li>
+<li>separate</li>
+<li>separate_f</li>
+<li>unzip</li>
+<li>unzip_f</li>
+<li>timed_unzip</li>
+<li>timed_unzip_f</li>
+<li>split_list</li>
+<li>split_list_f</li>
+<li>split_window</li>
+<li>split_window_f</li>
+</ol>
+</dd>
+<dt>Split functions:</dt>
+<dd><ol class="first last arabic simple">
+<li>split_element_f: a function returns a list with each element placed
+in a different stream.</li>
+<li>separate_f: separate_f is the inverse of mix (see merge.py). The
+elements of the input stream are pairs (i, v) and the value v is
+placed on the i-th output stream.</li>
+<li>unzip_f: unzip_f is the inverse of zip_stream (see
+merge.py). The elements of the input stream are lists and the
+i-th element of the list is placed on the i-th output stream.</li>
+<li>timed_unzip_f:</li>
+<li>split_list_f: function version of list split.</li>
+<li>split_window_f</li>
+</ol>
+</dd>
+<dt>Agents:</dt>
+<dd><ol class="first last arabic simple">
+<li>split_element: agent used by split_element_f</li>
+<li>separate: agent used by separate_f</li>
+<li>unzip: not used by any function in this module. It is
+retained only for backward compatibility.</li>
+<li>timed_unzip</li>
+<li>split_list</li>
+<li>split_window</li>
+</ol>
+</dd>
+</dl>
+<dl class="function">
+<dt id="split.split_element">
+<code class="descclassname">split.</code><code class="descname">split_element</code><span class="sig-paren">(</span><em>func</em>, <em>in_stream</em>, <em>out_streams</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>func</strong> (<em>function</em>) – function from an input list and possibly state, args, kwargs
+to an output list. Length of output list must be length of
+out_streams.</li>
+<li><strong>in_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single input stream of the agent</li>
+<li><strong>out_streams</strong> (<em>list of Stream</em>) – The list of output streams of the agent</li>
+<li><strong>state</strong> (<em>object</em>) – The state of the agent</li>
+<li><strong>call_streams</strong> (<em>list of Stream</em>) – The list of call_streams. A new value in any stream in this
+list causes a state transition of this agent.</li>
+<li><strong>name</strong> (<em>str</em>) – Name of the agent created by this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>func returns a list and the j-th element of the list is appended to a
+the j-th out_stream</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="split.split_element_f">
+<code class="descclassname">split.</code><code class="descname">split_element_f</code><span class="sig-paren">(</span><em>function</em>, <em>in_stream</em>, <em>num_out_streams</em>, <em>state=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>split_element_f returns out_streams, a list of num_out_streams
+streams.  The function, with the specified state, args and kwargs,
+is applied to the elements of the input stream. The return value
+of the function must be a list of length num_out_streams. The i-th
+value of the returned list is placed in the i-th output stream.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>in_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The stream that will be split</li>
+<li><strong>num_out_streams</strong> (<em>int</em>) – The number of output streams.</li>
+<li><strong>state</strong> (<em>object</em>) – function operates on a state, args, and kwargs</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>out_streams</strong> – The output streams generated by split_element_f</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">List of Stream</p>
+</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<div><ul class="simple">
+<li>split_element</li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="split.separate">
+<code class="descclassname">split.</code><code class="descname">separate</code><span class="sig-paren">(</span><em>in_stream</em>, <em>out_streams</em>, <em>name=None</em><span class="sig-paren">)</span></dt>
+<dd><p>separate is the inverse of mix (see merge.py). Each
+element of the input stream is a pair (j, v).
+The value v is placed on the j-th output stream.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>in_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single input stream of the agent</li>
+<li><strong>out_streams</strong> (<em>list of Stream</em>) – The list of output streams of the agent</li>
+<li><strong>name</strong> (<em>str</em>) – Name of the agent created by this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="split.separate_f">
+<code class="descclassname">split.</code><code class="descname">separate_f</code><span class="sig-paren">(</span><em>in_stream</em>, <em>num_out_streams</em><span class="sig-paren">)</span></dt>
+<dd><p>separate_f returns out_streams, a list of num_out_streams
+streams. separate_f is the inverse of mix (see merge.py). The
+elements of the input stream are pairs (i, v) and the value v is
+placed on the i-th output stream.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>in_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The stream that will be split</li>
+<li><strong>num_out_streams</strong> (<em>int</em>) – The number of output streams.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>out_streams</strong> – The output streams generated by split_element_f</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">List of Stream</p>
+</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<div><ul class="simple">
+<li>separate</li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="split.unzip">
+<code class="descclassname">split.</code><code class="descname">unzip</code><span class="sig-paren">(</span><em>in_stream</em>, <em>out_streams</em>, <em>name=None</em><span class="sig-paren">)</span></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>in_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single input stream of the agent</li>
+<li><strong>out_streams</strong> (<em>list of Stream</em>) – The list of output streams of the agent</li>
+<li><strong>name</strong> (<em>str</em>) – Name of the agent created by this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<div>split_element</div></blockquote>
+<p>Each element of in_stream is a list; the j-th element in this list
+is placed in the j-th output stream.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="split.unzip_f">
+<code class="descclassname">split.</code><code class="descname">unzip_f</code><span class="sig-paren">(</span><em>in_stream</em>, <em>num_out_streams</em><span class="sig-paren">)</span></dt>
+<dd><p>unzip_f returns out_streams, a list of num_out_streams
+streams. unzip_f is the inverse of zip_stream (see
+merge.py). The elements of the input stream are lists of length
+num_out_streams and the i-th element of the list is placed on the
+i-th output stream.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>in_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The stream that will be split</li>
+<li><strong>num_out_streams</strong> (<em>int</em>) – The number of output streams.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>out_streams</strong> – The output streams generated by split_element_f</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">List of Stream</p>
+</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<div><ul class="simple">
+<li>unzip</li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="split.timed_unzip">
+<code class="descclassname">split.</code><code class="descname">timed_unzip</code><span class="sig-paren">(</span><em>in_stream</em>, <em>out_streams</em><span class="sig-paren">)</span></dt>
+<dd><p>timed_unzip unzips the elements of in_stream into each stream
+in out_streams. timed_unzip is the inverse of timed_zip (see
+merge.py). The elements of the input stream are pairs (t, v) where
+v is a list of length num_out_streams. The i-th element of the
+list, with the timestamp t is placed on the i-th output stream if
+and only if v is not None.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>in_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The stream that will be split</li>
+<li><strong>out_streams</strong> (<em>list of Stream</em>) – The list of output streams.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#module-agent" title="agent">agent</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<div><ul class="simple">
+<li>split_element</li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="split.timed_unzip_f">
+<code class="descclassname">split.</code><code class="descname">timed_unzip_f</code><span class="sig-paren">(</span><em>in_stream</em>, <em>num_out_streams</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="split.split_list">
+<code class="descclassname">split.</code><code class="descname">split_list</code><span class="sig-paren">(</span><em>func</em>, <em>in_stream</em>, <em>out_streams</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name='split_list'</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>func</strong> (<em>function</em>) – <dl class="docutils">
+<dt>function from an input list to a list of lists (one</dt>
+<dd>list per output stream).</dd>
+</dl>
+</li>
+<li><strong>in_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single input stream of the agent</li>
+<li><strong>out_streams</strong> (<em>list of Stream</em>) – The list of output streams of the agent</li>
+<li><strong>state</strong> (<em>object</em>) – The state of the agent</li>
+<li><strong>call_streams</strong> (<em>list of Stream</em>) – The list of call_streams. A new value in any stream in this
+list causes a state transition of this agent.</li>
+<li><strong>name</strong> (<em>Str</em>) – Name of the agent created by this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="split.split_list_f">
+<code class="descclassname">split.</code><code class="descname">split_list_f</code><span class="sig-paren">(</span><em>func</em>, <em>in_stream</em>, <em>num_out_streams</em>, <em>state=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="split.split_window">
+<code class="descclassname">split.</code><code class="descname">split_window</code><span class="sig-paren">(</span><em>func</em>, <em>in_stream</em>, <em>out_streams</em>, <em>window_size</em>, <em>step_size</em>, <em>state=None</em>, <em>call_streams=None</em>, <em>name='split_window'</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>func</strong> (<em>function</em>) – function from a window to a list containing a single
+element for each output stream.</li>
+<li><strong>in_stream</strong> (<a class="reference internal" href="#stream.Stream" title="stream.Stream"><em>Stream</em></a>) – The single input stream of the agent</li>
+<li><strong>out_streams</strong> (<em>list of Stream</em>) – The list of output streams of the agent</li>
+<li><strong>window_size</strong> (<em>int</em>) – Positive integer. The size of the moving window</li>
+<li><strong>step_size</strong> (<em>int</em>) – Positive integer. The step size of the moving window</li>
+<li><strong>state</strong> (<em>object</em>) – The state of the agent</li>
+<li><strong>call_streams</strong> (<em>list of Stream</em>) – The list of call_streams. A new value in any stream in this
+list causes a state transition of this agent.</li>
+<li><strong>name</strong> (<em>Str</em>) – Name of the agent created by this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The agent created by this function.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Agent.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="split.split_window_f">
+<code class="descclassname">split.</code><code class="descname">split_window_f</code><span class="sig-paren">(</span><em>func</em>, <em>in_stream</em>, <em>window_size</em>, <em>step_size</em>, <em>state=None</em>, <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="multiprocessing">
+<h1>Multiprocessing</h1>
+<p>The following modules are all in FINAL/multiprocessing.</p>
+</div>
+<div class="section" id="module-Component">
+<span id="component"></span><h1>Component</h1>
+<dl class="function">
+<dt id="Component.connect_outputs">
+<code class="descclassname">Component.</code><code class="descname">connect_outputs</code><span class="sig-paren">(</span><em>out_streams</em>, <em>out_to_in</em><span class="sig-paren">)</span></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>out_streams</strong> (<em>list of Stream</em>) – list of out_streams</li>
+<li><strong>out_to_in</strong> (<em>dict</em>) – <dl class="docutils">
+<dt>key: str</dt>
+<dd>Name of an out_stream</dd>
+<dt>value: name_and_queue_list</dt>
+<dd>list of pairs where each pair is:
+(1) name: pickled object,<blockquote>
+<div>e.g. str: the name of the target stream,
+or
+e.g. pair (str, int) where str is the name
+of an array of target streams and int
+is an index into the array.</div></blockquote>
+<ol class="last arabic" start="2">
+<li><dl class="first docutils">
+<dt>queue: Queue. or multiprocessing.Queue</dt>
+<dd>The target queue</dd>
+</dl>
+</li>
+</ol>
+</dd>
+</dl>
+</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Creates an agent that does the following:
+for each element of each stream in out_to_in.keys(), the
+agent puts the tuple (stream name, element) on to each queue
+in name_and_queue_list.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="Component.connect">
+<code class="descclassname">Component.</code><code class="descname">connect</code><span class="sig-paren">(</span><em>in_queue</em>, <em>in_streams</em>, <em>out_streams</em>, <em>out_to_in</em>, <em>q_thread_name='connect_q_thread'</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="Component.target_of_make_process">
+<code class="descclassname">Component.</code><code class="descname">target_of_make_process</code><span class="sig-paren">(</span><em>func</em>, <em>in_queue</em>, <em>out_to_in</em>, <em>name</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="Component.make_process">
+<code class="descclassname">Component.</code><code class="descname">make_process</code><span class="sig-paren">(</span><em>func</em>, <em>in_queue</em>, <em>out_to_in</em>, <em>name='ComputeEngine in Process'</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="make-process">
+<h1>Make Process</h1>
+<dl class="class">
+<dt>
+<em class="property">class </em><code class="descclassname">Component.</code><code class="descname">make_process</code></dt>
+<dd></dd></dl>
+
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Juliette Xiong.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  false,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
