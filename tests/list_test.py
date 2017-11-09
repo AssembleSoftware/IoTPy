@@ -16,7 +16,7 @@ from stream import Stream, StreamArray
 from stream import _no_value, _multivalue
 from check_agent_parameter_types import *
 from recent_values import recent_values
-from sink import sink_list, sink_list_f
+from sink import sink_list
 from multi import *
 from op import *
 from split import split_list, split_list_f
@@ -90,9 +90,7 @@ def test_list():
     sink_agent = sink_list(
         func=sink_with_state, in_stream=x,
         name='sink_agent', state=out_list)
-    out_list_stream = []
-    # Function version of the previous agent example
-    sink_list_f(sink_with_state, x, out_list_stream)
+
     #-------------------------------------------------------------------
 
     #-------------------------------------------------------------------
@@ -153,7 +151,7 @@ def test_list():
     assert recent_values(z) == [0, 3, 6, 9, 12]
     assert recent_values(v) == []
     assert out_list == range(5)
-    assert out_list == out_list_stream
+
     assert recent_values(s) == []
     assert recent_values(r) == [1, 2, 3, 4, 5]
     assert recent_values(t) == [0, 2, 4, 6, 8]

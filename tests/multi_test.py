@@ -7,13 +7,17 @@ import os
 sys.path.append(os.path.abspath("../"))
 sys.path.append(os.path.abspath("../core"))
 sys.path.append(os.path.abspath("../agent_types"))
+sys.path.append(os.path.abspath("../helper_functions"))
+
 
 from agent import Agent
 from stream import Stream, StreamArray
 from stream import _no_value, _multivalue
-from helper_functions.check_agent_parameter_types import *
-from helper_functions.recent_values import recent_values
-from sink import sink_list, sink_list_f
+from check_agent_parameter_types import *
+from recent_values import *
+## from helper_functions.check_agent_parameter_types import *
+## from helper_functions.recent_values import recent_values
+from sink import sink_list
 from op import *
 from split import split_list, split_list_f
 from merge import merge_list, merge_list_f

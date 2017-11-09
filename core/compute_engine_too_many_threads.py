@@ -42,7 +42,8 @@ class ComputeEngine(object):
         self.name = name
         self.q_agents = Queue.Queue()
         self.scheduled_agents = set()
-        self.compute_thread = None
+        self.input_queue_to_stream_thread = None
+        self.execute_agents_thread = None
         self.started = False
         self.stopped = False
         self.lock = threading.Lock()
@@ -82,44 +83,43 @@ class ComputeEngine(object):
             return a
 
     def start(self):
-        def execute_computation():
-            self.ready.set()
+        self.ready.set()
+        def input_queue_to_stream_target():
             nnn = 0
             while not self.stopped:
-                input_queue_was_empty = False
                 try:
                     v = self.input_queue.get(timeout=0.5)
                     #v = self.input_queue.get()
-                except:
-                    input_queue_was_empty = True
-                    print 'input queue empty.'
-                    # Sleep for SLEEP_TIME seconds
-                    # Stop after LIMIT number of empty gets
-                    SLEEP_TIME = 0.5
-                    LIMIT = 5
-                    nnn += 1
-                    if nnn > LIMIT:
-                        self.stopped = True
-                    time.sleep(SLEEP_TIME)
-                if not input_queue_was_empty:
                     if v == 'closed':
                         self.stopped = True
                         break
                     out_stream_name, new_data_for_stream = v
                     out_stream = self.name_to_stream[out_stream_name]
+                    #out_stream.extend(new_data_for_stream)
                     out_stream.append(new_data_for_stream)
-                # Process the new data for this stream until all agents
-                # finish their work.
-                self.step()
-        self.compute_thread = threading.Thread(
-            target=execute_computation, args=())
-        self.compute_thread.start()
+                except:
+                    print 'no data in input queue', self.input_queue
+                    # Sleep for SLEEP_TIME seconds
+                    # Stop after LIMIT number of empty gets
+                    SLEEP_TIME = 0.1
+                    LIMIT = 2
+                    nnn += 1
+                    if nnn > LIMIT:
+                        self.stopped = True
+                    time.sleep(SLEEP_TIME)
+                #self.step()
+        self.input_queue_to_stream_thread = threading.Thread(
+            target=input_queue_to_stream_target, args=())
+        self.input_queue_to_stream_thread.start()
+        self.execute_agents_thread = self.make_execute_agents_thread()
+        self.execute_agents_thread.start()
     
     def stop(self):
         self.stopped = True
-        self.compute_thread.join()
+        self.input_queue_to_stream_thread.join()
     def join(self):
-        self.compute_thread.join()
+        self.input_queue_to_stream_thread.join()
+        self.execute_agents_thread.join()
 
     def step(self):
         while self.scheduled_agents:
@@ -127,7 +127,30 @@ class ComputeEngine(object):
             # This next discard is necessary!! Check.
             self.scheduled_agents.discard(a)
             a.next()
-        return
+
+    def make_execute_agents_thread(self):
+        def execute_agents_target():
+            # Same as step(self)
+            nnn = 0
+            LIMIT = 10
+            while nnn < LIMIT:
+                try:
+                    a = self.q_agents.get(timeout=0.5)
+                    # This next discard is necessary!! Check.
+                    self.scheduled_agents.discard(a)
+                    # Execute next transition of agent
+                    a.next()
+                except:
+                    print 'no data in execute_agents_queue', self.input_queue
+                    # Sleep for SLEEP_TIME seconds
+                    # Stop after LIMIT number of empty gets
+                    SLEEP_TIME = 1.0
+                    nnn += 1
+                    time.sleep(SLEEP_TIME)
+
+        return threading.Thread(
+            target=execute_agents_target, args=())
+
     
 # Creates one scheduler from compute_engine.py
 #scheduler = ComputeEngine()

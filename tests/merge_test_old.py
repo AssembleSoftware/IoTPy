@@ -15,12 +15,11 @@ from stream import Stream, StreamArray
 from stream import _no_value, _multivalue
 from check_agent_parameter_types import *
 from recent_values import recent_values
-from merge import *
+from merge_old import *
 from multi import *
-from op import timed_window, timed_window_f
 #--------------------------------------------------------
 #--------------------------------------------------------
-def test_some_merge_agents():
+def test_merge_agents():
     import numpy as np
     scheduler = Stream.scheduler
 
@@ -50,16 +49,17 @@ def test_some_merge_agents():
 
     #----------------------------------------------------
     # Define agents
-    d = zip_map(func=g, in_streams=[x,u], out_stream=s, name='d')
-    zipxu = zip_stream_f([x,u])
-    zip_map_xu = zip_map_f(sum, [x,u])
+    d = merge_element(func=g, in_streams=[x,u], out_stream=s, name='d')
+    
+    zipxu = zip_stream([x,u])
+    zip_map_xu = zip_map(sum, [x,u])
     zip_map_xu_merge = Stream('zip map xu merge')
-    zip_map(sum, [x,u], zip_map_xu_merge)
-    zip_map_g_args = zip_map_f(g_args, [x,u], multiplier=2)
-    dd = zip_map(
+    merge_element(sum, [x,u], zip_map_xu_merge)
+    zip_map_g_args = zip_map(g_args, [x,u], multiplier=2)
+    dd = merge_element(
         func=general_f, in_streams=[x,u], out_stream=t, name='dd', f=np.mean)
-    zip_map_ss = zip_map_f(np.mean, [x,u])
-    dddd = zip_map(
+    zip_map_ss = zip_map(np.mean, [x,u])
+    dddd = merge_element(
         func=fff, in_streams=[x,u], out_stream=v_stream, name='dddd', f=hhh,
         addend=10)
 
@@ -117,10 +117,11 @@ def test_some_merge_agents():
             return value*2
         else:
             raise Exception()
+
     
     merge_asynch(func=lambda v: v, in_streams=[x,y], out_stream=z)
     merge_asynch(func=g_asynch, in_streams=[x,y], out_stream=w)
-    mix_z = mix_f([x,y])
+    mix_z = mix([x,y])
     scheduler.step()
     assert recent_values(z) == []
     assert recent_values(mix_z) == []
@@ -325,15 +326,15 @@ def test_some_merge_agents():
 
 
     #----------------------------------------------------
-    # Test zip_map with StreamArray
+    # Test merge_element with StreamArray
     #----------------------------------------------------
     x = StreamArray('x')
     y = StreamArray('y')
     z = StreamArray('z', dimension=2)
     a = StreamArray('a')
 
-    zip_map(func=lambda v: v, in_streams=[x,y], out_stream=z)
-    zip_map(func=np.mean, in_streams=[x,y], out_stream=a)
+    merge_element(func=lambda v: v, in_streams=[x,y], out_stream=z)
+    merge_element(func=np.mean, in_streams=[x,y], out_stream=a)
 
     x.extend(np.linspace(0.0, 9.0, 10))
     scheduler.step()
@@ -521,49 +522,10 @@ def test_some_merge_agents():
     assert recent_values(s) == [10, 13, 16, 19]
     return
     #-------------------------------------------------------------------
-    
 
-def test_timed_mix_agents():
-    scheduler = Stream.scheduler
-
-    x = Stream('x')
-    y = Stream('y')
-    z = Stream('z')
-
-    timed_mix([x,y], z)
-
-    x.append((0, 'a'))
-    scheduler.step()
-    assert recent_values(z) == [(0, (0, 'a'))]
-
-    x.append((1, 'b'))
-    scheduler.step()
-    assert recent_values(z) == [(0, (0, 'a')), (1, (0, 'b'))]
-
-    y.append((2, 'A'))
-    scheduler.step()
-    assert recent_values(z) == \
-      [(0, (0, 'a')), (1, (0, 'b')), (2, (1, 'A'))]
-
-    y.append((5, 'B'))
-    scheduler.step()
-    assert recent_values(z) == \
-      [(0, (0, 'a')), (1, (0, 'b')), (2, (1, 'A')), (5, (1, 'B'))]
-
-    x.append((3, 'c'))
-    scheduler.step()
-    assert recent_values(z) == \
-      [(0, (0, 'a')), (1, (0, 'b')), (2, (1, 'A')), (5, (1, 'B'))]
-
-    x.append((4, 'd'))
-    scheduler.step()
-    assert recent_values(z) == \
-      [(0, (0, 'a')), (1, (0, 'b')), (2, (1, 'A')), (5, (1, 'B'))]
-
-    x.append((8, 'e'))
-    scheduler.step()
-    assert recent_values(z) == \
-      [(0, (0, 'a')), (1, (0, 'b')), (2, (1, 'A')), (5, (1, 'B')), (8, (0, 'e'))]
+def test_timed_zip():
+    sys.path.append(os.path.abspath("../core"))
+from recent_values import recent_values
 
 def test_timed_zip_agents():
     scheduler = Stream.scheduler
@@ -573,7 +535,7 @@ def test_timed_zip_agents():
     z = Stream('z')
 
     # timed_zip_agent(in_streams=[x,y], out_stream=z, name='a')
-    z = timed_zip_f([x, y])
+    z = timed_zip([x, y])
 
     def concat_operator(timed_list):
         result = ''
@@ -640,14 +602,14 @@ def test_timed_zip_agents():
                                  (110, 'klmn')]
     return
 
-def test_merge_agents():
-    test_some_merge_agents()
-    test_timed_mix_agents()
-    test_timed_zip_agents()
-    print 'TEST OF MERGE IS SUCCESSFUL'
+    
+    
+    
+    return
     
 if __name__ == '__main__':
     test_merge_agents()
+    print 'TEST OF MERGE IS SUCCESSFUL'
     
     
     

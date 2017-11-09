@@ -1,7 +1,9 @@
 """
-This module defines a Class, DistributedProcess, for making a
-multiprocess program that uses message-passing for communication. The
-protocol used is APMQ implemented by RabbitMQ/pika.
+This module defines a Class, StreamProcess, for making a multiprocess
+program that runs on a multicore (shared-memory) computer.
+
+For distributed computing with multiple computers with different IP 
+addresses, see the module DistributedComputing.py.
 
 """
 import multiprocessing
@@ -19,77 +21,71 @@ sys.path.append(os.path.abspath("../core"))
 from sink import sink_element
 from compute_engine import ComputeEngine
 from stream import Stream
-from Multicore import StreamProcess
+from Component import StreamProcess
 
 class DistributedProcess(StreamProcess):
     """
-    Class for creating and executing a process that communicates using
-    message passing with the APMQ protocol implemented by RabbitMQ.
-
-    Parameters
-    ----------
-       func: function
-          The function that is encapsulated to create this process.
-          func returns a 3-tuple: list of sources, input streams and
-            output streams.
-       name: str (optional)
-          Name given to the process. The name helps with debugging.
-
-    Attributes
-    ----------
-        out_to_remote: defaultdict(list)
-           key: str
-                Name of an out_stream
-           value: stream_name_and_process_name_list
-                  list of pairs (2-tuples) where each pair is
-                  (stream_name, process_name)
-                  (1) stream_name: pickled object
-                      stream_name is the name of the input stream
-                      of a function in the receiver process. This
-                      name may be different from the name of the 
-                      stream in the sending process attached to it.
-                      e.g. str: the name of the target stream, or
-                      e.g. pair (str, int) where str is the name
-                      of an array of target streams and int is an index
-                      into the array. 
-                  (2) process_name: str
-                          The name of the receiver process.
-        process: multiprocess.Process
-           The process that communicates using APMQ.
-           This process is created by calling the method
-           connect_process() and is started by calling the method,
-           start().
+    out_to_remote: defaultdict(list)
+       key: str
+            Name of an out_stream
+       value: stream_name_and_process_name_list
+              list of pairs (2-tuples) where each pair is
+              (stream_name, process_name)
+              (1) stream_name: pickled object
+                  stream_name is the name of the input stream
+                  of a function in the receiver process. This
+                  name may be different from the name of the 
+                  stream in the sending process attached to it.
+                  e.g. str: the name of the target stream, or
+                  e.g. pair (str, int) where str is the name
+                  of an array of target streams and int is an index
+                  into the array. 
+              (2) process_name: str
+                      The name of the receiver process.
 
     """
     def __init__(self, func, name=None):
         super(DistributedProcess, self).__init__(func, name)
+        print 'In Distributed.init. Stream.scheduler.name is ', Stream.scheduler.name
         self.out_to_remote = defaultdict(list)
         self.process = None
 
+        ## self.connection = pika.BlockingConnection(
+        ##     pika.ConnectionParameters(host='localhost')) 
+        ## self.channel = (self.connection).channel()
+        ## self.channel.exchange_declare(
+        ##     exchange='remote_processes', exchange_type='direct')
+        ## self.result = self.channel.queue_declare(exclusive=True)
+        ## self.queue_name = self.result.method.queue
+        ## self.channel.queue_bind(
+        ##         exchange='remote_processes',
+        ##         queue=self.queue_name,
+        ##         routing_key=self.name)
+        ## self.channel.basic_consume(
+        ##     self.callback, queue=self.queue_name, no_ack=True)
+        ## self.receive_remote_message_thread = threading.Thread(
+        ##     target=self.channel.start_consuming, args=())
+        ## self.receive_remote_message_thread_ready = \
+        ##   threading.Event()
+
+    ## def callback(self, ch, method, properties, body):
+    ##     print 'In Distributed.callback. Stream.scheduler.name is ', Stream.scheduler.name
+    ##     #print(" [x] %r:%r" % (method.routing_key, body))
+    ##     obj = json.loads(body)
+    ##     print 'obj', obj
+    ##     print 'Stream.scheduler.input_queue', Stream.scheduler.input_queue
+    ##     print 'self.in_queue is', self.in_queue
+    ##     self.in_queue.put(obj)
+
     def attach_remote_stream(
             self, sending_stream_name, receiving_process_name,
-            receiving_stream_name):
-        """
-        Put the key: sender, value:receiver in the out_to_remote dict.  
-
-        """
+            receiving_stream_name):   
         self.out_to_remote[sending_stream_name].append(
             (receiving_stream_name, receiving_process_name))
 
     def connect_processor(self, out_streams):
-        """
-        Create agents that send messages from each sending stream in
-        out_streams to the receiving streams in the remote processes
-        corresponding to that sending stream.
-        The receiving streams and processes are specified in
-        out_to_remote.
-
-        Parameters
-        ----------
-            out_streams: list of Stream
-
-        """
         super(DistributedProcess, self).connect_processor(out_streams)
+        print 'In Distributed.connect_processor. Stream.scheduler.name is ', Stream.scheduler.name
         # name_to_stream is a dict: sending_stream_name -> sending_stream
         name_to_stream = {s.name: s for s in out_streams}
         for sending_stream_name, stream_procs in self.out_to_remote.items():
@@ -100,19 +96,11 @@ class DistributedProcess(StreamProcess):
                 self.stream_to_AMQP_exchange(
                     sending_stream,
                     receiver_stream_name, receiver_process_name)
+
  
     def stream_to_AMQP_exchange(
-            self, sending_stream, receiver_stream_name,
-            receiver_process_name):
-        """
-        Makes an agent that connects sending_stream to the receiver
-        with name receiver_stream_name in the remote process
-        called receiver_process_name. The agent that is created is a
-        sink_element. Each element of sending_stream is tagged with
-        the receiver_stream_name, converted to JSON and sent using
-        RabbitMQ basic_publish() protocol.
-
-        """
+            self, sending_stream, receiver_stream_name, receiver_process_name):
+        print 'In Distributed.stream_to_AMQP_exchange. Stream.scheduler.name is ', Stream.scheduler.name
         def f(element):
             msg = (receiver_stream_name, element)
             json_payload = json.dumps(msg)
@@ -120,22 +108,29 @@ class DistributedProcess(StreamProcess):
                 exchange='remote_processes',
                 routing_key=receiver_process_name,
                 body=json_payload)
+            print 'sending ', json_payload
+            print 'receiver_process_name is ', receiver_process_name
         sink_element(func=f, in_stream=sending_stream)
 
 
-    def target_of_connect_process(self):
+    def target_of_connect_process_dist(self):
         """
         Returns
         -------
            None
 
         """
-        # callback is a method in RabbitMQ/pika.
-        # Lookup receive_logs_direct.py
+
+
         def callback(ch, method, properties, body):
-            self.in_queue.put(json.loads(body))
-        # Connection, channel, result, queue_name are part of
-        # RabbitMQ. Look at receive_logs_direct.py
+            print 'In Distributed.callback. Stream.scheduler.name is ', Stream.scheduler.name
+            #print(" [x] %r:%r" % (method.routing_key, body))
+            obj = json.loads(body)
+            print 'obj', obj
+            print 'Stream.scheduler.input_queue', Stream.scheduler.input_queue
+            print 'self.in_queue is', self.in_queue
+            self.in_queue.put(obj)
+        
         self.connection = pika.BlockingConnection(
             pika.ConnectionParameters(host='localhost')) 
         self.channel = (self.connection).channel()
@@ -149,7 +144,6 @@ class DistributedProcess(StreamProcess):
                 routing_key=self.name)
         self.channel.basic_consume(
             callback, queue=self.queue_name, no_ack=True)
-        # Create a thread to receive messages on the channel.
         self.receive_remote_message_thread = threading.Thread(
             target=self.channel.start_consuming, args=())
 
@@ -158,13 +152,12 @@ class DistributedProcess(StreamProcess):
         # processes that are fed to in_queue are operated
         # on by the scheduler.
         Stream.scheduler = ComputeEngine(self.name)
+        print 'In Distributed.target_of_connect_process. Stream.scheduler is ', Stream.scheduler.name
         Stream.scheduler.input_queue = self.in_queue
         # Obtain the externalities of func, i.e. its
         # source threads, and input and output streams.
         sources, in_streams, out_streams = self.func()
         name_to_stream = {s.name: s for s in in_streams}
-        # Tell the scheduler in which stream to append an element
-        # that is tagged with a stream name.
         Stream.scheduler.name_to_stream = name_to_stream
 
         # Connect the output streams to other processes
@@ -178,6 +171,8 @@ class DistributedProcess(StreamProcess):
             ss_thread, ss_ready = ss
             ss_ready.wait()
         # Start the thread that receives messages from RabbitMQ
+        print 'Starting remote message thread'
+        #self.channel.start_consuming()
         self.receive_remote_message_thread.start()
         # Start the scheduler for this process
         Stream.scheduler.start()
@@ -199,7 +194,7 @@ class DistributedProcess(StreamProcess):
 
         """
         self.process = multiprocessing.Process(
-            target=self.target_of_connect_process) 
+            target=self.target_of_connect_process_dist) 
 
     def start(self):
         self.process.start()

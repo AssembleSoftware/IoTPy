@@ -807,134 +807,134 @@ class StreamArray(Stream):
 
 
 
-def main():
-    #################################################
-    #   TEST SUITE
-    #################################################
+## def main():
+##     #################################################
+##     #   TEST SUITE
+##     #################################################
 
-    txyz_dtype = np.dtype([('time','int'), ('data', '3float')])
+##     txyz_dtype = np.dtype([('time','int'), ('data', '3float')])
 
-    #--------------------------------------------
-    # Testing StreamArray with positive dimension
-    s = StreamArray(name='s', dimension=3)
-    s.append(np.zeros(3))
-    assert(s.stop == 1)
-    assert(np.array_equal(s.recent[s.stop], np.array([0.0, 0.0, 0.0])))
-    s.extend(np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]))
+##     #--------------------------------------------
+##     # Testing StreamArray with positive dimension
+##     s = StreamArray(name='s', dimension=3)
+##     s.append(np.zeros(3))
+##     assert(s.stop == 1)
+##     assert(np.array_equal(s.recent[s.stop], np.array([0.0, 0.0, 0.0])))
+##     s.extend(np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]))
     
-    assert(np.array_equal(s.recent[:s.stop],
-                          np.array([[0.0, 0.0, 0.0],
-                                    [1.0, 2.0, 3.0],
-                                    [4.0, 5.0, 6.0]]
-                                    )))
+##     assert(np.array_equal(s.recent[:s.stop],
+##                           np.array([[0.0, 0.0, 0.0],
+##                                     [1.0, 2.0, 3.0],
+##                                     [4.0, 5.0, 6.0]]
+##                                     )))
     
-    #---------------------------------------------------------------
-    # Testing StreamArray with zero dimension and user-defined dtype
-    t = StreamArray(name='t', dimension=0, dtype=txyz_dtype)
-    assert(t.stop == 0)
-    t.append(np.array((0, [0.0, 0.0, 0.0]), dtype=txyz_dtype))
-    assert(t.stop == 1)
-    t.append(np.array((2, [11.0, 12.0, 13.0]), dtype=txyz_dtype))
-    assert (t.stop==2)
-    a =  np.array([(0, [0.0, 0.0, 0.0]),
-                   (2, [11.0, 12.0, 13.0])],
-                   dtype=txyz_dtype)
-    assert all(t.recent[:t.stop] == a)
-    t.extend(np.zeros(2, dtype=txyz_dtype))
-    a = np.array([(0, [0.0, 0.0, 0.0]),
-                   (2, [11.0, 12.0, 13.0]),
-                   (0, [0.0, 0.0, 0.0]),
-                   (0, [0.0, 0.0, 0.0])],
-                   dtype=txyz_dtype)
-    assert(t.stop == 4)
-    assert all(t.recent[:t.stop] == a)
+##     #---------------------------------------------------------------
+##     # Testing StreamArray with zero dimension and user-defined dtype
+##     t = StreamArray(name='t', dimension=0, dtype=txyz_dtype)
+##     assert(t.stop == 0)
+##     t.append(np.array((0, [0.0, 0.0, 0.0]), dtype=txyz_dtype))
+##     assert(t.stop == 1)
+##     t.append(np.array((2, [11.0, 12.0, 13.0]), dtype=txyz_dtype))
+##     assert (t.stop==2)
+##     a =  np.array([(0, [0.0, 0.0, 0.0]),
+##                    (2, [11.0, 12.0, 13.0])],
+##                    dtype=txyz_dtype)
+##     assert all(t.recent[:t.stop] == a)
+##     t.extend(np.zeros(2, dtype=txyz_dtype))
+##     a = np.array([(0, [0.0, 0.0, 0.0]),
+##                    (2, [11.0, 12.0, 13.0]),
+##                    (0, [0.0, 0.0, 0.0]),
+##                    (0, [0.0, 0.0, 0.0])],
+##                    dtype=txyz_dtype)
+##     assert(t.stop == 4)
+##     assert all(t.recent[:t.stop] == a)
 
-    #---------------------------------------------------------------
-    # Testing simple Stream
-    u = Stream('u')
-    v = Stream('v')
-    u.extend(range(4))
-    assert u.recent[:u.stop] == [0, 1, 2, 3]
-    v.append(10)
-    v.append([40, 50])
-    assert v.recent[:v.stop] == [10, [40, 50]]
-    v.extend([60, 70, 80])
-    assert v.recent[:v.stop] == [10, [40, 50], 60, 70, 80]
+##     #---------------------------------------------------------------
+##     # Testing simple Stream
+##     u = Stream('u')
+##     v = Stream('v')
+##     u.extend(range(4))
+##     assert u.recent[:u.stop] == [0, 1, 2, 3]
+##     v.append(10)
+##     v.append([40, 50])
+##     assert v.recent[:v.stop] == [10, [40, 50]]
+##     v.extend([60, 70, 80])
+##     assert v.recent[:v.stop] == [10, [40, 50], 60, 70, 80]
 
-    #------------------------------------------
-    # Test helper functions: get_contents_after_column_value()
-    y = StreamArray(name='y', dimension=0, dtype=txyz_dtype,
-                    num_in_memory=64)
+##     #------------------------------------------
+##     # Test helper functions: get_contents_after_column_value()
+##     y = StreamArray(name='y', dimension=0, dtype=txyz_dtype,
+##                     num_in_memory=64)
     
-    # Test data for StreamArray with user-defined data type.
-    test_data = np.zeros(128, dtype=txyz_dtype)
-    import random
-    for i in range(len(test_data)):
-        test_data[i]['time']= random.randint(0, 1000)
-        for j in range(3):
-            test_data[i]['data'][j] = random.randint(2000, 9999)
-    ordered_test_data = np.copy(test_data)
-    for i in range(len(ordered_test_data)):
-        ordered_test_data[i]['time'] = i
-    y.extend(ordered_test_data[:60])
-    assert(len(y.recent) == 64)
-    assert(y.stop == 60)
-    assert(all(y.recent[:60] == ordered_test_data[:60]))
+##     # Test data for StreamArray with user-defined data type.
+##     test_data = np.zeros(128, dtype=txyz_dtype)
+##     import random
+##     for i in range(len(test_data)):
+##         test_data[i]['time']= random.randint(0, 1000)
+##         for j in range(3):
+##             test_data[i]['data'][j] = random.randint(2000, 9999)
+##     ordered_test_data = np.copy(test_data)
+##     for i in range(len(ordered_test_data)):
+##         ordered_test_data[i]['time'] = i
+##     y.extend(ordered_test_data[:60])
+##     assert(len(y.recent) == 64)
+##     assert(y.stop == 60)
+##     assert(all(y.recent[:60] == ordered_test_data[:60]))
 
-    assert all (y.get_contents_after_column_value(column_number=0, value=50) ==
-                ordered_test_data[50:60])
-    assert all(y.get_contents_after_time(start_time=50) ==
-               ordered_test_data[50:60])
-    assert(y.get_index_for_column_value(column_number=0, value=50) ==
-           50)
+##     assert all (y.get_contents_after_column_value(column_number=0, value=50) ==
+##                 ordered_test_data[50:60])
+##     assert all(y.get_contents_after_time(start_time=50) ==
+##                ordered_test_data[50:60])
+##     assert(y.get_index_for_column_value(column_number=0, value=50) ==
+##            50)
 
-    #------------------------------------------
-    # TESTING regular Stream class
-    x = Stream(name='x', num_in_memory=8)
-    assert(len(x.recent) == 8)
-    assert(x.stop == 0)
+##     #------------------------------------------
+##     # TESTING regular Stream class
+##     x = Stream(name='x', num_in_memory=8)
+##     assert(len(x.recent) == 8)
+##     assert(x.stop == 0)
 
-    # Test append
-    x.append(10)
-    assert(len(x.recent) == 8)
-    assert(x.stop == 1)
-    assert(x.recent[0] == 10)
-    x.append(20)
-    assert(len(x.recent) == 8)
-    assert(x.stop == 2)
-    assert(x.recent[:2] == [10, 20])
+##     # Test append
+##     x.append(10)
+##     assert(len(x.recent) == 8)
+##     assert(x.stop == 1)
+##     assert(x.recent[0] == 10)
+##     x.append(20)
+##     assert(len(x.recent) == 8)
+##     assert(x.stop == 2)
+##     assert(x.recent[:2] == [10, 20])
 
-    # Test extend
-    x.extend([30, 40])
-    assert(len(x.recent) == 8)
-    assert(x.stop == 4)
-    assert(x.recent[:4] == [10, 20, 30, 40])
-    x.extend([])
-    assert(len(x.recent) == 8)
-    assert(x.stop == 4)
-    assert(x.recent[:4] == [10, 20, 30, 40])
-    x.extend([50])
-    assert(len(x.recent) == 8)
-    assert(x.stop == 5)
-    assert(x.recent[:5] == [10, 20, 30, 40, 50])
+##     # Test extend
+##     x.extend([30, 40])
+##     assert(len(x.recent) == 8)
+##     assert(x.stop == 4)
+##     assert(x.recent[:4] == [10, 20, 30, 40])
+##     x.extend([])
+##     assert(len(x.recent) == 8)
+##     assert(x.stop == 4)
+##     assert(x.recent[:4] == [10, 20, 30, 40])
+##     x.extend([50])
+##     assert(len(x.recent) == 8)
+##     assert(x.stop == 5)
+##     assert(x.recent[:5] == [10, 20, 30, 40, 50])
 
-    x.reader('a', 3)
-    x.reader('b', 4)
-    assert(x.start == {'a':3, 'b':4})
+##     x.reader('a', 3)
+##     x.reader('b', 4)
+##     assert(x.start == {'a':3, 'b':4})
     
-    x.extend([1, 2, 3, 4, 5])
-    assert(len(x.recent) == 8)
-    assert(x.stop == 7)
-    assert(x.recent[:7] == [40, 50, 1, 2, 3, 4, 5])
-    assert(x.start == {'a':0, 'b':1})
+##     x.extend([1, 2, 3, 4, 5])
+##     assert(len(x.recent) == 8)
+##     assert(x.stop == 7)
+##     assert(x.recent[:7] == [40, 50, 1, 2, 3, 4, 5])
+##     assert(x.start == {'a':0, 'b':1})
 
-    x.reader('a', 7)
-    x.reader('b', 7)
-    assert(x.start == {'a':7, 'b':7})
+##     x.reader('a', 7)
+##     x.reader('b', 7)
+##     assert(x.start == {'a':7, 'b':7})
 
-    #------------------------------------------
-    # Test helper functions
-    assert(x.get_last_n(n=2) == [4, 5])
+##     #------------------------------------------
+##     # Test helper functions
+##     assert(x.get_last_n(n=2) == [4, 5])
 
-if __name__ == '__main__':
-    main()
+## if __name__ == '__main__':
+##     main()

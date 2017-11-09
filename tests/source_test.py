@@ -153,7 +153,7 @@ def test_source():
     assert test_list_source_to_queue == que_contents
     assert recent_values(q2s_0) == q_to_streams_test_list_0
     assert recent_values(q2s_1) == q_to_streams_test_list_1
-    print 'SOURCE TEST IS SUCCESSFUL!'
+    print 'TEST OF SOURCE IS SUCCESSFUL!'
 
 if __name__ == '__main__':
     test_source()

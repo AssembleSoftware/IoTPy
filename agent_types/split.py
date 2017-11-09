@@ -15,6 +15,7 @@ Functions in the module:
    10. split_list_f
    11. split_window
    12. split_window_f
+   13. split_tuple
 
 Split functions:
    1. split_element_f: a function returns a list with each element placed
@@ -27,7 +28,6 @@ Split functions:
       i-th element of the list is placed on the i-th output stream.
    4. timed_unzip_f:
    5. split_list_f: function version of list split.
-   6. split_window_f
 
 Agents:
    1. split_element: agent used by split_element_f
@@ -37,6 +37,7 @@ Agents:
    4. timed_unzip
    5. split_list
    6. split_window
+   7. split_tuple (same as split_element with identity function for func) 
    
 """
 import sys
@@ -506,3 +507,6 @@ def split_window_f(func, in_stream, window_size, step_size, state=None, *args, *
     split_window(func, in_stream, out_streams, window_size, step_size,
                        None, None, state, *args, **kwargs)
     return out_stream
+
+def split_tuple(in_stream, out_streams):
+    split_element(lambda x: x, in_stream, out_streams)
