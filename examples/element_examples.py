@@ -1,5 +1,5 @@
 """
-This module tests element_agent.py
+This module tests element_agent in op.py.
 
 """
 
@@ -24,13 +24,18 @@ from op import *
 
 # In the following, w, x, y, z are streams that must be declared
 # before the functions are called.
-
+v = Stream('v')
+w = Stream('w')
+x = Stream('x')
+y = Stream('y')
+z = Stream('z')
 #----------------------------------------------------------------    
 # map_element with no state and no additional arguments
 #----------------------------------------------------------------
 def double(a):
     return 2*a
-
+x = Stream()
+y = Stream()
 map_element(func=double, in_stream=x, out_stream=y)
 #y[j] = 2*x[j] for j = 0, 1, 2,...
 
@@ -147,7 +152,8 @@ def filtering(v): return v <= 2
 # values greater than 2.
 # The elements of stream x that satisfy the boolean, filtering(), are
 # filtered out.
-yfilter = filter_element_function(func=filtering, in_stream=x)
+
+yfilter = filter_element_f(func=filtering, in_stream=x)
 #----------------------------------------------------------------    
 
 #----------------------------------------------------------------
@@ -158,7 +164,8 @@ def f(x, state):
     return x+state, state+2
 
 b = map_element(func=f, in_stream=x, out_stream=z, state=0, name='b')
-bmap = map_element_function(func=f, in_stream=x, state=0)
+
+bmap = map_element_f(func=f, in_stream=x, state=0)
 #----------------------------------------------------------------
 
 #----------------------------------------------------------------
@@ -187,7 +194,6 @@ no_value_agent = map_element(
     func=f_no_value, in_stream=x, out_stream=no_value_stream,
     name='no_value_agent')
 
-no_value_map = map_element_function(func=f_no_value, in_stream=x)
 #----------------------------------------------------------------
 
 #----------------------------------------------------------------
@@ -205,7 +211,7 @@ multivalue_stream = Stream('multivalue_stream')
 multivalue_agent = map_element(
     func=f_multivalue, in_stream=x, out_stream=multivalue_stream,
     name='multivalue_agent')
-multivalue_map = map_element_function(func=f_multivalue, in_stream=x)
+multivalue_map = map_element_f(func=f_multivalue, in_stream=x)
 #----------------------------------------------------------------    
 
 #----------------------------------------------------------------    
@@ -223,7 +229,7 @@ agent_test_args = map_element(
     function_with_args, x, r,
     None, None, 'agent_test_args',
     2, 10)
-stream_test_args = map_element_function(function_with_args, x, None, 2, 10)
+stream_test_args = map_element_f(function_with_args, x, None, 2, 10)
 #----------------------------------------------------------------        
 
 #----------------------------------------------------------------
@@ -279,7 +285,7 @@ filter_element(
 # Test filter_element_stream
 # p is a stream consisting of odd-numbered elements of x
 # Even-numbered elements are filtered out.
-p = filter_element_function(is_even_number, x)
+p = filter_element_f(is_even_number, x)
 #----------------------------------------------------------------
 
 #----------------------------------------------------------------
@@ -287,7 +293,7 @@ p = filter_element_function(is_even_number, x)
 filter_element(func=lambda v: v >= 5, in_stream=o, out_stream=n)
 map_element(func=lambda v: v+2, in_stream=n, out_stream=o)
 #----------------------------------------------------------------
-
+        
 #----------------------------------------------------------------    
 # PUT VALUES INTO STREAMS
 #----------------------------------------------------------------
@@ -320,7 +326,7 @@ assert recent_values(n) == [0, 2, 4]
 assert recent_values(o) == [2, 4, 6]
 #----------------------------------------------------------------
 
-
+    
 #----------------------------------------------------------------    
 x.extend(range(3, 5, 1))
 scheduler.step()
