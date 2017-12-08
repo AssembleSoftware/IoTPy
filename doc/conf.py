@@ -20,10 +20,10 @@
 import os
 import sys
 # from recommonmark.parser import CommonMarkParser
-sys.path.append(os.path.abspath("../FINAL/helper_functions"))
-sys.path.append(os.path.abspath("../FINAL/core"))
-sys.path.append(os.path.abspath("../FINAL/agent_types"))
-sys.path.append(os.path.abspath("../FINAL/multiprocessing"))
+sys.path.append(os.path.abspath("../IoTPy/helper_functions"))
+sys.path.append(os.path.abspath("../IoTPy/core"))
+sys.path.append(os.path.abspath("../IoTPy/agent_types"))
+sys.path.append(os.path.abspath("../IoTPy/multiprocessing"))
 
 # -- General configuration ------------------------------------------------
 
