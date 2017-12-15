@@ -315,12 +315,25 @@ def test_split_agents():
     scheduler.step()
     assert recent_values(y) == [1, 3, 5]
     assert recent_values(z) == [0, 2, 4]
+
+    # ------------------------------------------------------
+    # TEST split_tuple
+    # ------------------------------------------------------
+    x = Stream('x')
+    y = Stream('y')
+    z = Stream('z')
+    split_tuple(in_stream=x, out_streams=[y, z])
+    x.append((0, 'A'))
+    x.extend([(1, 'B'), (2, 'C')])
+    scheduler.step()
+
+    print 'TEST OF SPLIT IS SUCCESSFUL'
     
 
 if __name__ == '__main__':
     test_split_agents()
     
-    print 'TEST OF SPLIT IS SUCCESSFUL'
+    
     
     
     
