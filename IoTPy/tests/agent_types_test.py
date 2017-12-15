@@ -14,7 +14,8 @@ def test():
     test_split_agents()
     test_multi()
     test_sink()
-    print 'starting test of source. Takes few seconds'
+    print 'Starting test of source. Takes few seconds.'
+    print 'This test will output "input queue empty" a few times.'
     test_source()
 
 
