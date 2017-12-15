@@ -401,9 +401,6 @@ def source_function(
             for _ in range(num_steps):
                 output_list, state = get_output_list_and_next_state(state)
                 for v in output_list:
-                    print 'in source. stream_name is ', stream_name
-                    print 'in_source. value is ', v
-                    print 'in source. input queue is ', scheduler.input_queue
                     scheduler.input_queue.put((stream_name, v))
                 time.sleep(time_interval)
         return
