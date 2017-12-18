@@ -3,13 +3,14 @@ This module consists of functions that operate on a single input stream
 to produce a single output stream. These stream-functions encapsulate
 functions that operate on standard data types such as integers. 
 
-Functions in the module:
+Agents in the module:
    1. map_element
-   2. filter_element
-   3. map_list
-   4. map_window
-   5. map_window_list
-   6. timed_window
+   2. signal_element
+   3. filter_element
+   4. map_list
+   5. map_window
+   6. map_window_list
+   7. timed_window
 
 In addition functions that return streams are:
    map_element_f (version of map_element)
@@ -30,6 +31,7 @@ from agent import Agent
 from stream import Stream, _multivalue
 from check_agent_parameter_types import *
 
+#------------------------------------------------------------------------------------
 def map_element(
         func, in_stream, out_stream,
         state=None, call_streams=None, name=None,
@@ -41,7 +43,8 @@ def map_element(
     Parameters
     ----------
         func: function
-           function from an element of the in_stream to an element of the out_stream.
+           function from an element of the in_stream to an element of
+           the out_stream. func may also have state and kwargs.
         in_stream: Stream or StreamArray
            The single input stream of this agent
         out_stream: Stream or StreamArray
@@ -112,6 +115,74 @@ def map_element(
     return Agent([in_stream], [out_stream], transition, state, call_streams, name)
 
 
+#------------------------------------------------------------------------------------
+def signal_element(
+        func, in_stream, out_stream,
+        state=None, name=None,
+        *args, **kwargs):
+    """
+    This agent executes func when it reads a new value on
+    in_stream. The function func operates on kwargs and possibly
+    a state. Note that func does not operate on elements of in_stream.
+    This is because in_stream serves merely as a signaling mechanism
+    that informs this agent that it needs to execute a step, i.e.,
+    call func.
+
+    Parameters
+    ----------
+        func: function
+           function that operates on kwargs and possibly the state.
+        in_stream: Stream or StreamArray
+           The single input stream of this agent
+        out_stream: Stream or StreamArray
+           The single output stream of the agent
+        state: object
+           The state of the agent
+        name: Str
+           Name of the agent created by this function.
+        *args, **kwargs:
+           Positional and keyword parameters, if any, for func.
+    Returns
+    -------
+        Agent.
+         The agent created by this function.
+    Uses
+    ----
+       * Agent
+       * check_map_agent_arguments
+
+    """
+    call_streams=None
+    check_map_agent_arguments(func, in_stream, out_stream, call_streams, name)
+
+    # The transition function for this agent.
+    def transition(in_lists, state):
+        num_in_streams = 1
+        check_in_lists_type(name, in_lists, num_in_streams)
+        in_list = in_lists[0]
+        input_list = in_list.list[in_list.start:in_list.stop]
+        # If the new input data is empty then return an empty list for
+        # the single output stream, and leave the state and the starting
+        # point for the single input stream unchanged.
+        if input_list is None or len(input_list) == 0:
+            return ([[]], state, [in_list.start])
+        # In the following next_signal is (typically) _no_value if the
+        # variables listed in kwargs do not change, and is any other
+        # value if any variable does change.
+        else:
+            if state is None:
+                next_signal = func(*args, **kwargs)
+            else:
+                next_signal, state = func(state, *args, **kwargs)
+
+        return ([[next_signal]], state, [in_list.start+len(input_list)])
+    # Finished transition
+
+    # Create agent
+    return Agent([in_stream], [out_stream], transition, state, call_streams, name)
+
+
+#------------------------------------------------------------------------------------
 def filter_element(
         func, in_stream, out_stream,
         state=None, call_streams=None, name=None,
@@ -187,6 +258,7 @@ def filter_element(
     return Agent([in_stream], [out_stream], transition, state, call_streams, name)
 
 
+#------------------------------------------------------------------------------------
 def map_element_f(func, in_stream, state=None, *args, **kwargs):
     """
     map_element_f returns out_stream, a stream obtained by applying function to each
@@ -218,7 +290,7 @@ def map_element_f(func, in_stream, state=None, *args, **kwargs):
     return out_stream
 
 
-
+#------------------------------------------------------------------------------------
 def filter_element_f(func, in_stream, state=None, *args, **kwargs):
     """
     filter_element_f returns out_stream, a stream obtained by applying the filter function
@@ -249,7 +321,7 @@ def filter_element_f(func, in_stream, state=None, *args, **kwargs):
                          **kwargs)
     return out_stream
 
-
+#------------------------------------------------------------------------------------
 def map_list(func, in_stream, out_stream, state=None,
                    call_streams=None, name=None,
                    *args, **kwargs):
@@ -331,21 +403,24 @@ def map_list(func, in_stream, out_stream, state=None,
     # 4. new state
     # 5. list of calling streams
     # 6. Agent name
-    return Agent([in_stream], [out_stream], transition, state, call_streams, name)
+    return Agent([in_stream], [out_stream], transition, state,
+                 call_streams, name)
 
+#------------------------------------------------------------------------------------
 def map_list_f(func, in_stream, state=None, *args, **kwargs):
     out_stream = Stream(func.__name__+in_stream.name)
     map_list(func, in_stream, out_stream, state, None, None,
                    *args, **kwargs)
     return out_stream
 
+#------------------------------------------------------------------------------------
 def map_array_f(func, in_stream, state=None, *args, **kwargs):
     out_stream = StreamArray(func.__name__+in_stream.name)
     map_list(func, in_stream, out_stream, state, None, None,
                    *args, **kwargs)
     return out_stream
 
-
+#------------------------------------------------------------------------------------
 def map_window(
         func, in_stream, out_stream,
         window_size, step_size=1,
@@ -415,6 +490,7 @@ def map_window(
     # Create agent
     return Agent([in_stream], [out_stream], transition, state, call_streams, name)
 
+#------------------------------------------------------------------------------------
 def map_window_f(
         func, in_stream,
         window_size, step_size, state=None,
@@ -425,6 +501,7 @@ def map_window_f(
     return out_stream
 
 
+#------------------------------------------------------------------------------------
 def map_window_list(
         func, in_stream, out_stream,
         window_size, step_size=1,
@@ -472,6 +549,7 @@ def map_window_list(
     return Agent([in_stream], [out_stream], transition, state, call_streams, name)
 
 
+#------------------------------------------------------------------------------------
 def timed_window(
         func, in_stream, out_stream,
         window_duration, step_time, window_start_time=0,
@@ -609,6 +687,7 @@ def timed_window(
     return Agent([in_stream], [out_stream], transition, state, call_streams, name)
 
 
+#------------------------------------------------------------------------------------
 def timed_window_f(
         func, in_stream, window_duration, step_time, state=None, args=[], kwargs={}):
     out_stream = Stream(func.__name__+in_stream.name)
