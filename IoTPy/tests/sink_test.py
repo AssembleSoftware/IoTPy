@@ -296,25 +296,6 @@ def test_sink():
     os.remove('test5.txt')
 
     # ------------------------------------
-    # TEST stream_to_queue
-    
-    queue_contents=[]
-    while not queue_1.empty():
-        queue_contents.append(queue_1.get())
-    assert queue_contents == range(5)
-
-    queue_contents=[]
-    while not queue_2.empty():
-        queue_contents.append(queue_2.get())
-    assert queue_contents == [0, 2, 4, 6, 8]
-
-    
-    queue_contents=[]
-    while not queue_3.empty():
-        queue_contents.append(queue_3.get())
-    scheduler.step()
-    assert queue_contents == [0, 1, 3, 6, 10]
-    
     # Testing stream_to_queue
     def h(v, state, multiplier, addend):
         return v*multiplier+addend+state, v+state
