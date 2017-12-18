@@ -6,6 +6,7 @@ from split_test import test_split_agents
 from multi_test import test_multi
 from sink_test import test_sink
 from source_test import test_source
+from shared_variables_test import test_shared_variables
 def test():
     test_element()
     test_list()
@@ -13,6 +14,7 @@ def test():
     test_merge_agents()
     test_split_agents()
     test_multi()
+    test_shared_variables()
     test_sink()
     print 'Starting test of source. Takes few seconds.'
     print 'This test will output "input queue empty" a few times.'
