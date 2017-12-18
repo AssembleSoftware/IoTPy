@@ -5,17 +5,20 @@ object such as a list, file, queue, circular buffer, printer or display.
 
 Functions in the module:
    1. sink_element
-   2. sink   
-   3. stream_to_list
-   4. stream_to_file
-   5. stream_to_queue
-   6. stream_to_buffer
-   7. sink_window
-   8. sink_list
-   9. sink_list_f
+   2. signal_sink
+   3. sink   
+   4. stream_to_list
+   5. stream_to_file
+   6. stream_to_queue
+   7. stream_to_buffer
+   8. sink_window
+   9. sink_list
+   10. sink_list_f
 
 Agents:
    1. sink_element is the agent used by sink.
+   2. signal_sink is an agent that takes a step when signaled by its
+      input stream. 
 
 Sink functions:
    1. sink has input arguments: function, input stream, state, and
@@ -114,6 +117,64 @@ def sink_element(
     # Create agent
     return Agent([in_stream], [], transition, state, call_streams, name)
 
+#-----------------------------------------------------------------------
+def signal_sink(
+        func, in_stream, state=None, name=None,
+        *args, **kwargs):
+    """
+    This agent executes func when it reads a value on input_stream. It
+    has no output streams. This agent does not operate on values of
+    in_stream. The input stream, in_stream, is used purely as a
+    signaling mechanism that tells this agent to take a step.
+
+    Parameters
+    ----------
+        func: function
+           function that operates on kwargs. func (typically) has side
+           effects. If func operates on a state then it returns the
+           state. If func has no state then it returns nothing.
+        in_stream: Stream
+           The single input stream of this agent
+        state: object
+           The state of the agent
+        call_streams: list of Stream
+           The list of call_streams. A new value in any stream in this
+           list causes a state transition of this agent.
+        name: Str
+           Name of the agent created by this function.
+    Returns
+    -------
+        Agent.
+         The agent created by this function.
+
+    """
+    call_streams=None
+    check_sink_agent_arguments(func, in_stream, call_streams, name)
+
+    # The transition function for this agent.
+    def transition(in_lists, state):
+        num_in_streams = 1
+        check_in_lists_type(name, in_lists, num_in_streams)
+        in_list = in_lists[0]
+        input_list = in_list.list[in_list.start:in_list.stop]
+        # If the new input data is empty then return an empty list for
+        # the single output stream, and leave the state and the starting
+        # point for the single input stream unchanged.
+        if input_list is None or len(input_list) == 0:
+            return ([], state, [in_list.start])
+
+        if state is None:
+            func(*args, **kwargs)
+        else:
+            state = func(state, *args, **kwargs)
+        return ([], state, [in_list.start+len(input_list)])
+    # Finished transition
+
+    # Create agent
+    return Agent([in_stream], [], transition, state, call_streams, name)
+
+
+
 def sink(func, in_stream, state=None, *args, **kwargs):
     sink_element(func, in_stream, state, *args, **kwargs)
 
@@ -189,9 +250,6 @@ def stream_to_queue(
         queue.put(element)
     def function_stateless_append(
             element, queue, element_function, **kw):
-        print '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
-        print 'sink: stream to queue. queue is ', queue
-        print 'value is ', element_function(element, **kw)
         queue.put(element_function(element, **kw))
 
     def function_stateful_append(
