@@ -82,30 +82,34 @@ class ComputeEngine(object):
             return a
 
     def start(self):
-        self.ready.set()
         def execute_computation():
+            self.ready.set()
             nnn = 0
             while not self.stopped:
+                input_queue_was_empty = False
                 try:
                     v = self.input_queue.get(timeout=0.5)
                     #v = self.input_queue.get()
+                except:
+                    input_queue_was_empty = True
+                    print 'input queue empty.'
+                    # Sleep for SLEEP_TIME seconds
+                    # Stop after LIMIT number of empty gets
+                    SLEEP_TIME = 0.5
+                    LIMIT = 5
+                    nnn += 1
+                    if nnn > LIMIT:
+                        self.stopped = True
+                    time.sleep(SLEEP_TIME)
+                if not input_queue_was_empty:
                     if v == 'closed':
                         self.stopped = True
                         break
                     out_stream_name, new_data_for_stream = v
                     out_stream = self.name_to_stream[out_stream_name]
-                    #out_stream.extend(new_data_for_stream)
                     out_stream.append(new_data_for_stream)
-                except:
-                    print 'no data in input queue', self.input_queue
-                    # Sleep for SLEEP_TIME seconds
-                    # Stop after LIMIT number of empty gets
-                    SLEEP_TIME = 0.5
-                    LIMIT = 2
-                    nnn += 1
-                    if nnn > LIMIT:
-                        self.stopped = True
-                    time.sleep(SLEEP_TIME)
+                # Process the new data for this stream until all agents
+                # finish their work.
                 self.step()
         self.compute_thread = threading.Thread(
             target=execute_computation, args=())
