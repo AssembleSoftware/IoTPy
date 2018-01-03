@@ -12,9 +12,30 @@ from recent_values import recent_values
 from op import *
 
 def sort(lst):
+    """
+    Parameters
+    ----------
+    lst: list
 
-    def flip(I, L):
+    """
+    def flip(I):
+        """
+        Flips elements of list, lst, if they are out of order.
+        
+        Parameters
+        ----------
+        I : array of length 1 consisting of index of an element of the
+            list. The index is put into an array because Python passes
+            parameters that are integer by value and arrays by
+            reference. This is merely a trick to pass a parameter by
+            reference.
+        
+        """
+        # Extract index from the array.
         i = I[0]
+        # Flip elements if out of order and return any value (1 in
+        # this case) to indicate a change to lst.
+        # Return no value if the elements are in order.
         if lst[i] > lst[i+1]:
             lst[i], lst[i+1] = lst[i+1], lst[i]
             return (1)
@@ -23,32 +44,65 @@ def sort(lst):
 
     x = Stream('x')
 
+    # Create an agent for each of the elements 0, 1, ..., len(lst)-1,
+    # The agent executes its action when it reads a new value on
+    # stream x. The agent sends a signal (the value 1 in our example)
+    # on stream x when, and only when, the agent changes the list.
     for i in range(len(lst) - 1):
-        signal_element(func=flip, in_stream=x, out_stream=x, name=i, I=[i], L=lst)
+        signal_element(func=flip, in_stream=x, out_stream=x, name=i, I=[i])
     scheduler = Stream.scheduler
+    # Start the computation by putting any value (1 in this case) in
+    # stream x.
     x.append(1)
+    # Start the scheduler.
     scheduler.step()
 
 def shortest_path(D):
-    def triangle_inequality(triple, D):
+    """
+    Parameters
+    ----------
+    D: matrix where D[j,k] is the length of the edge from vertex j to
+    vertex k.
+
+    Returns
+    -------
+    D: matrix where D[j,k] is the length of the shortest path from
+    vertex j to  vertex k.
+    
+    """
+    def triangle_inequality(triple):
+        """
+        Apply the triangle inequality. If this changes D then
+        return any value (1 in our example). If D is unchanged
+        then return no value.
+
+        Parameters
+        ----------
+        triple: 3-element array or list
+
+        """
         i, j, k = triple
         if D[i][j] + D[j][k] < D[i][k]:
             D[i][k] = D[i][j] + D[j][k]
-            D[k][i] = D[i][k]
             return(1)
         else:
             return (_no_value)
 
     x = Stream('x')
-    size = len(D)
-    for i in range(size):
-        for j in range(i):
-            for k in range(size):
+    # Create an agent for each triple i,j,k. The agent executes its
+    # action when it reads a new element of stream x. If it changes D
+    # it then puts a new element on x.
+    indices = range(len(D))
+    for i in indices:
+        for j in indices:
+            for k in indices:
                 signal_element(func=triangle_inequality,
                                in_stream=x, out_stream=x,
                                name=str(i)+"_"+str(j)+"_"+str(k),
-                               triple=[i, j, k], D=D)
+                               triple=[i, j, k])
+
     scheduler = Stream.scheduler
+    # Start the computation by putting a value on x.
     x.append(1)
     scheduler.step()
     
