@@ -266,11 +266,12 @@ def merge_asynch(
                 # and its stream_number, to output_list
                 if state is None:
                     for element in input_list:
-                        output_list.append(func((stream_number, element)))
+                        output_list.append(
+                            func((stream_number, element), *args, **kwargs))
                 else:
                     for element in input_list:
                         output_element, state = func(
-                            (stream_number, element), state)
+                            (stream_number, element), state, *args, **kwargs)
                         output_list.append(output_element)
 
         return ([output_list], state, [v.stop for v in in_lists])
