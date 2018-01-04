@@ -11,10 +11,10 @@ agent_types/op.py on streams.
 
 import sys
 import os
-sys.path.append(os.path.abspath("../IoTPy/"))
-sys.path.append(os.path.abspath("../IoTPy/helper_functions"))
-sys.path.append(os.path.abspath("../IoTPy/core"))
-sys.path.append(os.path.abspath("../IoTPy/agent_types"))
+sys.path.append(os.path.abspath("../../IoTPy/"))
+sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
+sys.path.append(os.path.abspath("../../IoTPy/core"))
+sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
 
 from agent import Agent
 from stream import Stream, StreamArray
