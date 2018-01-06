@@ -166,16 +166,16 @@ def signal_element(
         # point for the single input stream unchanged.
         if input_list is None or len(input_list) == 0:
             return ([[]], state, [in_list.start])
-        # In the following next_signal is (typically) _no_value if the
+        # In the following output is (typically) _no_value if the
         # variables listed in kwargs do not change, and is any other
         # value if any variable does change.
         else:
             if state is None:
-                next_signal = func(*args, **kwargs)
+                output = func(*args, **kwargs)
             else:
-                next_signal, state = func(state, *args, **kwargs)
+                output, state = func(state, *args, **kwargs)
 
-        return ([[next_signal]], state, [in_list.start+len(input_list)])
+        return ([[output]], state, [in_list.start+len(input_list)])
     # Finished transition
 
     # Create agent
