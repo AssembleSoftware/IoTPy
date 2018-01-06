@@ -10,13 +10,12 @@ agent_types/op.py on streams.
 """
 import sys
 import os
-sys.path.append(os.path.abspath("../IoTPy/"))
-sys.path.append(os.path.abspath("../IoTPy/helper_functions"))
-sys.path.append(os.path.abspath("../IoTPy/core"))
-sys.path.append(os.path.abspath("../IoTPy/agent_types"))
+sys.path.append(os.path.abspath("../../IoTPy/"))
+sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
+sys.path.append(os.path.abspath("../../IoTPy/core"))
+sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
 
-from stream import Stream, StreamArray
-from stream import _no_value, _multivalue
+from stream import Stream
 from check_agent_parameter_types import *
 from recent_values import recent_values
 from op import filter_element
