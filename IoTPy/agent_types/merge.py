@@ -371,6 +371,16 @@ def blend_f(func, in_streams, state=None, *args, **kwargs):
     blend(func, in_streams, out_stream, state, *args, **kwargs)
     return out_stream
 
+def weave(in_streams, out_stream):
+    func=lambda v: v
+    blend(func, in_streams, out_stream)
+
+def weave_f(in_streams):
+    out_stream = Stream('output of weave')
+    weave(in_streams, out_stream)
+    return out_stream
+    
+
 #-----------------------------------------------------------------------
 # MERGE_WINDOW: LIST OF INPUT STREAMS, SINGLE OUTPUT STREAM
 #-----------------------------------------------------------------------

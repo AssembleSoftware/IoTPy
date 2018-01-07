@@ -510,3 +510,72 @@ def split_window_f(func, in_stream, window_size, step_size, state=None, *args, *
 
 def split_tuple(in_stream, out_streams):
     split_element(lambda x: x, in_stream, out_streams)
+
+
+
+def split_signal(
+        func, in_stream, out_streams, state=None, name=None,
+        *args, **kwargs):
+    """
+    This agent executes func when it reads a new value on
+    in_stream. The function func operates on kwargs and possibly
+    a state. Note that func does not operate on elements of in_stream.
+    This is because in_stream serves merely as a signaling mechanism
+    that informs this agent that it needs to execute a step, i.e.,
+    call func.
+
+    Parameters
+    ----------
+        func: function
+           function that operates on kwargs and possibly the state.
+        in_stream: Stream or StreamArray
+           The single input stream of this agent
+        out_streams: list of Stream or StreamArray
+           The list of output streams of the agent
+        state: object
+           The state of the agent
+        name: Str
+           Name of the agent created by this function.
+        *args, **kwargs:
+           Positional and keyword parameters, if any, for func.
+    Returns
+    -------
+        Agent.
+         The agent created by this function.
+    Uses
+    ----
+       * Agent
+       * check_map_agent_arguments
+
+    """
+    # The transition function for this agent.
+    def transition(in_lists, state):
+        num_in_streams = 1
+        check_in_lists_type(name, in_lists, num_in_streams)
+        in_list = in_lists[0]
+        input_list = in_list.list[in_list.start:in_list.stop]
+        # If the new input data is empty then return an empty list for
+        # the single output stream, and leave the state and the starting
+        # point for the single input stream unchanged.
+        if input_list is None or len(input_list) == 0:
+            return ([[]], state, [in_list.start])
+        # In the following output is (typically) a list of _no_value
+        # when the variables listed in kwargs do not change, and is a
+        # list of any value other than _no_value (e.g. 1)  if any
+        # variable in kwargs does change.
+        # The length of the list, output, must be the same as the length
+        # of the list, out_streams.
+        else:
+            if state is None:
+                output = func(*args, **kwargs)
+            else:
+                output, state = func(state, *args, **kwargs)
+        assert len(output) == len(out_streams)
+        output_list = [[v] for v in output]
+
+        return (output_list, state, [in_list.start+len(input_list)])
+    # Finished transition
+
+    call_streams = None
+    # Create agent
+    return Agent([in_stream], out_streams, transition, state, call_streams, name)
