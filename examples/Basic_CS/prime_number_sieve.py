@@ -23,9 +23,9 @@ import os
 import math
 
 sys.path.append(os.path.abspath("../"))
-sys.path.append(os.path.abspath("../core"))
-sys.path.append(os.path.abspath("../agent_types"))
-sys.path.append(os.path.abspath("../helper_functions"))
+sys.path.append(os.path.abspath("../../IoTPy/core"))
+sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
+sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
 
 from stream import Stream, _no_value
 from op import map_element

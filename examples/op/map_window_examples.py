@@ -32,7 +32,8 @@ x = Stream('x')
 s = Stream()
 map_window(func=sum, in_stream=x, out_stream=s, 
  window_size=2, step_size=10)
-#y[j] = f(x[j*step_size : j*step_size + window_size]) for all j. 
+# s[j] = f(x[j*step_size : j*step_size + window_size]) for all j.
+# s[j] = x[10*j] + x[10*j+1], for all j
 
 #----------------------------------------------------------------    
 # Example with state and no additional parameters
@@ -44,8 +45,10 @@ def comp(this_list, sum_of_previous_list):
    return sum(this_list) > sum_of_previous_list, sum(this_list)
 c = Stream()
 # The initial state is 0
-map_window(func=sums, in_stream=x, out_stream=c, 
+map_window(func=comp, in_stream=x, out_stream=c, 
            state=0, window_size=10, step_size=10)
+# c[0] = sum(x[:10]) > 0 because 0 is the initial state
+# c[j] = sum(x[10*j:10*j+10]) > sum(x[10*(j-1):10*(j-1)+10])
 
 #----------------------------------------------------------------    
 # Example with no state and additional parameters
