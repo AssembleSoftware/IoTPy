@@ -1,4 +1,20 @@
 import sys
+"""
+This module consists of functions that use ntp and other sources of
+timing signals to produce streams of timestamps or time offsets from
+system clocs.
+
+The key point of this module is that you create the streams you want
+by first writing simple terminating functions and then you encapsulate
+these functions using source_function or other mechanisms from the
+IoTPy library.
+
+This module has three parts: (1) terminating (non-streaming)
+terminating functions; (2) encapsulating these terminating functions
+to create functions that generate threads; (3) tests that start the
+threads which then populate the timing streams.
+
+"""
 import os
 sys.path.append(os.path.abspath("../helper_functions"))
 sys.path.append(os.path.abspath("../core"))
@@ -15,7 +31,7 @@ logging.basicConfig(
 ntp_client = ntplib.NTPClient()
 
 #-----------------------------------------------------------------------------
-#   FUNCTIONS ENCAPSULATED IN STREAMS
+#   PART 1: FUNCTIONS ENCAPSULATED IN STREAMS
 #-----------------------------------------------------------------------------
 
 def clock_drift_from_ntp_server(ntp_server):
@@ -127,7 +143,7 @@ def clock_drift_from_median_of_ntp_servers(list_of_ntp_servers):
 
 
 #-----------------------------------------------------------------------------
-#   FUNCTIONS THAT RETURN SOURCE THREADS
+#   PART 2: FUNCTIONS THAT RETURN SOURCE THREADS
 #-----------------------------------------------------------------------------
 # These functions encapsulate terminating Python functions to create
 # threads and ready signaling objects. These functions call
@@ -183,7 +199,7 @@ def thread_offset_from_median_of_ntp_servers(list_of_ntp_servers):
 
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
-#           TESTS
+#                        PART 3: TESTS
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 
