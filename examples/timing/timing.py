@@ -5,27 +5,49 @@ timing signals to produce streams of timestamps or time offsets from
 system clocs.
 
 The key point of this module is that you create the streams you want
-by first writing simple terminating functions and then you encapsulate
+by first writing simple terminating functions that call ntp (or other
+service) and which return an offset or other time. Then you encapsulate
 these functions using source_function or other mechanisms from the
-IoTPy library.
+IoTPy library to generate threads. Finally you start the threads to
+generate streams of offsets or timing values.
 
-This module has three parts: (1) terminating (non-streaming)
-terminating functions; (2) encapsulating these terminating functions
-to create functions that generate threads; (3) tests that start the
-threads which then populate the timing streams.
+This module has three parts:
+(1) terminating functions that call an ntp service and obtain a time
+offset;
+(2) encapsulating these terminating functions to create functions that
+return threads;
+(3) tests that start the threads. Execution of these threads causes a
+sequence of offsets to populate timing streams.
+
+Note: In some cases, the average or median of a window of offsets is
+more robust than a single offset. Use functions from
+IoTPy/examples/windows to compute statistics on the offset streams.
+
+Note: This module also has an example of generating a stream of
+timestamps obtained by getting system-clock offsets from an ntp
+service and then adding the offset to the clock. In some cases, a
+moving-window average of system-clock offsets is more robust than a
+single offset; examples of moving-window averages are given elsewhere.
 
 """
 import os
 sys.path.append(os.path.abspath("../helper_functions"))
 sys.path.append(os.path.abspath("../core"))
 sys.path.append(os.path.abspath("../agent_types"))
-from source import source_function
+
+# stream is in core
 from stream import Stream
+# recent_values is in helper_functions
 from recent_values import recent_values
+# op and source are in agent_types
+from op import map_element
+from source import source_function
 
 import time
 import ntplib
 import logging
+# If an ntp service is unavailable then this logged in the log file
+# 'ntp_service_operation.txt'
 logging.basicConfig(
     filename='ntp_service_operation.txt', level=logging.DEBUG)  
 ntp_client = ntplib.NTPClient()
@@ -55,6 +77,7 @@ def clock_drift_from_ntp_server(ntp_server):
 
     """
     try:
+        # response.offset is the system clock offset from ntp time.
         response = ntp_client.request(ntp_server, version=3)
         return response.offset
     except:
@@ -65,7 +88,7 @@ def clock_drift_from_ntp_server(ntp_server):
 def clock_drift_from_first_ntp_server(list_of_ntp_servers):
     """
     Returns the system clock drift computed from the first functioning
-    ntp_server. 
+    ntp_server in list_of_ntp_servers. 
 
     Parameters
     ----------
@@ -83,7 +106,11 @@ def clock_drift_from_first_ntp_server(list_of_ntp_servers):
 
     """
     for ntp_server in list_of_ntp_servers:
-        return clock_drift_from_ntp_server(ntp_server)
+        drift = clock_drift_from_ntp_server(ntp_server)
+        if drift:
+            return drift
+    # None of the npt servers in the list returned values.
+    return 0.0
 
 def clock_drift_from_average_of_ntp_servers(list_of_ntp_servers):
     """
@@ -139,7 +166,35 @@ def clock_drift_from_median_of_ntp_servers(list_of_ntp_servers):
                       if v is not None]
     if list_of_drifts:
         list_of_drifts = sorted(list_of_drifts)
-        return list_of_drifts[len(list_of_drifts)/2]
+        midpoint = len(list_of_drifts)/2
+        if len(list_of_drifts) == 0:
+            return 0.0
+        if len(list_of_drifts) == 1:
+            return list_of_drifts[0]
+        if len(list_of_drifts) % 2:
+            # list_of_drifts has an odd number of elements
+            # So, return the midpoint
+            return list_of_drifts[midpoint]
+        else:
+            # list_of_drifts has an even number of elements
+            # So, return the average of the middle two elements.
+            return (list_of_drifts[midpoint-1] + list_of_drifts[midpoint])/2.0
+            
+
+def ntp_time_estimate(offset):
+    """
+    Parameters
+    ----------
+       offset: float
+          offset between system clock and ntp clock.
+          This value should be obtained by calling an ntp service.
+    Returns
+    -------
+       float
+          The number of seconds since the epoch
+
+    """
+    return time.time() + offset
 
 
 #-----------------------------------------------------------------------------
@@ -278,9 +333,10 @@ def test_clock_drift_from_median_of_ntp_servers():
         print 'drift = ', drift
         time.sleep(0.1)
 
-        
-#            TESTING AGENTS
 
+#-----------------------------------------------------------------------------
+#            TESTING AGENTS
+#-----------------------------------------------------------------------------
 def test_thread_clock_offset():
 
     # STEP 1: SPECIFY CONSTANT PARAMETERS AND SHARED DATA.
@@ -301,15 +357,16 @@ def test_thread_clock_offset():
     offset_stream_from_average_of_ntp_servers = Stream()
     offset_stream_from_median_of_ntp_servers = Stream()
 
-    # STEP 4: SPECIFY MAPPING FROM NAMES (STRINGS) GIVEN
-    # TO STREAMS IN source_function AND NAMES USED WITHIN
-    # THE EXECUTING PROCESS. YOU CAN USE ANY NAME WITHIN
-    # THE EXECUTING PROCESSES; THESE NAMES DON'T HAVE TO BE
-    # THE SAME AS THE NAMES USED IN source_function.
-    # FOR EXAMPLE: THE STREAM WITH NAME
+    # STEP 4: DECLARE MAP FROM STREAM NAMES TO STREAMS
+    # Specify mapping from names (strings) given
+    # to streams in source_function and names used within
+    # the executing process. You can use any name within
+    # the executing processes; these names don't have to be
+    # the same as the names used in source_function.
+    # For example: the stream with name
     # 'offset_stream_from_single_ntp_server' in source_function
-    # IS MAPPED TO THE STREAM offset_stream_single_server IN
-    # THE EXECUTING PROCESS.
+    # is mapped to the stream offset_stream_single_server in
+    # the executing process.
     scheduler.name_to_stream = {
         'offset_stream_from_single_ntp_server':
         offset_stream_single_server,
@@ -347,6 +404,11 @@ def test_thread_clock_offset():
     ntp_thread_average_ready.wait()
     ntp_thread_median_ready.wait()
 
+    time_stream = Stream('Time Stream')
+    map_element(func=ntp_time_estimate,
+                in_stream=offset_stream_first_server,
+                out_stream=time_stream)
+
     # STEP 8:JOIN EACH THREAD.
     # This step should be skipped if threads run for ever.
     # This step is helpful if threads run until they generate a fixed
@@ -368,6 +430,8 @@ def test_thread_clock_offset():
     print recent_values(offset_stream_first_server)
     print recent_values(offset_stream_from_average_of_ntp_servers)
     print recent_values(offset_stream_from_median_of_ntp_servers)
+    print 'time stream'
+    print recent_values(time_stream)
 
 if __name__ == '__main__':
     print 'TESTING CLOCK DRIFT FROM SINGLE NTP SERVER'
@@ -383,9 +447,11 @@ if __name__ == '__main__':
     test_clock_drift_from_median_of_ntp_servers()
     print
     print 'TESTING NTP OFFSET STREAM'
-    print 'Next output will be N values of the stream'
-    print 'ntp timer from single server followed by'
-    print 'ntp timer from first server'
+    print 'Next output will be N values of the streams'
+    print 'ntp timer from single server'
+    print 'ntp timer from first available server'
+    print 'ntp timer from average of available ntp servers'
+    print 'ntp timer from median of available ntp servers'
     print
     print 'The scheduler waits for the input queue to become empty.'
     print 'Expect to see "input queue empty" a few times.'
