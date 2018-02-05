@@ -20,7 +20,7 @@ from multi import *
 from op import timed_window, timed_window_f
 #--------------------------------------------------------
 #--------------------------------------------------------
-def test_merge_agents():
+def test_some_merge_agents():
     import numpy as np
     scheduler = Stream.scheduler
 
@@ -194,11 +194,13 @@ def test_merge_agents():
     x = Stream('x')
     y = Stream('y')
     z = Stream('z')
+    z_addend = Stream('z_addend')
 
     def double(v): return 2*v
     def double_add(v, addend): return 2*v+addend
 
     blend(func=double, in_streams=[x, y], out_stream=z)
+    blend(func=double, in_streams=[x, y], out_stream=z_addend)
     blend_z = blend_f(double, [x, y])
     blend_add_z = blend_f(double_add, [x,y], addend=10)
 
@@ -640,11 +642,14 @@ def test_timed_zip_agents():
                                  (110, 'klmn')]
     return
 
-if __name__ == '__main__':
-    test_merge_agents()
+def test_merge_agents():
+    test_some_merge_agents()
     test_timed_mix_agents()
     test_timed_zip_agents()
     print 'TEST OF MERGE IS SUCCESSFUL'
+    
+if __name__ == '__main__':
+    test_merge_agents()
     
     
     

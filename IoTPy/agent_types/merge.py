@@ -277,7 +277,7 @@ def merge_asynch(
         return ([output_list], state, [v.stop for v in in_lists])
 
     # Create agent
-    return Agent(in_streams, [out_stream], transition, state, name="merge_asynch")
+    return Agent(in_streams, [out_stream], transition, state, call_streams, name)
 
 def merge_asynch_f(
         func, in_streams, state=None, *args, **kwargs):
@@ -356,15 +356,20 @@ def blend(func, in_streams, out_stream, state=None,
                 input_list = v.list[v.start:v.stop]
 
                 # Add each unread element in this input stream, with the
-                # stream_number, to output_list
-                for element in input_list:
-                    output_list.append(func(element, *args, **kwargs))
+                # stream_number, to output_list.
+                if state == None:
+                    for element in input_list:
+                        output_list.append(func(element, *args, **kwargs))
+                else:
+                    for element in input_list:
+                        next_output, state = func(element, state, *args, **kwargs)
+                        output_list.append(next_output)
 
         return ([output_list], state, [v.stop for v in in_lists])
 
     # Create agent
-    Agent(in_streams, [out_stream], transition, name="merge_asynch")
-    return
+    return Agent(in_streams, [out_stream], transition, state, call_streams, name)
+
 
 def blend_f(func, in_streams, state=None, *args, **kwargs):
     out_stream = Stream('output of blend')
