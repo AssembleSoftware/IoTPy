@@ -1,6 +1,19 @@
 import sys
 """
 Code for Paxos using IoTPy
+
+The proposers propose values to be accepted by the acceptors. They will 
+continue to propose values until a value is accepted by the majority of 
+acceptors. The time step behavior moves forward the time which is also the
+proposer's value that they can propose. There is a daemon for the messages
+from the proposers to the acceptors and another for the messages from the
+acceptors to the proposers. It can either duplicate, delete, or leave a 
+message alone each with set probabilities as a form of fault injection.
+
+We don't have learners because once the acceptors are in a stable state,
+learning the stable state is very straightforward.
+
+You can modify the number of proposers and acceptors to test different cases.
 """
 import os
 import random
