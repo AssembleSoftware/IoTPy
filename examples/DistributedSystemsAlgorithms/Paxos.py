@@ -1,4 +1,5 @@
 import sys
+import logging
 """
 Code for Paxos using IoTPy
 
@@ -17,14 +18,13 @@ You can modify the number of proposers and acceptors to test different cases.
 """
 import os
 import random
-sys.path.append(os.path.abspath("../helper_functions"))
-sys.path.append(os.path.abspath("../core"))
-sys.path.append(os.path.abspath("../agent_types"))
+sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
+sys.path.append(os.path.abspath("../../IoTPy/core"))
+sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
 
 from stream import Stream, _no_value, _multivalue
 from merge import blend
 from op import map_element
-from recent_values import recent_values
 
 # num_proposers: Number of proposers
 # num_acceptors: Number of acceptors
@@ -47,6 +47,8 @@ daemons_acceptors_out_streams = [
     Stream('daemons_acceptor_out_'+str(i)) for i in range(num_acceptors)]
 daemons_proposers_out_streams = [
     Stream('daemons_proposer_out_'+str(i)) for i in range(num_proposers)]
+
+logging.basicConfig(filename='agent.log', filemode='w', level=logging.DEBUG)
 
 def random_number():
     """
@@ -72,11 +74,11 @@ def delete(v, deletion_probability=0.1, duplication_probability=0.1):
 
 
 def proposer_behavior(input_msg, state):
-    print 'proposer. input_msg is ', input_msg
+    logging.info('proposer input_msg is ' + str(input_msg))
     my_id, my_prepare_timestamp, time_to_next_prepare_msg, dict_of_acceptors = state
-    print 'proposer id is', my_id
-    print 'prepare timestamp is', my_prepare_timestamp
-    print 'time remaining to next prepare message is ', time_to_next_prepare_msg
+    logging.info('proposer id is ' + str(my_id))
+    logging.info('prepare timestamp is ' + str(my_prepare_timestamp))
+    logging.info('time remaining to next prepare message is ' + str(time_to_next_prepare_msg))
     # my_id is the id of this proposer
     # my_prepare_timestamp is the time of last prepare message
     # sent by this proposer.
