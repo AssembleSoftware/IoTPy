@@ -6,7 +6,7 @@ object such as a list, file, queue, circular buffer, printer or display.
 Functions in the module:
    1. sink_element
    2. signal_sink
-   3. sink   
+   3. sink: same as sink_element. Used for convenience.
    4. stream_to_list
    5. stream_to_file
    6. stream_to_queue
