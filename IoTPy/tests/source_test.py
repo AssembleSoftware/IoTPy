@@ -51,16 +51,16 @@ def test_source():
 
     scheduler.name_to_stream = {'s': s, 'r':r, 'a':a}
     vv = source_function(
-        func=random_integer, stream_name='s', num_steps=5,
+        func=random_integer, stream=s, num_steps=5,
         name='random', window_size=2,
         test_list=test_list, a=10, b=20)
     
     ww = source_list(
-        in_list=range(10), stream_name='r', num_steps=5,
+        in_list=range(10), stream=r, num_steps=5,
         name='read list', window_size=2)
         
     xx = source_file(
-        func=lambda x: 2*int(x), stream_name='a', filename='test.dat',
+        func=lambda x: 2*int(x), stream=a, filename='test.dat',
         time_interval=0.5, num_steps=None)
     
     zz = source_to_stream(
@@ -157,10 +157,3 @@ def test_source():
 
 if __name__ == '__main__':
     test_source()
-
-    
-    
-    
-    
-    
-
