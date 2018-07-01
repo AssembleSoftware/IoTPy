@@ -38,7 +38,7 @@ class ComputeEngine(object):
     """
     def __init__(self, name=None):
         self.input_queue = multiprocessing.Queue()
-        self.name_to_stream = None
+        self.name_to_stream = {}
         self.name = name
         self.q_agents = Queue.Queue()
         self.scheduled_agents = set()
