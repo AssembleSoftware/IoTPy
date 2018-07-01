@@ -50,7 +50,7 @@ def test_some_merge_agents():
 
     #----------------------------------------------------
     # Define agents
-    d = zip_map(func=g, in_streams=[x,u], out_stream=s, name='d')
+    d = zip_map(func=sum, in_streams=[x,u], out_stream=s, name='d')
     zipxu = zip_stream_f([x,u])
     zip_map_xu = zip_map_f(sum, [x,u])
     zip_map_xu_merge = Stream('zip map xu merge')
@@ -642,7 +642,46 @@ def test_timed_zip_agents():
                                  (110, 'klmn')]
     return
 
+def simple_zip_map_test():
+    # Get scheduler
+    scheduler = Stream.scheduler
+    # Define streams
+    x = Stream('x')
+    y = Stream('y')
+    z = Stream('z')
+    # Define functions which are encapsulated
+    def f(lst):
+        return 2*sum(lst)
+    # Define agents
+    zip_map(func=f, in_streams=[x,y], out_stream=z)
+
+    # A STEP
+    # Put test data into input streams
+    x.extend(range(4))
+    y.extend(range(10, 20, 2))
+    # Execute a step
+    scheduler.step()
+    # Look at output data
+    assert recent_values(z) == [20, 26, 32, 38]
+    
+    # Put test data into input streams
+    x.extend([82, 10])
+    y.extend([-10, 200, 300])
+    # Execute a step
+    scheduler.step()
+    # Look at output data
+    assert recent_values(z) == [20, 26, 32, 38, 200, 0]
+
+    # Put test data into input streams
+    x.extend([-200, -300])
+    # Execute a step
+    scheduler.step()
+    # Look at output data
+    assert recent_values(z) == [20, 26, 32, 38, 200, 0, 0, 0]
+    
+
 def test_merge_agents():
+    simple_zip_map_test()
     test_some_merge_agents()
     test_timed_mix_agents()
     test_timed_zip_agents()
