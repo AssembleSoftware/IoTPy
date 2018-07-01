@@ -9,18 +9,176 @@ sys.path.append(os.path.abspath("../helper_functions"))
 sys.path.append(os.path.abspath("../core"))
 sys.path.append(os.path.abspath("../agent_types"))
 
+# agent and stream are in ../core
 from agent import Agent
-from stream import Stream, StreamArray
-from stream import _no_value, _multivalue
-from check_agent_parameter_types import *
+from stream import Stream, StreamArray, _no_value, _multivalue
+# recent_values is in ../helper_functions
 from recent_values import recent_values
-from op import *
+# op is in ../agent_types
+from op import map_element, map_element_f
+from op import filter_element, filter_element_f
+from op import map_list, map_list_f
+from op import timed_window
 
+#------------------------------------------------------------------------------------------------
+#                                     A SIMPLE EXAMPLE TEST
+#------------------------------------------------------------------------------------------------
+# This example is to illustrate the steps in the test.
+# The later examples test several agents whereas this simple
+# test only tests a single agent.
+# The seven steps in this test may occur in different orders
+# in the later tests.
+def test_example_1():
+    # Get scheduler
+    scheduler = Stream.scheduler
+    # Specify streams
+    x = Stream('x')
+    y = Stream('y')
+    # Specify encapsulated functions (if any)
+    def f(v): return 2*v
+    # Specify agents.
+    map_element(func=f, in_stream=x, out_stream=y)
 
+    # Execute a step
+    # Put test values in the input streams.
+    x.extend(range(3))
+    # Execute a step
+    scheduler.step()
+    # Look at recent values of output streams.
+    assert recent_values(y) == [0, 2, 4]
+
+    # Execute a step
+    # Put test values in the input streams.
+    x.extend([10, 20, 30])
+    # Execute a step
+    scheduler.step()
+    # Look at recent values of output streams.
+    assert recent_values(y) == [0, 2, 4, 20, 40, 60]
+
+    # Execute a step
+    # Put test values in the input streams.
+    x.extend([0, -10])
+    # Execute a step
+    scheduler.step()
+    # Look at recent values of output streams.
+    assert recent_values(y) == [0, 2, 4, 20, 40, 60, 0, -20]
+
+def test_example_2():
+    # Get scheduler
+    scheduler = Stream.scheduler
+    # Specify streams
+    x = Stream('x')
+    y = Stream('y')
+    # Specify encapsulated functions (if any)
+    def f(v): return v < 3
+    # Specify agents.
+    filter_element(func=f, in_stream=x, out_stream=y)
+
+    # Execute a step
+    # Put test values in the input streams.
+    x.extend(range(5))
+    # Execute a step
+    scheduler.step()
+    # Look at recent values of output streams.
+    assert recent_values(y) == [3, 4]
+
+def test_example_3():
+    # Get scheduler
+    scheduler = Stream.scheduler
+    # Specify streams
+    x = Stream('x')
+    y = Stream('y')
+    # Specify encapsulated functions (if any)
+    def f(v, state):
+        final, prefinal = state
+        next_output = final + prefinal
+        # In the next state:
+        # prefinal becomes final
+        # final becomes next_output
+        next_state = next_output, final
+        return next_output, next_state
+    def g(v, divisor):
+        if v % divisor == 0:
+            return _no_value
+        else:
+            return v
+    # Specify agents.
+    map_element(func=f, in_stream=y, out_stream=x, state=(0, 1))
+    map_element(func=g, in_stream=x, out_stream=y, divisor=4)
+    # Execute a step
+    # Put test values in the input streams.
+    y.append(0)
+    # Execute a step
+    scheduler.step()
+    # Look at recent values of output streams.
+    assert recent_values(x) == [1, 1, 2, 3, 5, 8]
+
+    # Execute a step
+    # Put test values in the input streams.
+    y.append(0)
+    # Execute a step
+    scheduler.step()
+    # Look at recent values of output streams.
+    assert recent_values(x) == \
+      [1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144]
+    
+
+def test_example_4():
+    # Get scheduler
+    scheduler = Stream.scheduler
+
+    # Specify network: streams, functions, agents
+    # (a) Specify streams
+    x = Stream('x')
+    y = Stream('y')
+    # (b) Specify encapsulated functions (if any)
+    def f(v, state):
+        final, prefinal = state
+        next_output = final + prefinal
+        # In the next state:
+        # prefinal becomes final
+        # final becomes next_output
+        next_state = next_output, final
+        return next_output, next_state
+
+    class G(object):
+        def __init__(self):
+            self.divisor = 4
+        def g(self, v):
+            if v % self.divisor == 0:
+                return _no_value
+            else:
+                return v
+
+    # (c) Specify agents.
+    encapsulator = G()
+    map_element(func=f, in_stream=y, out_stream=x, state=(0, 1))
+    map_element(func=encapsulator.g, in_stream=x, out_stream=y)
+
+    # Drive the network in steps.
+    # Execute a step
+    # Put test values in the input streams.
+    y.append(0)
+    # Execute a step
+    scheduler.step()
+    # Look at recent values of output streams.
+    assert recent_values(x) == [1, 1, 2, 3, 5, 8]
+
+    # Execute a step after changing agent parameters
+    encapsulator.divisor = 2
+    # Put test values in the input streams.
+    y.append(0)
+    # Execute a step
+    scheduler.step()
+    # Look at recent values of output streams.
+    assert recent_values(x) == \
+      [1, 1, 2, 3, 5, 8, 13, 21, 34]
+    
 #------------------------------------------------------------------------------------------------
 #                                     ELEMENT AGENT TESTS
 #------------------------------------------------------------------------------------------------
 def test_element_simple():
+    # SPECIFY STREAMS
     m = Stream('m')
     n = Stream('n')
     o = Stream('o')
@@ -40,8 +198,10 @@ def test_element_simple():
     # Test simple map using map_element
     # func operates on an element of the input stream and returns an element of
     # the output stream.
+    # SPECIFY ENCAPSULATED FUNCTIONS (IF ANY)
     def double(v): return 2*v
 
+    # SPECIFY AGENTS
     a = map_element(func=double, in_stream=x, out_stream=y, name='a')
     ymap = map_element_f(func=double, in_stream=x)
     #----------------------------------------------------------------    
@@ -195,14 +355,20 @@ def test_element_simple():
     #----------------------------------------------------------------
             
     #----------------------------------------------------------------    
-    # PUT VALUES INTO STREAMS
+    # PUT TEST VALUES INTO INPUT STREAMS
     #----------------------------------------------------------------
-    #   FIRST STEP        
+    #   Put test values into streams x, x0 and n.        
     x.extend(range(3))
     x0.extend([0, 1, 3, 3, 6, 8])
     n.append(0)
+    
+    # STEP 5: GET SCHEDULER
     scheduler = Stream.scheduler
+
+    # STEP 6: EXECUTE A STEP OF THE SCHEDULER
     scheduler.step()
+
+    # STEP 7: LOOK AT OUTPUT STREAMS
     assert recent_values(x) == [0, 1, 2]
     assert recent_values(y) == [0, 2, 4]
     assert recent_values(q0) == [3, 6, 8]
@@ -335,8 +501,14 @@ def test_map_list():
     assert recent_values(z) == f(x_values)
     assert recent_values(w) == g(x_values)
 
+
+
     
 def test_element():
+    test_example_1()
+    test_example_2()
+    test_example_3()
+    test_example_4()
     test_element_simple()
     test_timed_window()
     test_map_list()
