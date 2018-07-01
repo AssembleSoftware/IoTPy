@@ -1,26 +1,72 @@
 """
 These examples illustrate algorithms implemented by nondeterministic
-atomic actions. These examples are from the book, "Parallel Program
-Design: A Foundation" by Chandy & Misra. The most efficient way to
-solve most problems is to carry out a deterministic sequence of
-actions; these examples of nondeterministic solutions can have poor
-performance. They are presented here merely as examples of
-nondeterminism and to show how IoTPy can implement algorithms written
-in UNITY (see the book).
+atomic actions. The examples are from the book, "Parallel Program
+Design: A Foundation" by Chandy & Misra.  
 
-These examples illustrate how agents manipulate shared variables.
-These examples show how SIGNAL streams can be used with shared
-variables. Usually, a value is appended to a signal stream when a
-shared variable changes value. Agents listen for signals (i.e.,
-read signal streams) to detrermine when shared variables of interest
-change value. Usually the message in the signal is arbitrary, and
-often we use True or 1 as the only message.
+The efficient way to solve most problems is to execute a deterministic
+sequence of actions. The examples are presented merely to show how
+IoTPy can implement nondeterministic algorithms written in the UNITY
+framework (see the book).
+
+In any point in a computation, at most one agent in a process can
+execute an action. Execution proceeds as follows. One agent in a
+process is selected nondeterministically and fairly to execute an
+action. If the selected agent has not read all the items in its input
+streams then the agent executes an action, i.e., it reads the values
+currently in its input streams and as a consequence it may append new
+values to its output streams. If the selected agent has read all the
+items in its input stream then the action is a skip, i.e. nothing is
+changed.
+
+Fair selection is the same as in UNITY: every agent will be selected
+for execution eventually. For each agent x, at each point in the
+computation there will be a later point at which agent x will execute
+an action.
+
+If an agent has read all the values in its input streams then the
+action of the agent at that point is a skip. If a program consists of
+a single process and all agents of the process execute only skips then
+the program has reached a fixed point: no values in the program change
+from that point onwards. The system detects a fixed point and
+execution of the process terminates.
+
+If a program has multiple processes then a separate termination
+detection algorithm has to be executed to determine if the program has
+reached a fixed point.
+
+An agent in one process communicates with an agent in a different
+process through message passing. Agents in different processes do not
+share memory.
+
+Agents in different processes can execute actions concurrently;
+however, for the purposes of reasoning about the program we can assume
+that at each point in the computation only one agent in one process
+executes an action.
+
+The following examples illustrate how agents in a single process
+operate on shared variables.  These examples show how SIGNAL agents
+use shared variables. A signal agent takes an action when there are
+new values on its input streams. The agent doesn't inspect the values;
+it takes an action regardless of the values and the number of new
+values. Its input streams are merely signalling mechanisms to take
+action.
+
+Usually, an agent appends a value to a signaling stream to indicate
+that the agent has changed a shared variable; an agent that has this
+stream as an input stream can then take an action that reads the new
+value of the shared variable. Since the value on the signaling stream
+is arbitrary, and value can be used; we use the object _changed to
+indicate that the state has changed. You can use any value including 1
+and TRUE. Likewise, to indicate that a variable has not changed, the
+stream signaling changes should have no new value, or equivalently has
+_no_value. For convenience, you can also use _unchanged which has the
+same effect as _no_value.
 
 The first example is to sort a list in increasing order by flipping
 any adjacent pair of elements that are out of order. This example has
 one agent for each adjacent pair indexed (i, i+1) of the list, and
 this agent is responsible for ensuring that this pair is in increasing
-order.
+order. In this example, each action is represented by a single agent.
 
 The second example is to find the matrix of shortest-path lengths in a
 graph given the edge-weight matrix of the graph. This example has an
@@ -51,7 +97,8 @@ sys.path.append(os.path.abspath("../helper_functions"))
 sys.path.append(os.path.abspath("../core"))
 sys.path.append(os.path.abspath("../agent_types"))
 
-from stream import Stream, _no_value
+from stream import Stream
+from stream import _no_value, _unchanged, _changed
 from recent_values import recent_values
 from op import signal_element, map_element
 from merge import weave_f
@@ -68,51 +115,48 @@ def sort(lst):
     #----------------------------------------------------------------
     # STEP 1. DEFINE FUNCTION TO BE ENCAPSULATED
     
-    def flip(I):
+    def flip(index):
         """
         Flips elements of list, lst, if they are out of order.
         
         Parameters
         ----------
-        I : array of length 1 consisting of index of an element of the
-            list. The index is put into an array because Python passes
-            parameters that are integer by value and arrays by
-            reference. This is merely a trick to pass a parameter by
-            reference.
+        index: index into the array
         
         """
-        # Extract index from the array.
-        i = I[0]
-        # Flip elements if out of order and return any value (1 in
-        # this case) to indicate a change to lst.
-        # Return no value if the elements are in order.
-        if lst[i] > lst[i+1]:
-            lst[i], lst[i+1] = lst[i+1], lst[i]
-            # Since both lst[i] and lst[i+1] changed value, append
-            # a 1 for both output streams to signal that the values
-            # changed. 
-            return [1,1]
+        # Flip elements if out of order and return _changed
+        # to indicate a change to to the corresponding index.
+        # Return _unchanged if the elements are unchanged.
+        if lst[index] > lst[index+1]:
+            lst[index], lst[index+1] = lst[index+1], lst[index]
+            # Since both lst[index] and lst[index+1] changed value, return
+            # _changed for both outputs corresponding to index
+            # and index + 1
+            return [_changed,_changed]
         else:
-            # Since neither lst[i] nor lst[i+1] changed value, do not
-            # append any values to either output stream.
-            return [_no_value, _no_value]
+            # Since neither lst[index] nor lst[index+1] changed value,
+            # return _unchanged for both outputs
+            return [_unchanged, _unchanged]
 
     #----------------------------------------------------------------
     # STEP 2. CREATE STREAMS
+    # Create one stream for each index into the array.
+    # The stream changed[i] gets a new value when the i-th element
+    # of the array is changed.
     indices = range(len(lst))
     changed = [ Stream('changed_' + str(i)) for i in indices]
 
+    #----------------------------------------------------------------
+    # STEP 3. CREATE AGENTS
     # Create an agent for each of the elements 0, 1, ..., len(lst)-1,
     # The agent executes its action when it reads a new value on either
     # stream changed[i] or changed[i+1].
-    # This agent sends a signal (the value 1 in our example)
-    # on stream, changed[i], when, and only when, the agent changes
-    # lst[i]. Likewise, the agent sends a signal on changed[i+1] only
-    # when lst[i+1] changes.
-
-    #----------------------------------------------------------------
-    # STEP 3. CREATE AGENTS
-    # Note: weave_f is used split_signal below. weave_f returns a
+    # This agent sends _changed on stream, changed[i], when the agent
+    # changes lst[i].
+    # Likewise, the agent sends _changed on stream changed[i+1] only
+    # when it changes lst[i+1].
+    
+    # Note: weave_f is used in split_signal below. weave_f returns a
     # stream consisting of the elements of its input streams in the
     # order in which they arrive. In this example, in_stream is a
     # stream of elements from changed[i] and changed[i+1].
@@ -120,7 +164,8 @@ def sort(lst):
         split_signal(
             func=flip,
             in_stream=weave_f([changed[i], changed[i+1]]),
-            out_streams=[changed[i], changed[i+1]], name=i, I=[i])
+            out_streams=[changed[i], changed[i+1]],
+            name=i, index=i)
 
     #----------------------------------------------------------------
     #STEP 4. START COMPUTATION
@@ -162,9 +207,11 @@ def shortest_path(D):
         i, j, k = triple
         if D[i][j] + D[j][k] < D[i][k]:
             D[i][k] = D[i][j] + D[j][k]
-            return(1)
+            # Since D[i][k] changed value return _changed
+            return(_changed)
         else:
-            return (_no_value)
+            # Since D[i][k] was changed by this action return _unchanged
+            return (_unchanged)
 
     #----------------------------------------------------------------
     # STEP 2. CREATE STREAMS
