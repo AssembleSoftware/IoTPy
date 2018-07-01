@@ -1,7 +1,7 @@
 """ This module contains the Stream class. The
 Stream and Agent classes are the building blocks
 of PythonStreams.
-(Version 1.4 August 16, 2017. Created by: Mani Chandy)
+(Version 1.5 May 21, 2017. Created by: K. Mani Chandy)
 """
 
 from system_parameters import DEFAULT_NUM_IN_MEMORY
@@ -38,7 +38,16 @@ class _no_value(object):
     def __init__(self):
         pass
 
+class _changed(object):
+    def __init__(self):
+        pass
 
+class _unchanged(object):
+    def __init__(self):
+        pass
+
+
+    
 class _multivalue(object):
     """
     When _multivalue([x1, x2, x3,...]) is sent on a stream, the
@@ -89,8 +98,11 @@ def remove_novalue_and_open_multivalue(l):
             isinstance(v, tuple)):
             return_list.append(v)
         else:
-            if v == _no_value:
+            if (v == _no_value or
+                v == _unchanged):
                 continue
+            elif (v == _changed):
+                return_list.append(1)
             elif isinstance(v, _multivalue):
                 return_list.extend(v.lst)
             else:
