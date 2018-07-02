@@ -175,27 +175,15 @@ def test():
         def h(v):
             global m
             m += 1
-            ## print 'v is '
-            ## print v
-            #w = json.loads(v)
             if 'text' in v:
                 print v['text']
-            ## if 'entities' in v:
-            ##     x = v['entities']
-            ##     y = x['hashtags']
-            ##     if y:
-            ##         print 'y is ', y
-            ##         print
-            ##         y = None
-            ## else:
-            ##     print 'v is ', v
         sink_element(func=h, in_stream=s)
 
     twitter_trackwords_computation(
-        consumer_key="Iv6RTiO7Quw3ivH0GWPWqbiD4",
-        consumer_secret="theWmGwcKFG76OtTerxwhrxfX5nSDqGDWB2almLlp2ndRpxACm",
-        access_token="999118734320009216-jaE4Rmc6fU11sMmBKb566YTFAJoMPV5",
-        access_token_secret="6ZxqJdK2RU6iridMX1MzSqr3uNpQsC9fv1E6otpZquLiF",
+        consumer_key="Put your value here",
+        consumer_secret="Put your value here",
+        access_token="Put your value here",
+        access_token_secret="Put your value here",
         trackwords=['Trump'], compute_func=g, num_steps=4)
 
 if __name__ == '__main__':
