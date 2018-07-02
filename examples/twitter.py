@@ -24,10 +24,10 @@ from recent_values import recent_values
 pp = pprint.PrettyPrinter(indent=4)
 
 #Variables that contains the user credentials to access Twitter API 
-access_token = "999118734320009216-jaE4Rmc6fU11sMmBKb566YTFAJoMPV5"
-access_token_secret = "6ZxqJdK2RU6iridMX1MzSqr3uNpQsC9fv1E6otpZquLiF"
-consumer_key = "Iv6RTiO7Quw3ivH0GWPWqbiD4"
-consumer_secret = "theWmGwcKFG76OtTerxwhrxfX5nSDqGDWB2almLlp2ndRpxACm"
+access_token = "put your value here"
+access_token_secret = "put your value here"
+consumer_key = "put your value here"
+consumer_secret = "put your value here"
 
 class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
     """
