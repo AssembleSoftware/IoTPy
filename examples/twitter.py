@@ -9,19 +9,17 @@ import threading
 
 import sys
 import os
-sys.path.append(os.path.abspath("../helper_functions"))
-sys.path.append(os.path.abspath("../core"))
-sys.path.append(os.path.abspath("../agent_types"))
-sys.path.append(os.path.abspath("../multiprocessing"))
+sys.path.append(os.path.abspath("../IoTPy/helper_functions"))
+sys.path.append(os.path.abspath("../IoTPy/core"))
+sys.path.append(os.path.abspath("../IoTPy/agent_types"))
+sys.path.append(os.path.abspath("../IoTPy/multiprocessing"))
 
 import time
-from source import source_function
+
 from sink import stream_to_file, sink_element
-from Multicore import single_process_single_source
+from multicore import single_process_single_source
 from stream import Stream
 from recent_values import recent_values
-
-pp = pprint.PrettyPrinter(indent=4)
 
 #Variables that contains the user credentials to access Twitter API 
 access_token = "put your value here"
@@ -166,25 +164,21 @@ def twitter_trackwords_computation(
     twitter_thread.join()
     Stream.scheduler.join()
     
-    
+
 def test():
-    def g(s):
-        global m
-        m = 0
-        
+    def compute_func(stream):
         def h(v):
-            global m
-            m += 1
             if 'text' in v:
                 print v['text']
-        sink_element(func=h, in_stream=s)
+        sink_element(func=h, in_stream=stream)
 
     twitter_trackwords_computation(
         consumer_key="Put your value here",
         consumer_secret="Put your value here",
         access_token="Put your value here",
         access_token_secret="Put your value here",
-        trackwords=['Trump'], compute_func=g, num_steps=4)
+        trackwords=['Trump'],
+        compute_func=compute_func, num_steps=4)
 
 if __name__ == '__main__':
     test()
