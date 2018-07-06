@@ -116,69 +116,50 @@ class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
         """
         self.twitter_stream.filter(track=self.trackwords)
 
+    def get_thread_object(self):
+        self.setup()
+        return (threading.Thread(target=self.start),
+            self.ready)
 
-def source_twitter_trackwords(
+
+def twitter_source_func(
         consumer_key, consumer_secret,
         access_token, access_token_secret,
-        trackwords, stream, time_interval=0, num_steps=0):
+        trackwords, source_stream, num_steps):
     obj = TwitterTrackwordsToStream(
         consumer_key, consumer_secret,
         access_token, access_token_secret,
-        trackwords=trackwords, source_stream=stream, 
-        num_steps=num_steps)
-    obj.setup()
-    return (threading.Thread(target=obj.start),
-            obj.ready)
+        trackwords, source_stream, num_steps)
+    return obj.get_thread_object()
 
-
-def twitter_trackwords_computation(
-        consumer_key, consumer_secret,
-        access_token, access_token_secret,
-        trackwords, compute_func, time_interval=0, num_steps=0):
-    """
-    Creates a persistent computation (if num_steps is 0). This
-    computation gets a stream of Tweets and executes the function
-    compute_func on the stream. If num_steps is non-zero, the
-    computation halts after num_steps.
-
-    """
-    # Create:
-    # (1) s, the stream from the source to the computational
-    #     network.
-    # (2) The twitter thread and ready (which signals that the
-    #     thread is ready).
-    # (3) The computation network
-    
-    s = Stream('source_computation')
-    twitter_thread, twitter_ready = source_twitter_trackwords(
-        consumer_key, consumer_secret,
-        access_token, access_token_secret,
-        trackwords, s, time_interval, num_steps)
-    compute_func(s)
-
-    # Start and join the twitter thread
-    # and the computational thread, Stream.scheduler.
-    twitter_thread.start()
-    twitter_ready.wait()
-    Stream.scheduler.start()
-    twitter_thread.join()
-    Stream.scheduler.join()
-    
 
 def test():
-    def compute_func(stream):
-        def h(v):
-            if 'text' in v:
-                print v['text']
-        sink_element(func=h, in_stream=stream)
+    # Variables that contain the user credentials to access Twitter API 
+    access_token = "Your value here"
+    access_token_secret = "Your value here"
+    consumer_key = "Your value here"
+    consumer_secret = "Your value here"
+    trackwords=['Trump']
 
-    twitter_trackwords_computation(
-        consumer_key="Put your value here",
-        consumer_secret="Put your value here",
-        access_token="Put your value here",
-        access_token_secret="Put your value here",
-        trackwords=['Trump'],
-        compute_func=compute_func, num_steps=4)
+    def g(s):
+        def h(v):
+            if 'text' in v: print v['text']
+        sink_element(func=h, in_stream=s)
+
+    def f(s):
+        return twitter_source_func(
+            consumer_key, consumer_secret,
+            access_token, access_token_secret,
+            trackwords, source_stream=s, num_steps=2)
+
+    single_process_single_source(
+        source_func=f, compute_func=g)
+        
+    
+
+
+if __name__ == '__main__':
+    test()
 
 if __name__ == '__main__':
     test()
