@@ -199,10 +199,10 @@ class StreamProcess(object):
 ##     p.start()
 ##     p.join()
 
-def single_process_single_source(source_f, compute_f):
+def single_process_single_source(source_func, compute_func):
     s = Stream('s')
-    source_thread, source_ready = source_f(s)
-    compute_f(s)
+    source_thread, source_ready = source_func(s)
+    compute_func(s)
     
     source_thread.start()
     source_ready.wait()
@@ -211,17 +211,17 @@ def single_process_single_source(source_f, compute_f):
     source_thread.join()
     Stream.scheduler.join()
 
-def single_process_multiple_sources(list_source_f, compute_f):
+def single_process_multiple_sources(list_source_func, compute_func):
     def g():
         list_source_streams = []
         list_thread_objects = []
-        for i in range(len(list_source_f)):
+        for i in range(len(list_source_func)):
             stream = Stream('source' + str(i))
             list_source_streams.append(stream)
-            f = list_source_f[i]
+            f = list_source_func[i]
             list_thread_objects.append(f(stream))
             
-        compute_f(list_source_streams)
+        compute_func(list_source_streams)
         # return list of sources, list of input streams, and
         # list of output streams
         return list_thread_objects, list_source_streams, []
