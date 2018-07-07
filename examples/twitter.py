@@ -122,7 +122,7 @@ class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
             self.ready)
 
 
-def twitter_source_func(
+def twitter_to_stream(
         consumer_key, consumer_secret,
         access_token, access_token_secret,
         trackwords, source_stream, num_steps):
@@ -141,17 +141,20 @@ def test():
     consumer_secret = "Your value here"
     trackwords=['Trump']
 
+    # The function that carries out computation on the stream.
     def g(s):
         def h(v):
             if 'text' in v: print v['text']
         sink_element(func=h, in_stream=s)
 
+    # The function that generates a stream from the source.
     def f(s):
-        return twitter_source_func(
+        return twitter_to_stream(
             consumer_key, consumer_secret,
             access_token, access_token_secret,
             trackwords, source_stream=s, num_steps=2)
 
+    # Connect the source to the computation.
     single_process_single_source(
         source_func=f, compute_func=g)
         
