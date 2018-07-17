@@ -14,13 +14,11 @@ from stream import Stream, StreamArray
 from stream import _no_value, _multivalue
 from check_agent_parameter_types import *
 from recent_values import *
-#from helper_functions.check_agent_parameter_types import *
-#from helper_functions.recent_values import recent_values
-from sink import sink_list, sink_list_f
+from sink import sink_list
 from op import *
 from split import split_list, split_list_f
 from merge import merge_list, merge_list_f
-from multi import multi_element
+from multi import multi_element, multi_list, multi_window
 
 def test_multi():
     scheduler = Stream.scheduler
@@ -43,6 +41,19 @@ def test_multi():
     assert recent_values(v) == [10, 11, 12, 13]
     assert recent_values(x) == [10, 11, 12, 14]
     assert recent_values(y) == [18, 21, 24, 27]
+
+    # test of single input and single output
+    u = Stream('u')
+    x = Stream('x')
+    
+    def f(lst):
+        return [lst[0]*2]
+
+    multi_element(f, [u], [x])
+    
+    u.extend(range(5))
+    scheduler.step()
+    assert recent_values(x) == [0, 2, 4, 6, 8]
 
     # Test StreamArray
     u = StreamArray('u')
