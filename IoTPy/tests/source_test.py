@@ -42,7 +42,6 @@ def test_source():
     u = Stream('u')
     sb = Stream('sb')
     sc = Stream('sc')
-    sd = Stream('sd')
 
     filename = 'test.dat'
     with open(filename, 'w') as output_file:
@@ -51,22 +50,19 @@ def test_source():
 
     scheduler.name_to_stream = {'s': s, 'r':r, 'a':a}
     vv = source_function(
-        func=random_integer, stream=s, num_steps=5,
+        func=random_integer, out_stream=s, num_steps=5,
         name='random', window_size=2,
         test_list=test_list, a=10, b=20)
     
     ww = source_list(
-        in_list=range(10), stream=r, num_steps=5,
+        in_list=range(10), out_stream=r, num_steps=5,
         name='read list', window_size=2)
         
     xx = source_file(
-        func=lambda x: 2*int(x), stream=a, filename='test.dat',
+        func=lambda x: 2*int(x), out_stream=a, filename='test.dat',
         time_interval=0.5, num_steps=None)
     
-    zz = source_to_stream(
-        func=read_list, out_stream=sd, num_steps=5,
-        name='read list', window_size=2, state=0, in_list=range(10))
-    
+
     map_element(lambda x: 2*x, s, t)
     def f(lst):
         return [10*v for v in lst]
@@ -97,7 +93,7 @@ def test_source():
     q_to_streams_queue.put('_close')
     q2s_0 = Stream('q2s_0')
     q2s_1 = Stream('q2s_1')
-    q2sss = q_to_streams(q=q_to_streams_queue, streams=[q2s_0, q2s_1])
+    q2sss = q_to_streams(q=q_to_streams_queue, out_streams=[q2s_0, q2s_1])
 
     q2s_general_queue = Queue.Queue()
     q2s_test_list = range(5)
@@ -106,14 +102,12 @@ def test_source():
     random_thread, random_thread_ready = vv
     list_thread,list_thread_ready = ww
     file_thread, file_thread_ready = xx
-    stream_thread, stream_thread_ready = zz
     q_thread, q_thread_ready = sqq
     q2s_thread, q2s_thread_ready = q2sss
     
     random_thread.start()
     list_thread.start()
     file_thread.start()
-    stream_thread.start()
     q_thread.start()
     q2s_thread.start()
 
@@ -121,7 +115,6 @@ def test_source():
     random_thread_ready.wait()
     list_thread_ready.wait()
     file_thread_ready.wait()
-    stream_thread_ready.wait()
     q_thread_ready.wait()
     q2s_thread_ready.wait()
     
@@ -130,7 +123,6 @@ def test_source():
     #random_thread.join()
     list_thread.join()
     file_thread.join()
-    stream_thread.join()
     q_thread.join()
     q2s_thread.join()
 
@@ -146,7 +138,7 @@ def test_source():
     assert recent_values(q) == [v*v for v in recent_values(r)]
     assert recent_values(p) == zip(*[recent_values(u), recent_values(q)])
     assert recent_values(sc) == [x*x for x in range(5)]
-    assert recent_values(sd) == range(10)
+
     que_contents = []
     while not que.empty():
         que_contents.append(que.get())
