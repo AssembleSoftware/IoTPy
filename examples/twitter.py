@@ -15,17 +15,9 @@ sys.path.append(os.path.abspath("../IoTPy/agent_types"))
 sys.path.append(os.path.abspath("../IoTPy/multiprocessing"))
 
 import time
-
-from sink import stream_to_file, sink_element
-from multicore import single_process_single_source
+from sink import sink_element
 from stream import Stream
-from recent_values import recent_values
-
-#Variables that contains the user credentials to access Twitter API 
-access_token = "put your value here"
-access_token_secret = "put your value here"
-consumer_key = "put your value here"
-consumer_secret = "put your value here"
+from multicore import single_process_single_source, StreamProcess
 
 class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
     """
@@ -33,14 +25,14 @@ class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
 
     Parameters
     ----------
-    source_stream: Stream
+    out_stream: Stream
        The stream on which Tweet dicts are placed.
     trackwords: list of Str
        The list of words in Twitter that are tracked to create this
        stream.
     num_steps: int, optional
        If num_steps is non-zero, then num_steps is the number of
-       Tweet dicts placed on source_stream, after which the function
+       Tweet dicts placed on out_stream, after which the function
        closes. If num_steps is zero, the class is persistent until
        an error occurs.
 
@@ -51,20 +43,20 @@ class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
         helpful to ensure that all source streams start getting
         values at about the same time.
     n: int
-       The number of Tweets placed on source_stream so far.
+       The number of Tweets placed on out_stream so far.
 
     """
 
     def __init__(
             self, consumer_key, consumer_secret,
             access_token, access_token_secret,
-            trackwords, source_stream, num_steps=0):
+            trackwords, out_stream, num_steps=0):
         self.consumer_key = consumer_key
         self.consumer_secret = consumer_secret
         self.access_token = access_token
         self.access_token_secret = access_token_secret
         self.trackwords = trackwords
-        self.source_stream = source_stream
+        self.out_stream = out_stream
         self.num_steps = num_steps
         self.ready = threading.Event()
         self.n = 0
@@ -80,16 +72,20 @@ class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
         """
         Call back by Twitter.
         Appends a dict object containing the Tweet to
-        the source_stream. Runs forever if num_steps is
+        the out_stream. Runs forever if num_steps is
         0. Halts after num_steps if it is non-zero.
 
         """
         try:
             if data is None: return True
-            self.source_stream.append(json.loads(data))
+
+            # Put the data in the scheduler's input queue
+            Stream.scheduler.input_queue.put(
+                (self.out_stream.name, json.loads(data)))
             self.n += 1
             if self.num_steps and (self.n >= self.num_steps):
                 exit()
+            # Yield the thread
             time.sleep(0)
             return True
         except BaseException as e:
@@ -111,58 +107,57 @@ class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
     def start(self):
         """
         This is the thread target. This thread will put Tweets
-        on source_stream.
+        on out_stream.
 
         """
+        print 'start'
         self.twitter_stream.filter(track=self.trackwords)
+        
 
     def get_thread_object(self):
         self.setup()
         return (threading.Thread(target=self.start),
             self.ready)
 
-
 def twitter_to_stream(
         consumer_key, consumer_secret,
         access_token, access_token_secret,
-        trackwords, source_stream, num_steps):
+        trackwords, out_stream, num_steps):
     obj = TwitterTrackwordsToStream(
         consumer_key, consumer_secret,
         access_token, access_token_secret,
-        trackwords, source_stream, num_steps)
+        trackwords, out_stream, num_steps)
     return obj.get_thread_object()
-
 
 def test():
     # Variables that contain the user credentials to access Twitter API 
-    access_token = "Your value here"
-    access_token_secret = "Your value here"
-    consumer_key = "Your value here"
-    consumer_secret = "Your value here"
-    trackwords=['Trump']
+    access_token = "999118734320009216-jaE4Rmc6fU11sMmBKb566YTFAJoMPV5"
+    access_token_secret = "6ZxqJdK2RU6iridMX1MzSqr3uNpQsC9fv1E6otpZquLiF"
+    consumer_key = "Iv6RTiO7Quw3ivH0GWPWqbiD4"
+    consumer_secret = "theWmGwcKFG76OtTerxwhrxfX5nSDqGDWB2almLlp2ndRpxACm"
+    # trackwords is the list of words that you want to track on Twitter.
+    trackwords=['Trump', 'Clinton']
 
-    # The function that carries out computation on the stream.
+    # The computational function that operates on a stream s generated
+    # by the source.
     def g(s):
         def h(v):
             if 'text' in v: print v['text']
         sink_element(func=h, in_stream=s)
 
-    # The function that generates a stream from the source.
+    # The function that generates the source stream.
     def f(s):
         return twitter_to_stream(
             consumer_key, consumer_secret,
             access_token, access_token_secret,
-            trackwords, source_stream=s, num_steps=2)
+            trackwords, out_stream=s, num_steps=10)
 
-    # Connect the source to the computation.
-    single_process_single_source(
+    # Create a single process with a single source
+    # specified by function f, and a computational function
+    # specified by function g.
+    return single_process_single_source(
         source_func=f, compute_func=g)
-        
-    
 
-
-if __name__ == '__main__':
-    test()
 
 if __name__ == '__main__':
     test()
