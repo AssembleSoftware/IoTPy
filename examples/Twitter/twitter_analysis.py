@@ -3,7 +3,7 @@ import os
 from twitter import twitter_to_stream
 sys.path.append(os.path.abspath("../agent_types"))
 sys.path.append(os.path.abspath("../multiprocessing"))
-from Multicore import single_process_single_source
+from multicore import single_process_single_source
 from sink import sink_element
 
 import string
