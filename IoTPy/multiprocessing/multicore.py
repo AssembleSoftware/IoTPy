@@ -1,3 +1,4 @@
+
 """
 This module defines a Class, StreamProcess, for making a multiprocess
 program that runs on a multicore (shared-memory) computer.
@@ -184,72 +185,50 @@ class StreamProcess(object):
         self.process = multiprocessing.Process(
             target=self.target_of_connect_process)
 
-
-
-## def single_process_single_source(source_func, compute_func):
-##     s = Stream('s')
-##     Stream.scheduler.name_to_stream['s'] = s
-##     source_thread, source_ready = source_func(s)
-##     compute_func(s)
-    
-##     source_thread.start()
-##     source_ready.wait()
-##     print 'starting scheduler'
-##     Stream.scheduler.start()
-##     source_thread.join()
-##     Stream.scheduler.join()
-
-## def single_process_single_source(source_func, compute_func):
-##     print 'in single_process_single_source'
-##     print 'source_func is', source_func
-##     print 'compute_func is ', compute_func
-##     def f(s):
-##         compute_func(s[0])
-##     return single_process_multiple_sources(
-##         list_source_func=[source_func],
-##         compute_func=f)
-
-
-
 def single_process_single_source(source_func, compute_func):
     def f(s):
         compute_func(s[0])
+    single_process_multiple_sources(
+        list_source_func=[source_func], compute_func=f)
 
-    def target_of_StreamProcess():
-        return single_process_multiple_sources(
-            list_source_func=[source_func],
-            compute_func=f)
+    ## def target_of_StreamProcess():
+    ##     return single_process_multiple_sources(
+    ##         list_source_func=[source_func],
+    ##         compute_func=f)
 
-    proc0 = StreamProcess(
-        func=target_of_StreamProcess,
-        name='single process single source')
-    proc0.connect_process()
-    proc0.start()
-    proc0.join()
-
-
+    ## proc0 = StreamProcess(
+    ##     func=target_of_StreamProcess,
+    ##     name='single process single source')
+    ## proc0.connect_process()
+    ## proc0.start()
+    ## proc0.join()
 
 
 
 def single_process_multiple_sources(list_source_func, compute_func):
-    list_source_streams = []
-    list_thread_objects = []
-    for i in range(len(list_source_func)):
-        stream_name = '_source_' + str(i)
-        stream = Stream(stream_name)
-        Stream.scheduler.name_to_stream[stream_name] = stream
-        list_source_streams.append(stream)
-        f = list_source_func[i]
-        list_thread_objects.append(f(stream))
-            
-    compute_func(list_source_streams)
-    # return list of sources i.e. list_thread_objects,
-    # list of input streams i.e. list_source_streams, and
-    # list of output streams i.e. []
-    print 'in single_process_multiple_sources'
-    print 'list_thread_objects', list_thread_objects
-    print 'list_source_streams', list_source_streams
-    return list_thread_objects, list_source_streams, []
+    def target_of_StreamProcess():
+        list_source_streams = []
+        list_thread_objects = []
+        for i in range(len(list_source_func)):
+            stream_name = '_source_' + str(i)
+            stream = Stream(stream_name)
+            Stream.scheduler.name_to_stream[stream_name] = stream
+            list_source_streams.append(stream)
+            f = list_source_func[i]
+            list_thread_objects.append(f(stream))
+
+        compute_func(list_source_streams)
+        # returns (1) list of sources i.e. list_thread_objects,
+        # (2) list of input streams i.e. list_source_streams, and
+        # (3) list of output streams i.e. []
+        return list_thread_objects, list_source_streams, []
+    
+    proc0 = StreamProcess(
+        func=target_of_StreamProcess,
+        name='single process multiple sources')
+    proc0.connect_process()
+    proc0.start()
+    proc0.join()
 
 def process_in_multicore(
         list_source_func, compute_func,
@@ -271,25 +250,10 @@ def process_in_multicore(
         out_streams = []
         for out_stream_name in out_stream_names:
             out_streams.append(Stream(out_stream_name))
-
-        print 'list source func is ', list_source_func
-        print 'in_streams is:'
-        for stream in in_streams:
-            print stream.name
-        print 'out_streams is:'
-        for stream in out_streams:
-            print stream.name
         for in_stream in in_streams:
             Stream.scheduler.name_to_stream[in_stream.name] = in_stream
         for out_stream in out_streams:
             Stream.scheduler.name_to_stream[out_stream.name] = out_stream
-
-
-        print 'list thread objects'
-        for thread_object in list_thread_objects:
-            print 'thread', thread_object[0]
-            print 'ready', thread_object[1]
-        print
         compute_func(in_streams, out_streams)
         return (list_source_func, in_streams, out_streams)
     return StreamProcess(func=f, name=process_name)
