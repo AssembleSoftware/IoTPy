@@ -41,6 +41,23 @@ def twitter_analysis(consumer_key, consumer_secret,
     single_process_single_source(
         source_func=f, compute_func=g)
 
+def simple_test():
+    def h(tweet):
+        if 'text' in tweet: print tweet['text']
+        
+    # Variables that contain the user credentials to access Twitter API 
+    access_token = "999118734320009216-jaE4Rmc6fU11sMmBKb566YTFAJoMPV5"
+    access_token_secret = "6ZxqJdK2RU6iridMX1MzSqr3uNpQsC9fv1E6otpZquLiF"
+    consumer_key = "Iv6RTiO7Quw3ivH0GWPWqbiD4"
+    consumer_secret = "theWmGwcKFG76OtTerxwhrxfX5nSDqGDWB2almLlp2ndRpxACm"
+    # trackwords is the list of words that you want to track on Twitter.
+    trackwords=['Trump']
+    
+    twitter_analysis(
+        consumer_key, consumer_secret,
+        access_token, access_token_secret,
+        trackwords, compute_func=h, num_steps=10)
+
 def test():
     def untokenize(words):
         """
@@ -132,4 +149,10 @@ def test():
         trackwords, compute_func, num_steps=10)
 
 if __name__ == '__main__':
+    simple_test()
+    print "simple test is finished"
+    print
+    print "starting test of sentiment analysis"
     test()
+
+    
