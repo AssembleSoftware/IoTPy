@@ -1,3 +1,12 @@
+"""
+This module contains two tests:
+test_single_process_single_source()
+and
+test_single_process_multiple_sources()
+which tests code from multicore.py in multiprocessing.
+
+"""
+
 import sys
 import os
 sys.path.append(os.path.abspath("../multiprocessing"))
@@ -11,55 +20,70 @@ from merge import zip_stream
 from source import source_function
 
 def test_single_process_single_source():
-    def target():
+    """
+    The single source generates 1, 2, 3, 4, .....
+    The compute function multiplies this sequence by 10
+    and puts the result in the file called test.dat
+    num_steps is the number of values output by the source.
+    For example, if num_steps is 4 and test.dat is empty before the
+    function is called then, test.dat will contain 10, 20, 30, 40
+    on separate lines.
 
-        def g(s):
-            # A simple source which outputs 0, 1, 2, 3,.. on
-            # stream s.
-            def generate_sequence(state): return state+1, state+1
+    """
 
-            # Return a thread object which takes 10 steps, and
-            # sleeps for 0.1 seconds between successive steps, and
-            # puts the next element of the sequence in stream s,
-            # and starts the sequence with value 0.
-            return source_function(
-                func=generate_sequence, out_stream=s,
-                time_interval=0.1, num_steps=2, state=0)
+    def g(s):
+        # A simple source which outputs 1, 2, 3,... on
+        # stream s.
+        def generate_sequence(state): return state+1, state+1
 
-        def h(s):
-            # A trivial example of a network of agents consisting
-            # of two agents where the network has a single input
-            # stream: s.
-            # The first agent applies function f to each element 
-            # of the input stream, s, and puts the result in its
-            # output stream t.
-            # The second agent puts values in its input stream t
-            # on a file called test.dat.
-            from op import map_element
-            from sink import stream_to_file
+        # Return a thread object which takes 10 steps, and
+        # sleeps for 0.1 seconds between successive steps, and
+        # puts the next element of the sequence in stream s,
+        # and starts the sequence with value 0.
+        return source_function(
+            func=generate_sequence, out_stream=s,
+            time_interval=0.1, num_steps=4, state=0)
 
-            def f(x): return x*10
-            t = Stream()
-            map_element(
-                func=f, in_stream=s, out_stream=t)
-            stream_to_file(in_stream=t, filename='test.dat')
+    def h(s):
+        # A trivial example of a network of agents consisting
+        # of two agents where the network has a single input
+        # stream: s.
+        # The first agent applies function f to each element 
+        # of the input stream, s, and puts the result in its
+        # output stream t.
+        # The second agent puts values in its input stream t
+        # on a file called test.dat.
+        from op import map_element
+        from sink import stream_to_file
 
-        # Create a process with two threads: a source thread and
-        # a compute thread. The source thread executes the function
-        # g, and the compute thread executes function h.
-        result = single_process_single_source(source_func=g, compute_func=h)
-    target()
-    ## proc0 = StreamProcess(target, name='process 0')
-    ## proc0.connect_process()
-    ## print 'proc0 is', proc0
-    ## proc0.start()
-    ## proc0.join()
+        def f(x): return x*10
+        t = Stream()
+        map_element(
+            func=f, in_stream=s, out_stream=t)
+        stream_to_file(in_stream=t, filename='test.dat')
+
+    # Create a process with two threads: a source thread and
+    # a compute thread. The source thread executes the function
+    # g, and the compute thread executes function h.
+    single_process_single_source(source_func=g, compute_func=h)
+
 
 def test_single_process_multiple_sources():
+    """
+    This example has two sources: g_0 generates 1, 2, 3, 4, ...
+    and g_1 generates random numbers. The computation zips the two
+    streams together and writes the result to a file called
+    output.dat.
+    num_steps is the number of values produced by the source. For
+    example, if the smaller of the num_steps for each source is 10,
+    then (1, r1), (2, r2), ..., (10, r10), ... will be appended to the
+    file  output.dat where r1,..., r10 are random numbers. 
+
+    """
     import random
 
     def g_0(s):
-        # A simple source which outputs 0, 1, 2, 3,.. on
+        # A simple source which outputs 1, 2, 3, 4, .... on
         # stream s.
         def generate_sequence(state):
             return state+1, state+1
@@ -102,13 +126,6 @@ def test_single_process_multiple_sources():
     # g_0 and g_1, and the compute thread executes function h.
     single_process_multiple_sources(list_source_func=[g_0, g_1], compute_func=h)
 
-
 if __name__ == '__main__':
-    
-    ## print 'test_single_process_multiple_sources'
-    ## print
-    ## test_single_process_multiple_sources()
-    
-    print 'test_single_process_single_source'
-    print
+    test_single_process_multiple_sources()
     test_single_process_single_source()
