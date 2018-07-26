@@ -162,9 +162,9 @@ if __name__ == '__main__':
     print 'starting test_0'
     test_0()
     print
-    ## print 'starting test_1'
-    ## test_1()
-    ## print
-    ## print 'starting test_2'
-    ## test_2()
-    ## print
+    print 'starting test_1'
+    test_1()
+    print
+    print 'starting test_2'
+    test_2()
+    print
