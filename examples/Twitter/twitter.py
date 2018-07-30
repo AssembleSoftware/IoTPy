@@ -90,13 +90,13 @@ class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
                 (self.out_stream.name, json.loads(data)))
             self.n += 1
             if self.num_steps and (self.n >= self.num_steps):
-                exit()
+                sys.exit()
             # Yield the thread
             time.sleep(0)
             return True
         except BaseException as e:
             print("Error on_data: %s" % str(e))
-            exit()
+            sys.exit()
 
     def setup(self):
         """
