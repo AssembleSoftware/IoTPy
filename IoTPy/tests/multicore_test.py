@@ -15,9 +15,12 @@ sys.path.append(os.path.abspath("../agent_types"))
 
 from multicore import StreamProcess, single_process_single_source
 from multicore import single_process_multiple_sources
+from multicore import make_process, run_multiprocess
+#from multicore import process_in_multicore
 from stream import Stream
 from merge import zip_stream
 from source import source_function
+from op import map_element
 
 def test_single_process_single_source():
     """
@@ -126,6 +129,42 @@ def test_single_process_multiple_sources():
     # g_0 and g_1, and the compute thread executes function h.
     single_process_multiple_sources(list_source_func=[g_0, g_1], compute_func=h)
 
+
+def test_multicore_two_processes():
+    def ff(x):
+        return x*10
+    def gg(state):
+        return state+1, state+1
+    def h(v):
+        print 'h is', 2*v
+        return 200*v
+    def source(out_stream):
+        return source_function(
+            func=gg, out_stream=out_stream,
+            time_interval=0.1, num_steps=10, state=0, window_size=1,
+            name='source')
+    def compute_0(in_streams, out_streams):
+        map_element(
+            func=ff, in_stream=in_streams[0],
+            out_stream=out_streams[0], name='aaaa')
+    def compute_1(in_streams, out_streams):
+        map_element(
+            func=h, in_stream=in_streams[0],
+            out_stream=out_streams[0], name='aaaa')
+    proc_0 = make_process(
+        list_source_func=[source], compute_func=compute_0,
+        #process_name='proc_0',
+        in_stream_names=[], out_stream_names=['t'])
+    proc_1 = make_process(
+        list_source_func=[], compute_func=compute_1,
+        #process_name='proc_1',
+        in_stream_names=['t'], out_stream_names=['u'],
+        )
+    run_multiprocess(
+        processes=[proc_0, proc_1],
+        connections=[(proc_0, 't', proc_1, 't')])
+
 if __name__ == '__main__':
     test_single_process_multiple_sources()
     test_single_process_single_source()
+    test_multicore_two_processes()
