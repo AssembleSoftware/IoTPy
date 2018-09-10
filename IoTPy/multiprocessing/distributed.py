@@ -1,7 +1,7 @@
 """
 This module defines a Class, DistributedProcess, for making a
 multiprocess program that uses message-passing for communication. The
-protocol used is APMQ implemented by RabbitMQ/pika.
+protocol used is AMQP implemented by RabbitMQ/pika.
 
 """
 import multiprocessing
@@ -19,19 +19,19 @@ sys.path.append(os.path.abspath("../core"))
 from sink import sink_element, stream_to_file
 from compute_engine import ComputeEngine
 from stream import Stream
-from Multicore import StreamProcess
+from multicore import StreamProcess
 
 class DistributedProcess(StreamProcess):
     """
     Class for creating and executing a process that communicates using
-    message passing with the APMQ protocol implemented by RabbitMQ.
+    message passing with the AMQP protocol implemented by RabbitMQ.
 
     Parameters
     ----------
        func: function
           The function that is encapsulated to create this process.
-          func returns a 3-tuple: list of sources, input streams and
-            output streams.
+          func returns a 3-tuple: (1) list of sources, (2) list of
+            input streams, and (3) list of output streams.
        name: str (optional)
           Name given to the process. The name helps with debugging.
 
@@ -41,8 +41,8 @@ class DistributedProcess(StreamProcess):
            key: str
                 Name of an out_stream
            value: stream_name_and_process_name_list
-                  list of pairs (2-tuples) where each pair is
-                  (stream_name, process_name)
+                  which is a list of pairs (2-tuples) where each
+                  pair is (stream_name, process_name)
                   (1) stream_name: pickled object
                       stream_name is the name of the input stream
                       of a function in the receiver process. This
@@ -55,14 +55,14 @@ class DistributedProcess(StreamProcess):
                   (2) process_name: str
                           The name of the receiver process.
         process: multiprocess.Process
-           The process that communicates using APMQ.
+           The process that communicates using AMQP.
            This process is created by calling the method
            connect_process() and is started by calling the method,
            start().
 
     """
     def __init__(self, func, name=None):
-        #super(DistributedProcess, self).__init__(func, name)
+        super(DistributedProcess, self).__init__(func, name)
         self.out_to_remote = defaultdict(list)
         self.process = None
 
@@ -70,7 +70,8 @@ class DistributedProcess(StreamProcess):
             self, sending_stream_name, receiving_process_name,
             receiving_stream_name):
         """
-        Put the key: sender, value:receiver in the out_to_remote dict.  
+       Assign key = sender and value = receiver in
+       out_to_remote dict.  
 
         """
         self.out_to_remote[sending_stream_name].append(
@@ -229,7 +230,7 @@ def test_1():
         map_element(
             func=ff, in_stream=s, out_stream=t, name='aaaa')
         ss = source_function(
-            func=gg, stream=s,
+            func=gg, out_stream=s,
             time_interval=0.1, num_steps=10, state=0, window_size=1,
             name='source')
         #return sources, in_streams, out_streams
@@ -310,7 +311,7 @@ def test_2():
         def g(x): return {'h':int(100*x), 't':int(10*x)}
         map_element(g, s, t)
         random_source = source_function(
-            func=f, stream=s, time_interval=0.1, num_steps=10)
+            func=f, out_stream=s, time_interval=0.1, num_steps=10)
         return [random_source], [s], [t]
         #return sources, in_streams, out_streams
 
