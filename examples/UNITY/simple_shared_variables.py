@@ -44,12 +44,11 @@ once, from False to True. So, stop acts like a signal stream with a
 single value.
 
 """
-
 import sys
 import os
-sys.path.append(os.path.abspath("../helper_functions"))
-sys.path.append(os.path.abspath("../core"))
-sys.path.append(os.path.abspath("../agent_types"))
+sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
+sys.path.append(os.path.abspath("../../IoTPy/core"))
+sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
 
 from stream import Stream, _no_value
 from recent_values import recent_values
