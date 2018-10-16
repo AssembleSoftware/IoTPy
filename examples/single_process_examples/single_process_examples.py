@@ -1,9 +1,11 @@
 """
-This module contains two tests:
-test_single_process_single_source()
+This module contains very simple examples of creating a process
+consisting of a single process. The module has two examples:
+example_single_process_single_source()
 and
-test_single_process_multiple_sources()
-which tests code from multicore.py in multiprocessing.
+example_single_process_multiple_sources().
+
+Theses tests use code from multicore.py in multiprocessing.
 
 """
 
@@ -14,13 +16,16 @@ sys.path.append(os.path.abspath("../../IoTPy/multiprocessing"))
 sys.path.append(os.path.abspath("../../IoTPy/core"))
 sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
 
+# multicore is in IoTPy/IoTPy/multiprocessing
 from multicore import StreamProcess, single_process_single_source
 from multicore import single_process_multiple_sources
+# stream is in IoTPy/IoTPy/core
 from stream import Stream
+# merge and source are in IoTPy/IoTPy/agent_types
 from merge import zip_stream
 from source import source_function
 
-def test_single_process_single_source():
+def example_single_process_single_source():
     """
     The single source generates 1, 2, 3, 4, .....
     The compute function multiplies this sequence by 10
@@ -69,7 +74,7 @@ def test_single_process_single_source():
     single_process_single_source(source_func=g, compute_func=h)
 
 
-def test_single_process_multiple_sources():
+def example_single_process_multiple_sources():
     """
     This example has two sources: g_0 generates 1, 2, 3, 4, ...
     and g_1 generates random numbers. The computation zips the two
@@ -125,21 +130,27 @@ def test_single_process_multiple_sources():
     # Create a process with three threads: two source threads and
     # a compute thread. The source threads execute the functions
     # g_0 and g_1, and the compute thread executes function h.
-    single_process_multiple_sources(list_source_func=[g_0, g_1], compute_func=h)
+    single_process_multiple_sources(
+        list_source_func=[g_0, g_1], compute_func=h) 
 
+#---------------------------------------------------------------------------
+# RUN TESTS
+#---------------------------------------------------------------------------
 if __name__ == '__main__':
     print 'Starting testing single process with multiple sources'
     print 'Expect to see "input queue empty" a few times '
     print
-    test_single_process_multiple_sources()
+    example_single_process_multiple_sources()
+    print '---------------------------------------------------------'
     print
     print 'Successfully finished testing single process with multiple sources'
     print 'Look at the file: output.dat'
     print
+    print '---------------------------------------------------------'
     print 'Starting testing single process with single source'
     print 'Expect to see "input queue empty" a few times '
     print
-    test_single_process_single_source()
+    example_single_process_single_source()
     print
     print 'Successfully finished testing single process with single source'
     print 'Look at the file: test.dat'
