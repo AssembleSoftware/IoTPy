@@ -78,19 +78,15 @@ class StreamProcess(object):
         self.in_queue = multiprocessing.Queue()
         self.out_to_in = defaultdict(list)
         self.process = None
-
-
     def start(self):
         self.process.start()
     def join(self):
         self.process.join()
-
     def attach_stream(
             self, sending_stream_name, receiving_process,
             receiving_stream_name):   
         self.out_to_in[sending_stream_name].append(
             (receiving_stream_name, receiving_process))
-
     def connect_processor(self, out_streams):
         """
         Parameters
@@ -233,6 +229,8 @@ def single_process_multiple_sources(list_source_func, compute_func):
        elements of the list are source_function from
        agent_types/source
     compute_func: network of agents (possibly single agent)
+       The j-th input stream of compute_func is fed by the
+       j-th source in list_source_func
 
     Notes
     -----
