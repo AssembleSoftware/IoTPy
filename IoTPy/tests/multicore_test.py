@@ -1,8 +1,8 @@
 """
-This module contains two tests:
-test_single_process_single_source()
-and
-test_single_process_multiple_sources()
+This module contains tests:
+* test_single_process_single_source()
+* test_single_process_multiple_sources()
+* offset_estimation_test()
 which tests code from multicore.py in multiprocessing.
 
 """
@@ -12,15 +12,18 @@ import os
 sys.path.append(os.path.abspath("../multiprocessing"))
 sys.path.append(os.path.abspath("../core"))
 sys.path.append(os.path.abspath("../agent_types"))
+sys.path.append(os.path.abspath("../../examples/timing"))
 
 from multicore import StreamProcess, single_process_single_source
 from multicore import single_process_multiple_sources
 from multicore import make_process, run_multiprocess
 #from multicore import process_in_multicore
 from stream import Stream
-from merge import zip_stream
+from merge import zip_stream, blend
 from source import source_function
-from op import map_element
+from op import map_element, map_window
+from timing import offsets_from_ntp_server, print_stream
+
 
 def test_single_process_single_source():
     """
@@ -32,9 +35,14 @@ def test_single_process_single_source():
     function is called then, test.dat will contain 10, 20, 30, 40
     on separate lines.
 
+    The steps for creating the process are:
+    (1) Define the source: source()
+    (2) Define the computational network: compute()
+    (3) Call single_process_single_source()
+
     """
 
-    def g(s):
+    def source(s):
         # A simple source which outputs 1, 2, 3,... on
         # stream s.
         def generate_sequence(state): return state+1, state+1
@@ -47,7 +55,7 @@ def test_single_process_single_source():
             func=generate_sequence, out_stream=s,
             time_interval=0.1, num_steps=4, state=0)
 
-    def h(s):
+    def compute(s):
         # A trivial example of a network of agents consisting
         # of two agents where the network has a single input
         # stream: s.
@@ -68,24 +76,31 @@ def test_single_process_single_source():
     # Create a process with two threads: a source thread and
     # a compute thread. The source thread executes the function
     # g, and the compute thread executes function h.
-    single_process_single_source(source_func=g, compute_func=h)
+    single_process_single_source(
+        source_func=source, compute_func=compute)
 
 
 def test_single_process_multiple_sources():
     """
-    This example has two sources: g_0 generates 1, 2, 3, 4, ...
-    and g_1 generates random numbers. The computation zips the two
+    This example has two sources: source_0 generates 1, 2, 3, 4, ...
+    and source_1 generates random numbers. The computation zips the two
     streams together and writes the result to a file called
     output.dat.
+    
     num_steps is the number of values produced by the source. For
     example, if the smaller of the num_steps for each source is 10,
     then (1, r1), (2, r2), ..., (10, r10), ... will be appended to the
-    file  output.dat where r1,..., r10 are random numbers. 
+    file  output.dat where r1,..., r10 are random numbers.
+ 
+    The steps for creating the process are:
+    (1) Define the source: source()
+    (2) Define the computational network: compute()
+    (3) Call single_process_multiple_sources()
 
     """
     import random
 
-    def g_0(s):
+    def source_0(s):
         # A simple source which outputs 1, 2, 3, 4, .... on
         # stream s.
         def generate_sequence(state):
@@ -100,7 +115,7 @@ def test_single_process_multiple_sources():
             func=generate_sequence, out_stream=s,
             time_interval=0.1, num_steps=10, state=0)
 
-    def g_1(s):
+    def source_1(s):
         # A simple source which outputs random numbers
         # stream s.
 
@@ -111,14 +126,14 @@ def test_single_process_multiple_sources():
             func=random.random, out_stream=s,
             time_interval=0.05, num_steps=12)
 
-    def h(list_of_two_streams):
+    def compute(list_of_two_streams):
         # A trivial example of a network of agents consisting
         # of two agents where the network has a single input
         # stream: s.
         # The first agent zips the two input streams and puts
         # the result on stream t.
         # The second agent puts values in its input stream t
-        # on a file called output.dat.
+         # on a file called output.dat.
         from sink import stream_to_file
         t = Stream()
         zip_stream(in_streams=list_of_two_streams, out_stream=t)
@@ -126,9 +141,70 @@ def test_single_process_multiple_sources():
 
     # Create a process with three threads: two source threads and
     # a compute thread. The source threads execute the functions
-    # g_0 and g_1, and the compute thread executes function h.
-    single_process_multiple_sources(list_source_func=[g_0, g_1], compute_func=h)
+    # source_0 and source_1, and the compute thread executes function
+    # compute. 
+    single_process_multiple_sources(
+        list_source_func=[source_0, source_1], compute_func=h)
+    
 
+def offset_estimation_test():
+    """
+    Another test of single_process_multiple_sources().
+    This process has two sources, each of which receives ntp offsets
+    from ntp servers. The computational network consists of:
+    (1) an agent that merges the two sources, and
+    (2) an agent that computes the average of the merged stream over a
+    window, and
+    (3) a sink agent that prints the averaged stream.
+
+    The steps for creating the process are:
+    (1) Define the source: source()
+    (2) Define the computational network: compute()
+    (3) Call single_process_multiple_sources()
+
+    """
+    ntp_server_0 = '0.us.pool.ntp.org'
+    ntp_server_1 = '1.us.pool.ntp.org'
+    time_interval = 0.1
+    num_steps = 20
+    def average_of_list(a_list):
+        if a_list:
+            # Remove None elements from the list
+            a_list = [i for i in a_list if i is not None]
+            return sum(a_list)/float(len(a_list))
+        else:
+            return 0.0
+
+    def source_0(out_stream):
+        return offsets_from_ntp_server(
+            out_stream, ntp_server_0, time_interval, num_steps)
+
+    def source_1(out_stream):
+        return offsets_from_ntp_server(
+            out_stream, ntp_server_1, time_interval, num_steps)
+
+    def compute(in_streams):
+        merged_stream = Stream('merge in_streams')
+        averaged_stream = Stream('average merged stream')
+        # Create agent that merges streams
+        blend(
+            func=lambda x: x, in_streams=in_streams,
+            out_stream=merged_stream)
+        # Create agent that computes average over time window of
+        # merged streams. 
+        map_window(
+            func=average_of_list,
+            in_stream=merged_stream,out_stream=averaged_stream,
+            window_size=2, step_size=1)
+        # Create sink agent that prints the averaged stream.
+        print_stream(averaged_stream)
+
+    # Make the process
+    single_process_multiple_sources(
+        list_source_func=[source_0, source_1],
+        compute_func=compute)
+        
+    
 
 def test_multicore_two_processes():
     def ff(x):
@@ -165,6 +241,7 @@ def test_multicore_two_processes():
         connections=[(proc_0, 't', proc_1, 't')])
 
 if __name__ == '__main__':
-    test_single_process_multiple_sources()
+    ## test_single_process_multiple_sources()
     test_single_process_single_source()
-    test_multicore_two_processes()
+    ## test_multicore_two_processes()
+    ## offset_estimation_test()
