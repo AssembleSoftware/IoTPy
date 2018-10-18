@@ -1,52 +1,56 @@
 import sys
 """
-This module consists of functions that use ntp and other sources of
-timing signals to produce streams of either (1) timestamps or (2) time
-offsets from  system clocks.
+This module consists of functions that use ntp to produce streams of
+timestamps or time offsets from local clocks.
 
-The key point of this module is that you create the streams you want
-by first writing simple terminating functions that call ntp (or other
-services) and which return an offset or other time. Then you encapsulate
-these functions using source_function or other procedures from the
-IoTPy library to generate threads. Finally you start the threads to
-generate streams of offsets or timing values, and join the threads
-before terminating.
+The key point of this module is that you develop these applications in
+the following steps:
+(1) Write terminating functions that call ntp and that return a time
+offset from the local computer clock. 
+(2) Wrap these functions using the source_function wrapper to get an
+source agent that generates a stream of offsets or corrected times.
+(3) Make processes using these sources by using the wrapper
+                    single_process_single_source
+which makes a process consisting of:
+(a) the single source agent executing in its own thread and
+(b) a computational network of agents executing in its own thread. In
+our tests, this computational network has a sink agent that prints a
+stream. 
 
 This module has four parts:
-(0) Classes for storing parameters such as the estimated offset or the
-estimated mu and sigma for a Wiener process.
-(1) Terminating functions that call one or more ntp services and
-obtain time offsets between the time read by the local system clock
-and the ntp services. The different functions use multiple ntp
-services in different ways, e.g., use the max or the median value.
-(2) Encapsulations of these terminating functions to create functions that
-return threads.
-(3) Tests that start the threads. Execution of these threads causes a
-sequence of timing offsets to populate timing streams.
-
-Note: In some cases, the average or median of a window of offsets is
-more robust than a single offset. Use functions from
-IoTPy/examples/windows to compute statistics on the offset streams.
-
-Note: This module also has an example of generating a stream of
-timestamps obtained by getting system-clock offsets from an ntp
-service and then adding the offset to the clock. In some cases, a
-moving-window average of system-clock offsets is more robust than a
-single offset; examples of moving-window averages are given elsewhere.
+(1) Classes for computing parameters such as the estimated time offset
+or the estimated mean and standard deviation for a Wiener process
+model of the offset. Helper functions such as print_stream.
+(2) Agents that generate streams of offsets or absolute times. These
+agents are created in two steps:
+  (a) Create terminating functions that call one or more ntp services
+  and obtain time offsets between the time read by the local system
+  clock and the ntp services. The different functions use multiple ntp
+  services in different ways, e.g., use the max or the median value.
+  (b) Wrap these terminating functions using the source_function
+  wrapper to create agents that execute in their own threads.
+(3) Make processes using the wrapper single_process_single_source;
+test the processes.
+(4) Tests of the processes.
 
 """
 import os
 sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
 sys.path.append(os.path.abspath("../../IoTPy/core"))
 sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
+sys.path.append(os.path.abspath("../../IoTPy/multiprocessing"))
+sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
 
 # stream is in core
 from stream import Stream
-# recent_values is in helper_functions
-from recent_values import recent_values
-# op and source are in agent_types
+# print_stream is in helper_functions
+from print_stream import print_stream
+# op, sink and source are in agent_types
 from op import map_element, map_window
+from sink import sink_element
 from source import source_function
+# multicore is in multiprocessing
+from multicore import single_process_single_source
 
 from threading import Lock
 # math is used for calculating statistics such as median
@@ -62,14 +66,48 @@ logging.basicConfig(
 ntp_client = ntplib.NTPClient()
 
 
-#-----------------------------------------------------
-#   PART 0: CLASSES WITH PARAMETERS DEALING WITH TIME
-#----------------------------------------------------
+#------------------------------------------------------------------
+#------------------------------------------------------------------
+#   PART 1: CLASSES DEALING WITH TIME, AND HELPER FUNCTIONS
+#------------------------------------------------------------------
+#------------------------------------------------------------------
 
+def ntp_time_estimate(offset):
+    """
+    Parameters
+    ----------
+       offset: float
+          offset between system clock and ntp clock.
+          This value should be obtained by calling an ntp service.
+    Returns
+    -------
+       float
+          The number of seconds since the epoch
+
+    """
+    return time.time() + offset
+    
 class TimeCorrector(object):
     """
-    Stores the most recent offset which is used to compute the
-    corrected time.
+    Provides a more accurate time than the local system clock by using
+    ntp services.
+
+    Attributes
+    ----------
+    lock: Lock
+       Lock that is acquired to access offset
+    offset: float
+       offset of the ntp time from the local clock.
+
+    Methods
+    -------
+    set_offset() stores the most recent offset.
+    get_time() gets the corrected time. 
+
+    Note
+    ----
+    Uses a lock because a thread could be getting the
+    time while another thread is setting offset.
 
     """
     def __init__(self):
@@ -80,10 +118,8 @@ class TimeCorrector(object):
             self.offset = offset
     def get_time(self):
         with self.lock_offset:
-            return time.time() + self.offset
-
-# This is the only instance of the class TimeCorrector
-time_corrector = TimeCorrector()
+            if self.offset:
+                return time.time() + self.offset
 
 class WienerProcessTime(object):
     """
@@ -104,8 +140,6 @@ class WienerProcessTime(object):
        sigma is the infinitesimal standard deviation of the Wiener
        process.
     local_anchor_time: time
-       The corrected time is a function of the local_anchor_time
-       and the current time.
        This time is the last time, measured on the local system clock,
        at which an ntp reading was taken.
     anchor_offset: ntp offset
@@ -170,6 +204,11 @@ def set_wiener_process_parameters_and_get_time(
           An object that stores mu and sigma and parameters of the
           Wiener process.
 
+    Returns
+    -------
+       time
+          The correct time using the Wiener process model
+
     """
     R = range(len(list_of_local_time_and_offset))
     # local_t is the list of the local times
@@ -218,17 +257,23 @@ def set_wiener_process_parameters_and_get_time(
     wiener_process_time.set_anchor_times(
         local_anchor_time=local_t[-1],
         anchor_offset=offset[-1])
-    print 'mu is ', mu
-    print 'sigma is ', sigma
+    print 'Wiener Process average rate, mu is ', mu
+    print 'Wiener Process standard deviation rate, sigma is ', sigma
     return wiener_process_time.get_corrected_time()
 
-#-----------------------------------------------------------------------------
-#   PART 1: FUNCTIONS ENCAPSULATED IN STREAMS
-#-----------------------------------------------------------------------------
 
-def clock_drift_from_ntp_server(ntp_server):
+#------------------------------------------------------------------
+#------------------------------------------------------------------
+#   PART 2: AGENTS THAT GENERATE STREAMS OF CLOCK OFFSETS AND TIMES
+#------------------------------------------------------------------
+#------------------------------------------------------------------
+
+#------------------------------------------------------------
+# CLOCK OFFSETS FROM A SPECIFIED NTP SERVER
+#------------------------------------------------------------
+def clock_offset_from_ntp_server(ntp_server):
     """
-    Returns the system clock drift computed from the specified
+    Returns the system clock offset computed from the specified
     ntp_server 
 
     Parameters
@@ -239,7 +284,7 @@ def clock_drift_from_ntp_server(ntp_server):
     Returns
     -------
     response.offset: float
-       system clock drift
+       system clock offset
 
     filenames
     ---------
@@ -254,21 +299,52 @@ def clock_drift_from_ntp_server(ntp_server):
         logging.warning('No response from NTP server: %s',ntp_server)
         return None
 
-
-def clock_drift_from_first_ntp_server(list_of_ntp_servers):
+def offsets_from_ntp_server(
+        out_stream, ntp_server, time_interval, num_steps):
     """
-    Returns the system clock drift computed from the first functioning
+    Returns a source agent that produces a stream of time offsets from
+    the local clock.
+
+    Parameters
+    ----------
+    out_stream: Stream
+       The output stream containing the source data.
+    ntp_server: ntp server
+       The ntp server that is called to get the offsets.
+    time_interval: int or float
+       time in seconds between successive calls to the ntp service.
+    num_steps: int (optional)
+       The number of steps after which the stream stops. Set this to a
+        positive integer during debugging. If it is unspecified, or is
+        0, then the stream never stops.
+    
+    """
+    return source_function(
+        func=clock_offset_from_ntp_server,
+        out_stream=out_stream,
+        time_interval=time_interval,
+        num_steps=num_steps,
+        ntp_server=ntp_server)
+
+
+#--------------------------------------------------------------
+# CLOCK OFFSETS FROM THE FIRST FUNCTIONING NTP SERVER IN A LIST
+#--------------------------------------------------------------
+def clock_offset_from_first_ntp_server(list_of_ntp_servers):
+    """
+    Returns the system clock offset computed from the first functioning
     ntp_server in list_of_ntp_servers. 
 
     Parameters
     ----------
     list_of_ntp_servers: list
-        List of names of ntp servers which are called in order.
+        List of names of ntp servers which are called in order until
+        the first functioning ntp server is obtained.
 
     Returns
     -------
     response.offset: float
-       system clock drift
+       system clock offset
 
     filenames
     ---------
@@ -276,12 +352,44 @@ def clock_drift_from_first_ntp_server(list_of_ntp_servers):
 
     """
     for ntp_server in list_of_ntp_servers:
-        drift = clock_drift_from_ntp_server(ntp_server)
-        if drift:
-            print 'drift is ', drift
-            return drift
+        offset = clock_offset_from_ntp_server(ntp_server)
+        if offset:
+            return offset
     # None of the npt servers in the list returned values.
     return 0.0
+
+def offsets_from_first_ntp_server(
+        out_stream, list_of_ntp_servers, time_interval, num_steps):
+    """
+    Returns a source agent that produces a stream of time offsets from
+    the first functioning ntp server in a list of ntp servers.
+
+    Parameters
+    ----------
+    out_stream: Stream
+       The output stream containing the source data.
+    list_of_ntp_servers: list
+       A list of ntp servers. The first functioning ntp server in the
+       list is called to get the time offset from the local clock. 
+    time_interval: int or float
+       time in seconds between successive calls to the ntp services.
+    num_steps: int (optional)
+       The number of steps after which the stream stops. Set this to a
+        positive integer during debugging. If it is unspecified, or is
+        0, then the stream never stops.
+
+    """
+    return source_function(
+        func=clock_offset_from_first_ntp_server,
+        out_stream=out_stream,
+        time_interval=time_interval, num_steps=num_steps,
+        list_of_ntp_servers=list_of_ntp_servers
+        )
+
+
+#-----------------------------------------------------------------
+# TIME AND OFFSETS FROM THE FIRST FUNCTIONING NTP SERVER IN A LIST
+#-----------------------------------------------------------------
 
 def time_and_offset(list_of_ntp_servers):
     """
@@ -307,476 +415,411 @@ def time_and_offset(list_of_ntp_servers):
 
     """
     for ntp_server in list_of_ntp_servers:
-        offset = clock_drift_from_ntp_server(ntp_server)
+        offset = clock_offset_from_ntp_server(ntp_server)
         if offset:
             return time.time(), offset
     # None of the ntp servers in the list returned values.
     return time.time(), 0.0
 
 
-def clock_drift_from_average_of_ntp_servers(list_of_ntp_servers):
+def times_and_offsets_from_first_ntp_server(
+        out_stream, list_of_ntp_servers, time_interval, num_steps):
     """
-    Returns the system clock drift computed from the average obtained
-    from the list of ntp servers. 
+    Returns a source agent that produces a stream of 2-tuples,
+    (absolute time, time offset) from the first functioning ntp server
+    in the specified list of ntp servers. 
 
     Parameters
     ----------
+    out_stream: Stream
+       The output stream containing the source data.
     list_of_ntp_servers: list
-        List of names of ntp servers which are called in order.
-
-    Returns
-    -------
-    system clock drift
-
-    filenames
-    ---------
-    'ntp_service_operation.txt': logging error file
-
-    """
-    list_of_drifts_including_None = [
-        clock_drift_from_ntp_server(ntp_server) for
-        ntp_server in list_of_ntp_servers]
-    list_of_drifts = [v for v in list_of_drifts_including_None
-                      if v is not None]
-    if list_of_drifts:
-        return sum(list_of_drifts)/float(len(list_of_drifts))
-
-
-def clock_drift_from_median_of_ntp_servers(list_of_ntp_servers):
-    """
-    Returns the system clock drift computed from the median obtained
-    from the list of ntp servers. 
-
-    Parameters
-    ----------
-    list_of_ntp_servers: list
-        List of names of ntp servers which are called in order.
-
-    Returns
-    -------
-    system clock drift
-
-    filenames
-    ---------
-    'ntp_service_operation.txt': logging error file
+       A list of ntp servers. The first functioning ntp server in the
+       list is called to get the time offset from the local clock. 
+    time_interval: int or float
+       time in seconds between successive calls to the ntp services.
+    num_steps: int (optional)
+       The number of steps after which the stream stops. Set this to a
+        positive integer during debugging. If it is unspecified, or is
+        0, then the stream never stops.
 
     """
-    list_of_drifts_including_None = [
-        clock_drift_from_ntp_server(ntp_server) for
-        ntp_server in list_of_ntp_servers]
-    list_of_drifts = [v for v in list_of_drifts_including_None
-                      if v is not None]
-    if list_of_drifts:
-        list_of_drifts = sorted(list_of_drifts)
-        midpoint = len(list_of_drifts)/2
-        if len(list_of_drifts) == 0:
-            return 0.0
-        if len(list_of_drifts) == 1:
-            return list_of_drifts[0]
-        if len(list_of_drifts) % 2:
-            # list_of_drifts has an odd number of elements
-            # So, return the midpoint
-            return list_of_drifts[midpoint]
-        else:
-            # list_of_drifts has an even number of elements
-            # So, return the average of the middle two elements.
-            return (list_of_drifts[midpoint-1] + list_of_drifts[midpoint])/2.0
-            
-
-def ntp_time_estimate(offset):
-    """
-    Parameters
-    ----------
-       offset: float
-          offset between system clock and ntp clock.
-          This value should be obtained by calling an ntp service.
-    Returns
-    -------
-       float
-          The number of seconds since the epoch
-
-    """
-    return time.time() + offset
-
-
-#-----------------------------------------------------------------------------
-#   PART 2: FUNCTIONS THAT RETURN SOURCE THREADS
-#-----------------------------------------------------------------------------
-# These functions encapsulate terminating Python functions to create
-# threads and ready signaling objects. These functions call
-# source_function from agent_types/source. Next we describe some of
-# the parameters of source_function()
-
-# The threads run for ever if num_steps is None. If num_steps is a
-# positive number then the threads terminate after num_steps values
-# are placed on the output stream.
-
-def thread_offset_from_single_ntp_server(ntp_server, out_stream):
-    return source_function(
-        func=clock_drift_from_ntp_server,
-        out_stream=out_stream,
-        time_interval=0.1, num_steps=8,
-        window_size=1, name='ntp_agent_single',
-        #declare kwargs: ntp_server 
-        ntp_server=ntp_server
-        )
-
-def thread_offset_from_first_ntp_server(
-        list_of_ntp_servers, out_stream): 
-    return source_function(
-        func=clock_drift_from_first_ntp_server,
-        out_stream=out_stream,
-        time_interval=0.1, num_steps=8,
-        name='ntp_agent_first_ntp_server', window_size=1,
-        list_of_ntp_servers=list_of_ntp_servers
-        )
-
-def thread_offset_from_average_of_ntp_servers(
-        list_of_ntp_servers, out_stream):
-    return source_function(
-        func=clock_drift_from_average_of_ntp_servers,
-        out_stream=out_stream,
-        time_interval=0.1, num_steps=8,
-        name='ntp_agent_average_of_ntp_servers', window_size=1,
-        list_of_ntp_servers=list_of_ntp_servers
-        )
-
-def thread_offset_from_median_of_ntp_servers(
-        list_of_ntp_servers, out_stream):
-    return source_function(
-        func=clock_drift_from_median_of_ntp_servers,
-        out_stream=out_stream,
-        time_interval=0.1, num_steps=8,
-        name='ntp_agent_median', window_size=1,
-        list_of_ntp_servers=list_of_ntp_servers
-        )
-
-def thread_time_and_offset(
-        list_of_ntp_servers, out_stream):
     return source_function(
         func=time_and_offset,
         out_stream=out_stream,
-        time_interval=0.1, num_steps=8,
-        name='time_and_offset_agent', window_size=1,
+        time_interval=time_interval, num_steps=num_steps,
         list_of_ntp_servers=list_of_ntp_servers
         )
 
-#-----------------------------------------------------------------------------
-#-----------------------------------------------------------------------------
-#                        PART 3: TESTS
-#-----------------------------------------------------------------------------
-#-----------------------------------------------------------------------------
 
-#          TESTING FUNCTIONS ENCAPSULATED IN THREADS
+#-----------------------------------------------------------------
+# OFFSETS FROM AVERAGE OF NTP SERVERS
+#-----------------------------------------------------------------
 
-# N is the number of times that groups of NTP services are called.
-N = 8
-def test_clock_drift_from_ntp_server():
+def clock_offset_from_average_of_ntp_servers(list_of_ntp_servers):
     """
-    Tests clock drift by printing N drifts
+    Returns the system clock offset computed from the average obtained
+    from the list of ntp servers. 
 
-    """
-    ntp_server = '0.us.pool.ntp.org'
-    for _ in range(N):
-        drift = clock_drift_from_ntp_server(ntp_server)
-        print 'drift = ', drift
-        time.sleep(0.1)
+    Parameters
+    ----------
+    list_of_ntp_servers: list
+        List of names of ntp servers which are called in order.
 
-def test_clock_drift_from_first_ntp_server():
-    
-    """
-    Tests clock drift by printing N drifts
+    Returns
+    -------
+    system clock offset
+
+    filenames
+    ---------
+    'ntp_service_operation.txt': logging error file
 
     """
-    list_of_ntp_servers =  [
-        "0.us.pool.ntp.org",
-        "1.us.pool.ntp.org",
-        "2.us.pool.ntp.org",
-        "3.us.pool.ntp.org"
-        ]
-    for _ in range(N):
-        drift = clock_drift_from_first_ntp_server(list_of_ntp_servers)
-        print 'drift = ', drift
-        time.sleep(0.1)
+    list_of_offsets_including_None = [
+        clock_offset_from_ntp_server(ntp_server) for
+        ntp_server in list_of_ntp_servers]
+    list_of_offsets = [v for v in list_of_offsets_including_None
+                      if v is not None]
+    if list_of_offsets:
+        return sum(list_of_offsets)/float(len(list_of_offsets))
 
 
-def test_clock_drift_from_average_of_ntp_servers():
-    
+def offsets_from_average_of_ntp_servers(
+        out_stream, list_of_ntp_servers, time_interval, num_steps):
     """
-    Tests clock drift by printing N drifts computed by taking
-    the average from a list of ntp servers
+    Returns a source agent that produces a stream of time offsets
+    which is the average of the offsets returned by each ntp server in
+    the specified list. 
 
-    """
-    list_of_ntp_servers =  [
-        "0.us.pool.ntp.org",
-        "1.us.pool.ntp.org",
-        "2.us.pool.ntp.org",
-        "3.us.pool.ntp.org"
-        ]
-    N = 2
-    for _ in range(N):
-        drift = clock_drift_from_average_of_ntp_servers(
-            list_of_ntp_servers) 
-        print 'drift = ', drift
-        time.sleep(0.1)
-
-
-def test_clock_drift_from_median_of_ntp_servers():
-    """
-    Tests clock drift by printing N drifts computed by taking
-    the median from a list of ntp servers
+    Parameters
+    ----------
+    out_stream: Stream
+       The output stream containing the averages of the offsets from
+        the ntp servers.
+    list_of_ntp_servers: list
+       A list of ntp servers. All the functioning ntp servers in the
+       list are called to get the time offset from the local clock,
+        and the average of their values is placed on the stream.
+    time_interval: int or float
+       time in seconds between successive calls to the ntp services.
+    num_steps: int (optional)
+       The number of steps after which the stream stops. Set this to a
+        positive integer during debugging. If it is unspecified, or is
+        0, then the stream never stops.
 
     """
-    list_of_ntp_servers =  [
-        "0.us.pool.ntp.org",
-        "1.us.pool.ntp.org",
-        "2.us.pool.ntp.org",
-        "3.us.pool.ntp.org"
-        ]
-    N = 2
-    for _ in range(N):
-        drift = clock_drift_from_median_of_ntp_servers(
-            list_of_ntp_servers) 
-        print 'drift = ', drift
-        time.sleep(0.1)
-
-def test_time_and_offset():
-    list_of_ntp_servers =  [
-        "0.us.pool.ntp.org",
-        "1.us.pool.ntp.org",
-        "2.us.pool.ntp.org",
-        "3.us.pool.ntp.org"
-        ]
-    N = 8
-    for _ in range(N):
-        absolute_time, offset = time_and_offset(
-            list_of_ntp_servers) 
-        print 'absolute time is ', absolute_time, 'offset is ', offset
-        time.sleep(0.1)
-    
-
-
-#-----------------------------------------------------------------------------
-#            TESTING AGENTS
-#-----------------------------------------------------------------------------
-def test_thread_clock_offset():
-
-    # STEP 1: SPECIFY CONSTANT PARAMETERS AND SHARED DATA.
-    ntp_server = '0.us.pool.ntp.org'
-    list_of_ntp_servers =  [
-        "0.us.pool.ntp.org",
-        "1.us.pool.ntp.org",
-        "2.us.pool.ntp.org",
-        "3.us.pool.ntp.org"
-        ]
-
-    # STEP 2: DEFINE THE scheduler
-    scheduler = Stream.scheduler
-
-    # STEP 3: DECLARE STREAMS
-    # Stream of offsets between local time and single NTP server.
-    offset_stream_single_server = Stream(
-        'offset_stream_from_single_ntp_server')
-    # Stream of offsets between local time and first NTP server in a
-    # list of NTP servers.
-    offset_stream_first_server = Stream(
-        'offset_stream_from_first_ntp_server')
-    # Stream of offsets between local time and the average of a list
-    # of NTP servers. NTP servers that are not responding are
-    # ignored. 
-    offset_stream_from_average_of_ntp_servers = Stream(
-        'offset_stream_from_average_of_ntp_servers')
-    # Stream of offsets between local time and the median of a list
-    # of NTP servers. NTP servers that are not responding are
-    # ignored. 
-    offset_stream_from_median_of_ntp_servers = Stream(
-        'offset_stream_from_median_of_ntp_servers')
-    # Stream of tuples (absolute local time, offset)
-    time_and_offset_stream = Stream('time_and_offset_stream')
-
-    ## # STEP 4: DECLARE MAP FROM STREAM NAMES TO STREAMS
-    ## # Specify mapping from names (strings) given
-    ## # to streams in source_function and names used within
-    ## # the executing process. You can use any name within
-    ## # the executing processes; these names don't have to be
-    ## # the same as the names used in source_function.
-    ## # For example: the stream with name
-    ## # 'offset_stream_from_single_ntp_server' in
-    ## # def thread_offset_from_single_ntp_server() source_function
-    ## # is mapped to the stream offset_stream_single_server in
-    ## # the executing process, and
-    ## # the stream with name
-    ## # 'offset_stream_from_first_ntp_server' in
-    ## # def thread_offset_from_first_ntp_server() source_function
-    ## # is mapped to the stream offset_stream_first_server in
-    ## # the executing process. 
-    scheduler.name_to_stream = {
-        'offset_stream_from_single_ntp_server':
-        offset_stream_single_server,
-        'offset_stream_from_first_ntp_server':
-        offset_stream_first_server,
-        'offset_stream_from_average_of_ntp_servers':
-        offset_stream_from_average_of_ntp_servers,
-        'offset_stream_from_median_of_ntp_servers':
-        offset_stream_from_median_of_ntp_servers,
-        'time_and_offset_stream':
-        time_and_offset_stream
-        }
-
-    # STEP 5: GET A THREAD AND A READY SIGNALING OBJECT FOR
-    # EACH source_function.
-    # The ready signal indicates that the thread is ready to run.
-    #
-    # ntp_thread_single is the name of the thread, and
-    # ntp_thread_single_ready is the ready signal object.
-    ntp_thread_single, ntp_thread_single_ready = \
-      thread_offset_from_single_ntp_server(
-          ntp_server, out_stream=offset_stream_single_server)
-    ntp_thread_first, ntp_thread_first_ready = \
-      thread_offset_from_first_ntp_server(
-          list_of_ntp_servers, out_stream=offset_stream_first_server)
-    ntp_thread_average, ntp_thread_average_ready = \
-      thread_offset_from_average_of_ntp_servers(
-          list_of_ntp_servers,
-          out_stream=offset_stream_from_average_of_ntp_servers)
-    ntp_thread_median, ntp_thread_median_ready = \
-      thread_offset_from_median_of_ntp_servers(
-          list_of_ntp_servers,
-          out_stream=offset_stream_from_median_of_ntp_servers)
-    time_and_offset_thread, thread_time_and_offset_ready = \
-      thread_time_and_offset(
-          list_of_ntp_servers,
-          out_stream=time_and_offset_stream)
-
-    # STEP 6: START EACH THREAD.
-    ntp_thread_single.start()
-    ntp_thread_first.start()
-    ntp_thread_average.start()
-    ntp_thread_median.start()
-    time_and_offset_thread.start()
-
-    # STEP 7: WAIT FOR EACH THREAD TO BE READY.
-    # This step can be skipped if threads run for ever.
-    # This step is helpful if threads run until they generate a fixed
-    # number of values.
-    ntp_thread_single_ready.wait()
-    ntp_thread_first_ready.wait()
-    ntp_thread_average_ready.wait()
-    ntp_thread_median_ready.wait()
-    thread_time_and_offset_ready.wait()
-
-    # STEP 8: BUILD A NETWORK OF AGENTS THAT OPERATE ON SOURCE STREAMS
-    # This example creates a stream of timestamps. This agent reads
-    # time offsets from the stream offset_stream_first_server and it
-    # outputs a stream, time_stream, of absolute times. Thus the
-    # output stream is an absolute timestamp for each offset in the
-    # input stream.
-    time_stream = Stream('Time Stream')
-    map_element(func=ntp_time_estimate,
-                in_stream=offset_stream_first_server,
-                out_stream=time_stream)
-
-    # ----------------------------------------------------------------
-    # This example creates an average of the offset over a sliding
-    # window. The average offset is more stable than a single
-    # offset value.
-    #
-    # average_offset_stream is a sliding window of the average of the
-    # offsets for each input in the window.
-    average_offset_stream = Stream('Average Offset Stream')
-    def average_of_list(a_list):
-        return sum(a_list)/float(len(a_list))
-    map_window(func=average_of_list,
-               in_stream=offset_stream_first_server,
-               out_stream=average_offset_stream,
-               window_size=3, step_size=1)
-    # ----------------------------------------------------------------
-    #
-    # test class TimeCorrector
-    # time_corrector is an instance of TimeCorrector.
-    def test_time_object(offset, time_corrector):
-        time_corrector.set_offset(offset)
-        return time_corrector.get_time()
-    corrected_time_stream = Stream('Corrected time stream')
-    map_element(func= test_time_object,
-                in_stream=average_offset_stream,
-                out_stream=corrected_time_stream,
-                time_corrector=time_corrector)
-    # ----------------------------------------------------------------
-    #
-    # test class WienerProcessTime
-    corrected_wiener_times = Stream('Corrected Wiener Times')
-    map_window(
-        func=set_wiener_process_parameters_and_get_time,
-        in_stream=time_and_offset_stream,
-        out_stream=corrected_wiener_times,
-        window_size=3, step_size=2,
-        wiener_process_time = wiener_process_time
+    return source_function(
+        func=clock_offset_from_average_of_ntp_servers,
+        out_stream=out_stream,
+        time_interval=time_interval, num_steps=num_steps,
+        list_of_ntp_servers=list_of_ntp_servers
         )
 
-    # STEP 9:JOIN EACH THREAD.
-    scheduler.start()
-    # This step should be skipped if threads run for ever.
-    # This step is helpful if threads run until they generate a fixed
-    # number of values.
-    ntp_thread_single.join()
-    ntp_thread_first.join()
-    ntp_thread_average.join()
-    ntp_thread_median.join()
-    time_and_offset_thread.join()
 
-    # STEP 10: START THE SCHEDULER.
-    #scheduler.start()
+#-----------------------------------------------------------------
+# OFFSETS FROM MEDIAN OF NTP SERVERS
+#-----------------------------------------------------------------
 
-    # STEP 11: JOIN THE SCHEDULER THREAD
-    # This step should be skipped if execution should never stop.
-    scheduler.join()
+def clock_offset_from_median_of_ntp_servers(list_of_ntp_servers):
+    """
+    Returns the system clock offset computed from the median obtained
+    from the list of ntp servers. 
 
-    # STEP 12: FOR TESTING, PRINT VALUES IN STREAMS.
-    print 'offset: NTP- local clock. Single NTP server.'
-    print recent_values(offset_stream_single_server)
-    print
-    print 'offset from first NTP server to respond.'
-    print recent_values(offset_stream_first_server)
-    print
-    print 'offset from the average of a list of NTP servers.'
-    print recent_values(offset_stream_from_average_of_ntp_servers)
-    print
-    print 'offset from the median of a list of NTP servers.'
-    print recent_values(offset_stream_from_median_of_ntp_servers)
-    print
-    print 'stream of absolute times.'
-    print recent_values(time_stream)
-    print
-    print 'average of offset over sliding window'
-    print recent_values(average_offset_stream)
-    print
-    print 'corrected time using offset from sliding window'
-    print recent_values(corrected_time_stream)
-    print
-    print 'corrected Wiener times'
-    print recent_values(corrected_wiener_times)
-    print 'Test is successful'
+    Parameters
+    ----------
+    list_of_ntp_servers: list
+        List of names of ntp servers which are called in order.
+
+    Returns
+    -------
+    system clock offset
+
+    filenames
+    ---------
+    'ntp_service_operation.txt': logging error file
+
+    """
+    list_of_offsets_including_None = [
+        clock_offset_from_ntp_server(ntp_server) for
+        ntp_server in list_of_ntp_servers]
+    list_of_offsets = [v for v in list_of_offsets_including_None
+                      if v is not None]
+    if list_of_offsets:
+        list_of_offsets = sorted(list_of_offsets)
+        midpoint = len(list_of_offsets)/2
+        if len(list_of_offsets) == 0:
+            return 0.0
+        if len(list_of_offsets) == 1:
+            return list_of_offsets[0]
+        if len(list_of_offsets) % 2:
+            # list_of_offsets has an odd number of elements
+            # So, return the midpoint
+            return list_of_offsets[midpoint]
+        else:
+            # list_of_offsets has an even number of elements
+            # So, return the average of the middle two elements.
+            return (list_of_offsets[midpoint-1] + list_of_offsets[midpoint])/2.0
+            
+def offsets_from_median_of_ntp_servers(
+        out_stream, list_of_ntp_servers, time_interval, num_steps):
+    """
+    Returns a source agent that produces a stream of time offsets
+    which is the median of the offsets returned by each ntp server in
+    the specified list. 
+
+    Parameters
+    ----------
+    out_stream: Stream
+       The output stream containing the median of the offsets from
+        the ntp servers.
+    list_of_ntp_servers: list
+       A list of ntp servers. All the functioning ntp servers in the
+       list are called to get the time offset from the local clock,
+        and the average of their values is placed on the stream.
+    time_interval: int or float
+       time in seconds between successive calls to the ntp services.
+    num_steps: int (optional)
+       The number of steps after which the stream stops. Set this to a
+        positive integer during debugging. If it is unspecified, or is
+        0, then the stream never stops.
+
+    """
+    return source_function(
+        func=clock_offset_from_median_of_ntp_servers,
+        out_stream=out_stream,
+        time_interval=time_interval, num_steps=num_steps,
+        list_of_ntp_servers=list_of_ntp_servers
+        )
+
+#------------------------------------------------------------------
+#------------------------------------------------------------------
+#     PART 3:   PROCESSES
+#------------------------------------------------------------------
+#------------------------------------------------------------------
+
+# Please use your own list of ntp servers. These servers are included
+# here merely for illustration.
+list_of_ntp_servers =  [
+    "0.us.pool.ntp.org",
+    "1.us.pool.ntp.org",
+    "2.us.pool.ntp.org",
+    "3.us.pool.ntp.org"
+    ]
+ntp_server = '0.us.pool.ntp.org'
+time_interval=0.1
+num_steps=10
+
+# The three steps for creating the process are:
+#     (1) Define the source: source()
+#     (2) Define the computational network: compute()
+#     (3) Call single_process_single_source()
+#
+# In many of the examples, the computational network consists of a
+# single sink, print_stream(), which prints a stream. 
+
+#------------------------------------------------------------
+# PROCESS CLOCK OFFSET FROM THE SPECIFIED NTP SERVER
+#------------------------------------------------------------
+def process_offsets_from_ntp_server(
+        ntp_server, time_interval, num_steps):
+
+    def source(out_stream):
+        return offsets_from_ntp_server(
+            out_stream, ntp_server, time_interval, num_steps)
+
+    # Wrapper that creates a network of two agents: source and
+    # print_stream. 
+    single_process_single_source(
+        source_func=source, compute_func=print_stream)
+
+#------------------------------------------------------------
+# PROCESS CLOCK OFFSET FROM THE FIRST FUNCTIONING NTP SERVER
+#------------------------------------------------------------
+def process_offsets_from_first_ntp_server(
+        list_of_ntp_servers, time_interval, num_steps):
+
+    def source(out_stream):
+        return offsets_from_first_ntp_server(
+            out_stream, list_of_ntp_servers, time_interval, num_steps)
+
+    # Wrapper that creates a network of two agents: source and
+    # print_stream. 
+    single_process_single_source(
+        source_func=source, compute_func=print_stream)
+
+#------------------------------------------------------------
+# PROCESS TIME AND OFFSET FROM FIRST FUNCTIONING NTP SERVER
+#------------------------------------------------------------
+def process_time_and_offset(
+        list_of_ntp_servers, time_interval, num_steps):
+
+    def source(out_stream):
+        return times_and_offsets_from_first_ntp_server(
+            out_stream, list_of_ntp_servers, time_interval, num_steps)
+
+    # Wrapper that creates a network of two agents: source and
+    # print_stream. 
+    single_process_single_source(
+        source_func=source, compute_func=print_stream)
+
+#------------------------------------------------------------
+# PROCESS OFFSET FROM AVERAGE OF NTP SERVERS
+#------------------------------------------------------------
+def process_offsets_from_average_of_ntp_servers(
+        list_of_ntp_servers, time_interval, num_steps):
+
+    def source(out_stream):
+        return offsets_from_average_of_ntp_servers(
+            out_stream, list_of_ntp_servers, time_interval, num_steps)
+
+    # Wrapper that creates a network of two agents: source and
+    # print_stream. 
+    single_process_single_source(
+        source_func=source, compute_func=print_stream)
+
+#------------------------------------------------------------
+# PROCESS OFFSETS FROM MEDIAN OF NTP SERVERS
+#------------------------------------------------------------
+def process_offsets_from_median_of_ntp_servers(
+        list_of_ntp_servers, time_interval, num_steps):
+
+    def source(out_stream):
+        return offsets_from_median_of_ntp_servers(
+            out_stream, list_of_ntp_servers, time_interval, num_steps)
+
+    # Wrapper that creates a network of two agents: source and
+    # print_stream. 
+    single_process_single_source(
+        source_func=source, compute_func=print_stream)
+
+#------------------------------------------------------------
+# PROCESS OFFSETS FROM NTP SERVER, AVERAGED OVER WINDOW
+#------------------------------------------------------------
+window_size = 3
+step_size = 1
+def process_offsets_average_over_window(
+        ntp_server, time_interval, num_steps, window_size, step_size):
+    def average_of_list(a_list):
+        if a_list:
+            # Remove None elements from the list
+            a_list = [i for i in a_list if i is not None]
+            return sum(a_list)/float(len(a_list))
+        else:
+            return 0.0
+
+    def source(out_stream):
+        return offsets_from_ntp_server(
+            out_stream, ntp_server, time_interval, num_steps)
+
+    def compute(in_stream):
+        offset_average_stream = Stream('Offsets averaged over window')
+        map_window(
+            func=average_of_list, in_stream=in_stream,
+            out_stream=offset_average_stream, 
+            window_size=window_size, step_size=step_size)
+        print_stream(offset_average_stream)
+
+    # Wrapper that creates a network of two agents: source and
+    # compute. 
+    single_process_single_source(
+        source_func=source, compute_func=compute)
+
+
+#------------------------------------------------------------
+# PROCESS CORRECTED TIMES
+#------------------------------------------------------------
+def process_corrected_times(ntp_server, time_interval, num_steps):
+    time_corrector = TimeCorrector()
+
+    def f(offset):
+        time_corrector.set_offset(offset)
+        return time_corrector.get_time()
+
+    def source(out_stream):
+        return offsets_from_ntp_server(
+            out_stream, ntp_server, time_interval, num_steps)
+
+    def compute(in_stream):
+        corrected_times = Stream('Corrected times')
+        map_element(func=f, in_stream=in_stream, out_stream=corrected_times)
+        print_stream(in_stream=corrected_times)
+
+    # Wrapper that creates a network of two agents: source and
+    # compute. 
+    single_process_single_source(
+        source_func=source, compute_func=compute)
+
+    ## # ----------------------------------------------------------------
+    ## #
+    ## # test class WienerProcessTime
+    ## corrected_wiener_times = Stream('Corrected Wiener Times')
+    ## map_window(
+    ##     func=set_wiener_process_parameters_and_get_time,
+    ##     in_stream=time_and_offset_stream,
+    ##     out_stream=corrected_wiener_times,
+    ##     window_size=3, step_size=2,
+    ##     wiener_process_time = wiener_process_time
+    ##     )
+
+
+#------------------------------------------------------------------
+#------------------------------------------------------------------
+#     PART 4:   TESTS
+#------------------------------------------------------------------
+#------------------------------------------------------------------
 
 if __name__ == '__main__':
-    ## print 'TESTING CLOCK DRIFT FROM SINGLE NTP SERVER'
-    ## test_clock_drift_from_ntp_server()
-    ## print
-    ## print 'TESTING CLOCK DRIFT FROM FIRST NTP SERVER'
-    ## test_clock_drift_from_first_ntp_server()
-    ## print
-    ## print 'TESTING CLOCK DRIFT FROM AVERAGE OF NTP SERVERS'
-    ## test_clock_drift_from_average_of_ntp_servers()
-    ## print
-    ## print 'TESTING CLOCK DRIFT FROM MEDIAN OF NTP SERVERS'
-    ## test_clock_drift_from_median_of_ntp_servers()
-    ## print
-    ## print 'TESTING NTP OFFSET STREAM'
-    ## test_time_and_offset()
-    print
+    # Please use your own list of ntp servers. These servers are included
+    # here merely for illustration.
+    list_of_ntp_servers =  [
+        "0.us.pool.ntp.org",
+        "1.us.pool.ntp.org",
+        "2.us.pool.ntp.org",
+        "3.us.pool.ntp.org"]
+    ntp_server = '0.us.pool.ntp.org'
+    # Set the test parameters
+    time_interval=0.1
+    num_steps=100
+    window_size=3
+    step_size=1
     print 'The scheduler waits for the input queue to become empty.'
     print 'This may take some time.'
     print 'Expect to see "input queue empty" a few times.'
     print
-    test_thread_clock_offset()
-    
+    print '-----------------------------------------------------'
+    print
+    print 'RUNNING TESTS'
+    print
+    print 'PROCESS OFFSETS FROM SINGLE NTP SERVER'
+    process_offsets_from_ntp_server(
+        ntp_server, time_interval, num_steps)
+    ## print '-----------------------------------------------------'
+    ## print
+    ## print 'PROCESS OFFSETS FROM FIRST NTP SERVER'
+    ## process_offsets_from_first_ntp_server(
+    ##     list_of_ntp_servers, time_interval, num_steps)
+    ## print '-----------------------------------------------------'
+    ## print
+    ## print 'PROCESS TIME AND OFFSET OFFSET STREAM'
+    ## print 'OUTPUT IS (time, offset)'
+    ## process_time_and_offset(
+    ##     list_of_ntp_servers, time_interval, num_steps)
+    ## print '-----------------------------------------------------' 
+    ## print
+    ## print 'PROCESS OFFSETS FROM AVERAGE OF NTP SERVERS'
+    ## process_offsets_from_average_of_ntp_servers(
+    ##     list_of_ntp_servers, time_interval, num_steps)
+    ## print '-----------------------------------------------------'
+    ## print
+    ## print 'PROCESS OFFSETS FROM MEDIAN OF NTP SERVERS'
+    ## process_offsets_from_median_of_ntp_servers(
+    ##     list_of_ntp_servers, time_interval, num_steps)
+    ## print '-----------------------------------------------------'
+    ## ## print
+    ## print 'PROCESS OFFSETS AVERAGE OVER WINDOW'
+    ## process_offsets_average_over_window(
+    ##     ntp_server, time_interval, num_steps, window_size, step_size)
+    ## print '-----------------------------------------------------'
+    ## print
+    ## print "PROCESS CORRECTED TIMES"
+    ## process_corrected_times(ntp_server, time_interval, num_steps)
