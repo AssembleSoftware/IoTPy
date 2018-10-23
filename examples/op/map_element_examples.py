@@ -1,12 +1,27 @@
 """
-====================
-Map Element Examples
-====================
-agent maps the function func from its single input stream to its
-single output stream.
-    
-This example demonstrates how to use :function:`map_element` in 
-agent_types/op.py on streams.
+This module contains examples of agents created using the map_element
+wrapper.
+
+map_element is a function in IoTPy/IoTPy/agents_types/op.py
+
+The call to map_element is:
+   map_element(func, in_stream, out_stream, state, name, **kwargs)
+where
+  func is a function from an element of in_stream to an element of
+  out_stream.
+  in_stream is the input stream of the agent
+  out_stream is the output stream of the agent
+  state: optional
+    is the state of the agent if the agent has state.
+    The state can be any object.
+  name: str, optional
+    is the name of the agent.
+  **kwargs: keyword arguments, if any, of func.
+
+The call creates an agent with a single input stream and a single
+output stream. When a value v is appended to the input stream, the
+agent appends func(v) to the output stream.
+
 """
 
 import sys
@@ -22,205 +37,236 @@ from stream import _no_value, _multivalue
 from check_agent_parameter_types import *
 from recent_values import recent_values
 from op import map_element
+from print_stream import print_stream
 
-scheduler = Stream.scheduler
 # In the following, x and y are streams that must be declared
 # before the functions are called.
 x = Stream('x')
 y = Stream('y')
+
 #----------------------------------------------------------------    
 # map_element with no state and no additional arguments
 #----------------------------------------------------------------
-def double(a):
-    return 2*a
-doubles = Stream()
-map_element(func=double, in_stream=x, out_stream=doubles) 
+# GENERIC EXAMPLE
+# f is a function from an element of the input stream to an element of
+# the output stream.
+def f(v): pass
+map_element(func=f, in_stream=x, out_stream=y) 
+#y[j] = f(x[j]) for j = 0, 1, 2,...
+
+# EXAMPLE 1
+# The output stream s double the input stream
+def f(in_stream_element):
+    out_stream_element = 2*in_stream_element
+    return out_stream_element
+map_element(func=f, in_stream=x, out_stream=y) 
 #y[j] = 2*x[j] for j = 0, 1, 2,...
 
+# Note that we could also write f as f(v): return 2*v
+
 #----------------------------------------------------------------    
-# map_element with no state and with keyword arguments
+# EXAMPLE: map_element with no state and with keyword arguments
 #----------------------------------------------------------------
-# The arguments in this example are multiplicand and addend
+# The keyword arguments of func in this example are multiplicand and
+# addend.
+# The first argument of func is an in_stream element. The remaining
+# arguments are passed as keyword arguments specified in map_element.
  
-def multiply_and_add(a, multiplicand, addend):
-    return multiplicand*a + addend
-mult_add = Stream()
-map_element(func=multiply_and_add, in_stream=x, out_stream=mult_add,
+def multiply_and_add(in_stream_element, multiplicand, addend):
+    out_stream_element = multiplicand*in_stream_element + addend
+    return out_stream_element
+
+map_element(func=multiply_and_add, in_stream=x, out_stream=y,
             multiplicand=2, addend=10)
 # y[j] = x[j]*2 + 10, for j = 0, 1, 2,...
 
 #----------------------------------------------------------------    
-# map_element with state and with no additional arguments
+# EXAMPLE: map_element with state and with no additional arguments
 #----------------------------------------------------------------
+# 
 # At each step, the state is increased by 2. So, at the j-th
 # step, state is 2*j
  
-def add_twice_position(a, state):
-    return a+state, state+2
-add_twice = Stream()
-map_element(func=add_twice_position, in_stream=x, out_stream=add_twice,
+def add_twice_position(in_stream_element, current_state):
+    out_stream_element = in_stream_element + current_state
+    next_state = current_state+2
+    return out_stream_element, next_state
+
+map_element(func=add_twice_position, in_stream=x, out_stream=y,
             state=0)
 # y[j] = x[j] + 2*j
+# If x is [0, 1, 2, 3, 4,..] then y is [0, 3, 6, 9, 12, ...]
 
 
 #----------------------------------------------------------------
-# Same example merely to illustrate that the name of the state
-# parameter of func does not have to be "state"
+# EXAMPLE: Same example, short form
 def add_twice_position(a, position):
-    # Next output is: a + position
-    # Next state is: position + 2
     return a+position, position+2
-# The initial state is 0.
-add_twice_pos = Stream()
-map_element(func=add_twice_position, in_stream=x, out_stream=add_twice_pos,
+map_element(func=add_twice_position, in_stream=x, out_stream=y,
             state=0)
-# y[j] = x[j] + 2*j
 
 #----------------------------------------------------------------
-# Same example with different initial value of "state"
+# EXAMPLE: Same example with different initial value of state
 # Initial state is 10.
 # At the j-th step state is 10 + 2*j
-add_twice_state = Stream()
-map_element(func=add_twice_position, in_stream=x, out_stream=add_twice_state,
-            state=10)
+map_element(
+    func=add_twice_position, in_stream=x, out_stream=y,
+    state=10) 
 # y[j] = x[j] + 2*j + 10
 
+#----------------------------------------------------------------
+# EXAMPLE: Example of a state that is a tuple.
+def f(in_stream_element, current_state):
+        next_state = (current_state[1], sum(current_state))
+        out_stream_element = next_state[0]
+        return out_stream_element, next_state
+
+map_element(func=f, in_stream=x, out_stream=y, state=(0,1))
+# The sequence of values of next_state are:
+# (0, 1), (1, 1), (1, 2), (2, 3), (3, 5), (5, 8), ....
+# and hence the output is 1, 1, 2, 3, 5, 8, ...
+# which is the Fibonacci sequence. This is independent of the input
+# stream. The length of y will be the same as the length of x.
 
 #----------------------------------------------------------------    
-# map_element with state and with keyword arguments
+# EXAMPLE: map_element with state and with keyword arguments
 #----------------------------------------------------------------
-# The arguments in this example are multiplicand and addend
+# In this example, the keyword arguments passed to func are
+# multiplicand and addend. Note the order of parameters of func:
+# in_stream_element, then current_state, then keyword arguments.
 
-def f(a, position, multiplicand, addend):
-    # Next output is a*multiplicand + position
-    # Next state is position + addend
-    return a*multiplicand + position, position + addend
-addends = Stream()
-map_element(func=f, in_stream=x, out_stream=addends, state=0,
-            multiplicand=2, addend=1)
+def f(in_stream_element, current_state, multiplicand, addend):
+    out_stream_element = \
+      in_stream_element*multiplicand + current_state
+    next_state = current_state + addend
+    return out_stream_element, next_state
+
+map_element(func=f, in_stream=x, out_stream=y, state=0,
+            multiplicand=3, addend=2)
 # Initial state is 0.
-# y[j] = x[j]*2 + j, for j = 0, 1, 2, ....
-
-x.extend(range(4))
-"""
-====================
-Map Element Examples
-====================
-agent maps the function func from its single input stream to its
-single output stream.
-    
-This example demonstrates how to use :function:`map_element` in 
-agent_types/op.py on streams.
-"""
-
-import sys
-import os
-sys.path.append(os.path.abspath("../"))
-sys.path.append(os.path.abspath("../helper_functions"))
-sys.path.append(os.path.abspath("../core"))
-sys.path.append(os.path.abspath("../agent_types"))
-
-from agent import Agent
-from stream import Stream, StreamArray
-from stream import _no_value, _multivalue
-from check_agent_parameter_types import *
-from recent_values import recent_values
-from op import map_element
-
-scheduler = Stream.scheduler
-# In the following, w, x, y, z are streams that must be declared
-# before the functions are called.
-v = Stream('v')
-w = Stream('w')
-x = Stream('x')
-y = Stream('y')
-z = Stream('z')
-#----------------------------------------------------------------    
-# map_element with no state and no additional arguments
-#----------------------------------------------------------------
-def double(a):
-    return 2*a
-doubles = Stream()
-map_element(func=double, in_stream=x, out_stream=doubles) 
-#y[j] = 2*x[j] for j = 0, 1, 2,...
-
-#----------------------------------------------------------------    
-# map_element with no state and with keyword arguments
-#----------------------------------------------------------------
-# The arguments in this example are multiplicand and addend
- 
-def multiply_and_add(a, multiplicand, addend):
-    return multiplicand*a + addend
-mult_add = Stream()
-map_element(func=multiply_and_add, in_stream=x, out_stream=mult_add,
-            multiplicand=2, addend=10)
-# y[j] = x[j]*2 + 10, for j = 0, 1, 2,...
-
-#----------------------------------------------------------------    
-# map_element with state and with no additional arguments
-#----------------------------------------------------------------
-# At each step, the state is increased by 2. So, at the j-th
-# step, state is 2*j
- 
-def add_twice_position(a, state):
-    return a+state, state+2
-add_twice = Stream()
-map_element(func=add_twice_position, in_stream=x, out_stream=add_twice,
-            state=0)
-# y[j] = x[j] + 2*j
-
-
-#----------------------------------------------------------------
-# Same example merely to illustrate that the name of the state
-# parameter of func does not have to be "state"
-def add_twice_position(a, position):
-    # Next output is: a + position
-    # Next state is: position + 2
-    return a+position, position+2
-# The initial state is 0.
-add_twice_pos = Stream()
-map_element(func=add_twice_position, in_stream=x, out_stream=add_twice_pos,
-            state=0)
-# y[j] = x[j] + 2*j
-
-#----------------------------------------------------------------
-# Same example with different initial value of "state"
-# Initial state is 10.
-# At the j-th step state is 10 + 2*j
-add_twice_state = Stream()
-map_element(func=add_twice_position, in_stream=x, out_stream=add_twice_state,
-            state=10)
-# y[j] = x[j] + 2*j + 10
+# y[j] = x[j]*3 + 2*j, for j = 0, 1, 2, ....
+# If x is [0, 1, 2, 3, 4,....] then y is [0, 5, 10, 15, 20, ...]
 
 
 #----------------------------------------------------------------    
-# map_element with state and with keyword arguments
+# EXAMPLE: Illustrates use of _no_value
 #----------------------------------------------------------------
-# The arguments in this example are multiplicand and addend
+# In this example, the output stream is the same as the input stream
+# except that multiples of 2 are filtered out.
+def f(in_stream_element):
+    if in_stream_element % 2:
+            out_stream_element = in_stream_element
+    else:
+            out_stream_element = _no_value
+    return out_stream_element
+map_element(func=f, in_stream=x, out_stream=y)
+# If x is [0, 1, 2, 3, 4,....] then y is [1, 5, 7, 11,...]
 
-def f(a, position, multiplicand, addend):
-    # Next output is a*multiplicand + position
-    # Next state is position + addend
-    return a*multiplicand + position, position + addend
-addends = Stream()
-map_element(func=f, in_stream=x, out_stream=addends, state=0,
-            multiplicand=2, addend=1)
-# Initial state is 0.
-# y[j] = x[j]*2 + j, for j = 0, 1, 2, ....
 
-x.extend(range(4))
-print 'x'
-print recent_values(x)
-scheduler.step()
-print 'doubles'
-print recent_values(doubles)
-print 'multiply_and_add'
-print recent_values(mult_add)
-print 'add_twice_position'
-print recent_values(add_twice)
-print 'add_twice_position: same example'
-print recent_values(add_twice_pos)
-print 'add_twice_position. different state'
-print recent_values(add_twice_state)
-print 'multiplicand and addend'
-print recent_values(addends)
+#----------------------------------------------------------------    
+# EXAMPLE: Illustrates use of _no_value and a keyword argument
+#----------------------------------------------------------------
+# In this example, the output stream is the same as the input stream
+# except that only values that are less than the threshold are passed
+# through to the output stream. Here threshold is a keyword argument
+def f(in_stream_element, threshold):
+    if in_stream_element < threshold:
+            out_stream_element = in_stream_element
+    else:
+            out_stream_element = _no_value
+    return out_stream_element
+map_element(func=f, in_stream=x, out_stream=y, threshold=5)
+# If x is [0, 1, 2, 3, 4,....20] then y is [0, 1, 2, 3, 4]
+
+
+#----------------------------------------------------------------    
+# EXAMPLE: Illustrates use of _multivalue and _no_value
+#----------------------------------------------------------------
+# Elements of the input stream are tuples (x, y). Any x or y that
+# exceeds 5 is placed in the output stream
+def f(in_stream_element):
+        x, y = in_stream_element
+        if x > 5 and y > 5:
+                out_stream_element = _multivalue((x,y))
+        elif x > 5:
+                out_stream_element = x
+        elif y > 5:
+                out_stream_element = y
+        else:
+                out_stream_element = _no_value
+        return out_stream_element
+map_element(func=f, in_stream=x, out_stream=y)
+# If x is [(10, 10), (2, 20), (30, 3), (4, 4), (1, 3), (60, 70)] then
+# y is [10, 10, 20, 30, 60, 70]
+
+# Compare the above example with a function in which _multivalue is
+# not used.
+
+def f(in_stream_element):
+        x, y = in_stream_element
+        if x > 5 and y > 5:
+                out_stream_element = (x,y)
+        elif x > 5:
+                out_stream_element = x
+        elif y > 5:
+                out_stream_element = y
+        else:
+                out_stream_element = _no_value
+        return out_stream_element
+map_element(func=f, in_stream=x, out_stream=y)
+# If x is [(10, 10), (2, 20), (30, 3), (4, 4), (1, 3), (60, 70)] then
+# y is [(10, 10), 20, 30, (60, 70)]
+
+#----------------------------------------------------------------    
+# EXAMPLE: map_element using a Class and _no_value
+#----------------------------------------------------------------
+class my_dict(object):
+        """
+        Example illustrating the use of a method of an object as func
+        in map_element.
+        This example also illustrates the use of _no_value. When func
+        returns _no_value then no value (as opposed to None) is put on
+        the output stream.
+
+        This object keeps a dictionary (current_dict). If an element
+        of the input stream is a pair (key, value) then the key-value
+        is inserted into the dictionary and nothing is placed on the
+        output stream. If the element is a key, and if the key is in
+        the dictionary then the corresponding (key, value) tuple is
+        placed on the output stream; if the key is not in the
+        dictionary, then a warning is printed, and nothing is placed
+        on the output stream.
+
+        Example
+        -------
+        If the input stream is:
+        [('b', 2), ('c', 3), 'a', 'b', 'a', 'd', ('a', 10), 'a', .. ]
+        then the output stream is:
+        [('a', 1), ('b', 2), ('a', 1), ('a', 10), ....]
+        and the warning:
+        Key d is not in the dictionary
+        is printed to the screen.
+        
+
+        """
+        def __init__(self):
+            self.current_dict = {'a':1}
+        def get_value(self, key):
+            return self.current_dict[key]
+        def put_value(self, key, value):
+            self.current_dict[key] = value
+        def f(self, in_stream_element):
+            if isinstance(in_stream_element, tuple):
+                key, value = in_stream_element
+                self.put_value(key, value)
+                return _no_value
+            else:
+                key = in_stream_element
+                if key in self.current_dict:
+                    return (key, self.get_value(key))
+                else:
+                    print 'Key', key, 'is not in the dictionary'
+                    return _no_value
+
+example_object = my_dict()
+map_element(func=example_object.f, in_stream=x, out_stream=y)
