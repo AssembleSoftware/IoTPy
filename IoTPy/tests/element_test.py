@@ -173,6 +173,79 @@ def test_example_4():
     # Look at recent values of output streams.
     assert recent_values(x) == \
       [1, 1, 2, 3, 5, 8, 13, 21, 34]
+
+
+def test_1():
+    # From map_element_examples
+    x = Stream('x')
+    y = Stream('y')
+
+    def f(in_stream_element):
+        out_stream_element = 2*in_stream_element
+        return out_stream_element
+    map_element(func=f, in_stream=x, out_stream=y)
+
+    x.extend(range(5))
+    Stream.scheduler.step()
+    assert recent_values(y) == [0, 2, 4, 6, 8]
+      
+def test_2():
+    # From map_element_examples
+    x = Stream('x')
+    y = Stream('y')
+
+    def multiply_and_add(
+            in_stream_element, multiplicand, addend):
+            out_stream_element = \
+              multiplicand*in_stream_element + addend
+            return out_stream_element
+
+    map_element(func=multiply_and_add, in_stream=x, out_stream=y,
+                multiplicand=2, addend=10)
+    x.extend(range(5))
+    Stream.scheduler.step()
+    assert recent_values(y) == [10, 12, 14, 16, 18]
+
+def test_3():
+    # From map_element_examples
+    x = Stream('x')
+    y = Stream('y')
+
+    # In this example, the output stream is the same as the input stream
+    # except that only values that are less than the threshold are passed
+    # through to the output stream. Here threshold is a keyword argument
+    def f(in_stream_element, threshold):
+        if in_stream_element < threshold:
+                out_stream_element = in_stream_element
+        else:
+                out_stream_element = _no_value
+        return out_stream_element
+    map_element(func=f, in_stream=x, out_stream=y, threshold=5)
+    x.extend(range(20))
+    Stream.scheduler.step()
+    assert recent_values(y) == [0, 1, 2, 3, 4]
+    # If x is [0, 1, 2, 3, 4,....20] then y is [0, 1, 2, 3, 4]
+
+
+def test_4():
+    # From map_element_examples
+    x = Stream('x')
+    y = Stream('y')
+    def f(in_stream_element):
+            x, y = in_stream_element
+            if x > 5 and y > 5:
+                    out_stream_element = _multivalue((x,y))
+            elif x > 5:
+                    out_stream_element = x
+            elif y > 5:
+                    out_stream_element = y
+            else:
+                    out_stream_element = _no_value
+            return out_stream_element
+    map_element(func=f, in_stream=x, out_stream=y)
+    x.extend( [(10, 10), (2, 20), (30, 3), (4, 4), (1, 3), (60, 70)] )
+    Stream.scheduler.step()
+    assert recent_values(y) == [10, 10, 20, 30, 60, 70]
     
 #------------------------------------------------------------------------------------------------
 #                                     ELEMENT AGENT TESTS
@@ -505,6 +578,10 @@ def test_map_list():
 
     
 def test_element():
+    test_1()
+    test_2()
+    test_3()
+    test_4()
     test_example_1()
     test_example_2()
     test_example_3()
