@@ -391,8 +391,8 @@ def weave_f(in_streams):
 #-----------------------------------------------------------------------
 def merge_window(
         func, in_streams, out_stream, window_size, step_size,
-        state=None, call_streams=None, name='merge_window',
-        *args, **kwargs):
+        state=None, initial_value=None, call_streams=None,
+        name='merge_window', *args, **kwargs):
     """
     Parameters
     ----------
@@ -409,6 +409,10 @@ def merge_window(
            Positive integer. The step size of the moving window
         state: object
            The state of the agent
+        initial_value: None or object
+           If initial_value is None then the output stream starts
+           after its first window is full. Otherwise, the output
+           stream starts with window_size elements of initial_value.
         call_streams: list of Stream
            The list of call_streams. A new value in any stream in this
            list causes a state transition of this agent.
@@ -425,6 +429,9 @@ def merge_window(
     check_num_args_in_func(state, name, func, args, kwargs)
     num_in_streams = len(in_streams)
     num_out_streams = 1
+
+    if initial_value is not None:
+        out_stream.extend([initial_value for _ in range(window_size)])
 
     # The transition function for this agent.
     def transition(in_lists, state):
