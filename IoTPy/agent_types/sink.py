@@ -57,6 +57,9 @@ from check_agent_parameter_types import *
 from recent_values import recent_values
 from Buffer import Buffer
 
+# json is used in stream_to_json
+import json
+
 #-----------------------------------------------------------------------
 # SINK: SINGLE INPUT STREAM, NO OUTPUT
 #-----------------------------------------------------------------------
@@ -205,6 +208,14 @@ def stream_to_list(
         ext_kw['element_function'] = element_function
         sink(function_stateful_append, in_stream, state, **ext_kw) 
 
+# -----------------------------
+def stream_to_json(in_stream, filename):
+    def simple_append(element, filename):
+        with open(filename, 'a') as the_file:
+            json.dump(element, the_file)
+    sink(simple_append, in_stream, filename=filename)
+
+    
 # -----------------------------
 def stream_to_file(
         in_stream, filename, element_function=None, state=None,
