@@ -9,6 +9,8 @@ which tests code from multicore.py in multiprocessing.
 
 import sys
 import os
+import threading
+import random
 sys.path.append(os.path.abspath("../multiprocessing"))
 sys.path.append(os.path.abspath("../core"))
 sys.path.append(os.path.abspath("../agent_types"))
@@ -18,11 +20,10 @@ sys.path.append(os.path.abspath("../../examples/timing"))
 from multicore import StreamProcess, single_process_single_source
 from multicore import single_process_multiple_sources
 from multicore import make_process, run_multiprocess
-#from multicore import process_in_multicore
 from stream import Stream
 from op import map_element, map_window
 from merge import zip_stream, blend
-from source import source_function
+from source import source_func_to_stream, source_function, source_list
 from sink import stream_to_file
 from timing import offsets_from_ntp_server
 from print_stream import print_stream
@@ -51,7 +52,7 @@ def single_process_single_source_example_1():
     (2) Define the computational network: compute(in_stream), where
         in_stream is a stream, and is the only input stream of the
         network. 
-    (3) Call single_process_single_source()
+    (3) Create and run the process.
 
     """
 
@@ -68,7 +69,7 @@ def single_process_single_source_example_1():
         # puts the next element of the sequence in stream s,
         # and starts the sequence with value 0. The elements on
         # out_stream will be 1, 2, 3, ...
-        return source_function(
+        return source_func_to_stream(
             func=generate_sequence, out_stream=out_stream,
             time_interval=0.1, num_steps=4, state=0)
 
@@ -88,14 +89,23 @@ def single_process_single_source_example_1():
         map_element(
             func=f, in_stream=in_stream, out_stream=t)
         stream_to_file(in_stream=t, filename='test.dat')
+        out_streams=[]
 
-    # STEP 3: CREATE THE PROCESS
+    # STEP 3: CREATE AND RUN THE PROCESS
     # Use single_process_multiple_sources() to create the process. 
     # Create a process with two threads: a source thread and
     # a compute thread. The source thread executes the function
     # g, and the compute thread executes function h.
     single_process_single_source(
         source_func=source, compute_func=compute)
+    ## proc = make_process(
+    ##     compute_func=compute,
+    ##     in_stream_names=['in'],
+    ##     out_stream_names=[],
+    ##     connect_sources=[('in', source)],
+    ##     connect_actuators=[],
+    ##     process_name='single source test')
+    ## run_multiprocess(processes=[proc], connections=[])
 
 
 # ----------------------------------------------------------------
@@ -122,7 +132,7 @@ def single_process_multiple_sources_example_1():
     (2) Define the computational network: compute(in_streams) where
        in_streams is a list of streams. In this example, in_streams is
        a list of two streams, one from each source.
-    (3) Call single_process_multiple_sources()
+    (3) Create and run the process.
 
     """
     import random
@@ -139,7 +149,7 @@ def single_process_multiple_sources_example_1():
         # puts the next element of the sequence in out_stream,
         # and starts the sequence with value 0. The elements on
         # out_stream will be 1, 2, 3, ...
-        return source_function(
+        return source_func_to_stream(
             func=generate_sequence, out_stream=out_stream,
             time_interval=0.1, num_steps=10, state=0)
 
@@ -150,12 +160,12 @@ def single_process_multiple_sources_example_1():
         # Return an agent which takes 10 steps, and sleeps for 0.1
         # seconds between successive steps, and puts a random number
         # on out_stream at each step.
-        return source_function(
+        return source_func_to_stream(
             func=random.random, out_stream=out_stream,
             time_interval=0.1, num_steps=10)
 
     # STEP 2: DEFINE THE COMPUTATIONAL NETWORK OF AGENTS
-    def compute(in_streams):
+    def compute(in_streams, out_streams):
         # in_streams is a list of streams.
         # This is a simple example of a network of agents consisting
         # of two agents where the network has two input streams and no
@@ -171,16 +181,72 @@ def single_process_multiple_sources_example_1():
         zip_stream(in_streams=in_streams, out_stream=t)
         stream_to_file(in_stream=t, filename='output.dat')
 
-    # STEP 3: CREATE THE PROCESS
+    # STEP 3: CREATE AND RUN THE PROCESS
     # Use single_process_multiple_sources() to create the process. 
     # Create a process with three threads: two source threads and
     # a compute thread. The source threads execute the functions
     # source_0 and source_1, and the compute thread executes function
     # compute. 
-    single_process_multiple_sources(
-        list_source_func=[source_0, source_1], compute_func=compute)
+    ## single_process_multiple_sources(
+    ##     list_source_func=[source_0, source_1], compute_func=compute)
     
+    proc = make_process(
+        compute_func=compute,
+        in_stream_names=['source_0','source_1'],
+        out_stream_names=[],
+        connect_sources=[('source_0', source_0), ('source_1', source_1)],
+        connect_actuators=[],
+        process_name='multiple source test')
+    run_multiprocess(
+        processes=[proc],
+        connections=[])
 
+# ----------------------------------------------------------------
+# ----------------------------------------------------------------
+#   EXAMPLES: SINGLE PROCESS WITH ACTUATOR
+# ----------------------------------------------------------------
+# ----------------------------------------------------------------
+
+def simple_actuator_example():
+    def random_integer():
+        return random.randint(0, 10)
+    def g(state):
+        state += 1
+        #print 'state = ', state
+        if state > 10:
+            return None, state
+        else:
+            return state, state
+        
+    def random_source(out_stream):
+        return source_func_to_stream(
+            func=g, out_stream=out_stream, num_steps=15,
+            window_size=1, state=0)
+    
+    def f(in_streams, out_streams):
+        def pr(v):
+            return v
+        # The streams of the network
+        map_element(func=pr,
+                    in_stream=in_streams[0],
+                    out_stream=out_streams[0])
+    def pri(q):
+        while True:
+            v = q.get()
+            if v is None:
+                return True
+            print 'v from q is ', v
+
+    proc=make_process(
+        compute_func=f,
+        in_stream_names=['in'],
+        out_stream_names=['out'],
+        connect_sources=[('in', random_source)],
+        connect_actuators=[['out', pri]]
+        )
+    run_multiprocess(processes=[proc], connections=[]) 
+
+    
 def clock_offset_estimation_single_process_multiple_sources():
     """
     Another test of single_process_multiple_sources().
@@ -251,7 +317,7 @@ def clock_offset_estimation_single_process_multiple_sources():
             in_stream=merged_stream, out_stream=averaged_stream,
             window_size=2, step_size=1)
         stream_to_file(
-            in_stream=averaged_stream, filename='average.dat') 
+            in_stream=averaged_stream, filename='average.dat')
 
     # STEP 3: CREATE THE PROCESS
     # Use single_process_multiple_sources() to create the process.
@@ -313,7 +379,7 @@ def multiprocess_example_1():
     # ----------------------------------------------------------------    
     # STEP 1: DEFINE SOURCES
     def source_0(out_stream):
-        return source_function(
+        return source_func_to_stream(
             func=increment_state, out_stream=out_stream,
             time_interval=0.1, num_steps=10, state=0, window_size=1,
             name='source')
@@ -335,9 +401,11 @@ def multiprocess_example_1():
     # agents, and this output stream is called 's'. It has a single
     # source agent: source_0().
     proc_0 = make_process(
-        list_source_func=[source_0], compute_func=compute_0,
-        process_name='process_0',
-        in_stream_names=[], out_stream_names=['s'])
+        compute_func=compute_0,
+        in_stream_names=['in'],
+        out_stream_names=['s'],
+        connect_sources=[('in', source_0)],
+        process_name='process_0')
 
     # ----------------------------------------------------------------
     # MAKE PROCESS proc_1
@@ -365,9 +433,11 @@ def multiprocess_example_1():
     # This process has a single input stream, called 't', produced by
     # proc_1. It has no output streams.
     proc_1 = make_process(
-        list_source_func=[], compute_func=compute_1,
-        process_name='process_1',
-        in_stream_names=['t'], out_stream_names=[],
+        compute_func=compute_1,
+        in_stream_names=['t'],
+        out_stream_names=[],
+        connect_sources=[],
+        process_name='process_1'
         )
 
     # ----------------------------------------------------------------
@@ -434,9 +504,11 @@ def clock_offset_estimation_multiprocess():
     # This process has a single source, no input stream, and an output
     # stream called 's'
     proc_0 = make_process(
-        list_source_func=[source_0], compute_func=compute,
-        process_name='process_1',
-        in_stream_names=[], out_stream_names=['s'],
+        compute_func=compute,
+        in_stream_names=['in'],
+        out_stream_names=['s'],
+        connect_sources=[('in', source_0)], 
+        process_name='process_1'
         )
 
     # ----------------------------------------------------------------
@@ -463,9 +535,11 @@ def clock_offset_estimation_multiprocess():
     # This process has a single source, no input stream, and an output
     # stream called 's'
     proc_1 = make_process(
-        list_source_func=[source_1], compute_func=compute,
-        process_name='process_1',
-        in_stream_names=[], out_stream_names=['s'],
+        compute_func=compute,
+        in_stream_names=['in'],
+        out_stream_names=['s'],
+        connect_sources=[('in', source_1)],
+        process_name='process_1'
         )
 
 # ----------------------------------------------------------------
@@ -494,9 +568,11 @@ def clock_offset_estimation_multiprocess():
     # This process has no sources, two input streams, and no output
     # streams. We call the input streams 'u' and 'v'.
     proc_2 = make_process(
-        list_source_func=[], compute_func=compute,
-        process_name='process_2',
-        in_stream_names=['u', 'v'], out_stream_names=[],
+        compute_func=compute,
+        in_stream_names=['u', 'v'],
+        out_stream_names=[],
+        connect_sources=[], 
+        process_name='process_2'
         )
 
     # ----------------------------------------------------------------
@@ -512,6 +588,22 @@ def clock_offset_estimation_multiprocess():
         connections=[ (proc_0, 's', proc_2, 'u'),
                       (proc_1, 's', proc_2, 'v') ])
 
+def source_from_func_example():
+    def f():
+        return random.random()
+    source_function_object = source_function(
+        func=f, time_interval=0.01, num_steps=10)
+    single_process_single_source(
+        source_func=source_function_object.source_func,
+        compute_func=print_stream)
+
+def source_from_list_example():
+    source_list_object = source_list(
+        in_list=range(10), num_steps=10)
+    single_process_single_source(
+        source_func=source_list_object.source_func,
+        compute_func=print_stream)
+    
 
 # ----------------------------------------------------------------
 # ----------------------------------------------------------------
@@ -533,6 +625,12 @@ if __name__ == '__main__':
     print 'Finished single_process_multiple_sources_example_1()'
     print '(1, r1), (2, r2), ... will be appended to file output.dat'
     print 'where r1, r2, .. are random numbers.'
+    print
+    print '-----------------------------------------------------'
+    print
+    print 'Starting'
+    simple_actuator_example()
+    print 'Finished'
     print
     print '-----------------------------------------------------'
     print
@@ -559,4 +657,15 @@ if __name__ == '__main__':
     print
     print '-----------------------------------------------------'
     print
+    print 'Starting source_from_func_example()'
+    source_from_func_example()
+    print 'Finished source_from_func_example()'
+    print
+    print '-----------------------------------------------------'
+    print
+    print 'Starting source_from_list_example()'
+    source_from_list_example()
+    print 'Finished source_from_list_example()'
+    print
+    print '-----------------------------------------------------'
     
