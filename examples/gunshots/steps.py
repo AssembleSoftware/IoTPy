@@ -1,7 +1,7 @@
 
 """
-Creates a multiprocess, multithread application to detect explosive
-sounds such as gunshots.
+Creates a multiprocess, multithread application to detect high
+readings.
 
 See https://www.assemblesoftware.com/examples/
 
@@ -22,190 +22,146 @@ from multicore import make_process, run_multiprocess
 from stream import Stream
 # op, merge, source, sink are in agent_types
 from op import map_element, map_window
-from merge import zip_stream, blend, zip_map, merge_window
-from source import source_function, source_file
+from merge import zip_map, merge_window
+from source import source_float_file
 from sink import stream_to_file
+# print_stream is in helper functions. Useful for debugging.
 from print_stream import print_stream
 
-# Sensor data in horizontal (e, n) and vertical (z)
-# directions for 3 sensors.
-sensors_e_n_z = [
-    ['Sensor1.e.txt', 'Sensor1.n.txt', 'Sensor1.z.txt'],
-    ['Sensor2.e.txt', 'Sensor2.n.txt', 'Sensor2.z.txt'],
-    ['Sensor3.e.txt', 'Sensor3.n.txt', 'Sensor3.z.txt']
-    ]
+# --------------------------------------------------------
+# THE FUNCTION f FOR THE SOURCE PROCESS
+# --------------------------------------------------------
+def f(in_streams, out_streams):
+    # DECLARE STREAMS
+    zero_means = [
+        Stream('zero_means_' + str(i))
+        for i in range(len(in_streams))]
+    magnitudes = Stream('magnitudes')
 
-
-class source(object):
-    """
-    source.source_func() returns an agent that puts data from a file
-    called self.filename into the specified out_stream.
-    """
-    def __init__(self, filename, time_interval=0.0, num_steps=0):
-        """
-        Parameters
-        ----------
-        filename: str
-          name of a file that contains floating point numbers, one
-          number per line.
-        time_interval: int or float, optional
-          The time elapsed between successive numbers, from the file,
-          that are placed on the output stream.
-        num_steps: int, optional
-          The number of elements from the file placed on the output
-          stream. If this is omitted or is 0 then the entire file
-          is placed on the output stream.
-
-        """
-        self.filename=filename
-        self.time_interval=time_interval
-        self.num_steps=num_steps
-    def source_func(self, out_stream):
-        return source_file(
-            lambda v: float(v), out_stream,
-            self.filename, self.time_interval,
-            self.num_steps)
-
-def compute(in_streams, out_streams):
-    """
-    Parameters
-    ----------
-    in_streams: list of Stream
-    out_streams: list of Stream
-
-    Creates a network of agents with input streams, in_streams and
-    output streams, out_streams.
-    instreams has a stream for each direction (e.g. East, North,
-    vertical) of a sensor.
-    out_streams is a singleton list, and out_streams[0] is the output
-    stream of this nework
-
-        """
-    # SPECIFY CONSTANTS
-    THRESHOLD = 0.01
-
-    # Define functions that are wrapped to create agents. 
+    # CREATE AGENTS
+    # create subtract_mean agents
+    # Define the terminating function
     def subtract_mean(window):
         return window[-1] - sum(window)/float(len(window))
-    def magnitude_of_vector(coordinates):
-        return math.sqrt(sum([v*v for v in coordinates]))
-    def simple_anomaly(value):
-        if value > THRESHOLD:
-        return 1.0 if value > THRESHOLD else 0.0
-
-    # Define the internal and output streams
-    zero_mean_streams = [Stream() for i in range(len(in_streams))]
-    magnitude_stream = Stream('magnitude')
-    anomaly_stream = Stream('anomaly_stream')
-    out_streams[0] = anomaly_stream
-
-    # Create agents
+    # Wrap the terminating function to create an agent
     for i in range(len(in_streams)):
         map_window(
             func=subtract_mean, 
             in_stream=in_streams[i], 
-            out_stream=zero_mean_streams[i],
+            out_stream=zero_means[i],
             window_size=500, step_size=1,
             initial_value=0.0)
+
+    # Create the magnitude agent
+    # Define the terminating function
+    def magnitude_of_vector(coordinates):
+        return math.sqrt(sum([v*v for v in coordinates]))
+    # Wrap the terminating function to create an agent
     zip_map(
         func=magnitude_of_vector,
-        in_streams=zero_mean_streams,
-        out_stream=magnitude_stream
+        in_streams=zero_means,
+        out_stream=magnitudes
         )
+
+    # Create the local anomaly agent
+    # Define the terminating function
+    def simple_anomaly(value):
+        return 1.0 if value > 1 else 0.0
+    # Wrap the terminating function to create an agent
     map_element(
         func=simple_anomaly,
-        in_stream=magnitude_stream,
-        out_stream=anomaly_stream
+        in_stream=magnitudes,
+        out_stream=out_streams[0]
         )
     
-def detect_regional_anomalies(in_streams, out_streams):
-    """
-    Parameters
-    ----------
-    in_streams: list of Stream
-    out_streams: list of Stream
 
-    Creates a network of agents with input streams, in_streams and
-    output streams, out_streams.
-    instreams has a stream from each sensor.
-    out_streams is empty because this network has no output stream.
-
-    This network detects regional anomalies by aggregating local
-    anomalies. 
-
-    """
-    THRESHOLD = 1
-    # Define functions that are wrapped to create agents. 
-    def f(windows):
-        number_local_anomalies = [
-            any(window) for window in windows].count(True)
-        return 1.0 if number_local_anomalies > THRESHOLD else 0.0
-
-    # Define the internal and output streams.
-    # This network has no output stream.
+# --------------------------------------------------------
+# THE FUNCTION g FOR THE AGGREGATION PROCESS
+# --------------------------------------------------------    
+def g(in_streams, out_streams):
+    # DECLARE STREAMS
     regional_anomalies = Stream('Regional anomalies')
 
-    # # Create agents
+    # CREATE AGENTS
+    # Create the aggregation agent
+    # Define the terminating function
+    def aggregate(windows):
+        number_local_anomalies = [
+            any(window) for window in windows].count(True)
+        return 1.0 if number_local_anomalies > 1 else 0.0
+    # Wrap the terminating function to create an agent
     merge_window(
-        func=f, in_streams=in_streams, out_stream=regional_anomalies,
-        window_size=2000, step_size=1, initial_value=0.0)
+        func=aggregate,
+        in_streams=in_streams, out_stream=regional_anomalies,
+        window_size=250, step_size=1, initial_value=0.0)
+    # Agent that copies a stream to a file
+    # Plot these files to understand the application.
     for i in range(len(in_streams)):
         stream_to_file(in_streams[i], 'Anomalies_'+str(i+1)+'_.txt')
     stream_to_file(regional_anomalies, 'regional_anomalies.txt')
 
 
 # DEFINE PROCESSES
-processes = []
-NUM_STEPS=100000
+local_anomaly_processes = []
+NUM_STEPS=10000
 TIME_INTERVAL=0.0005
-for sensor_e_n_z in sensors_e_n_z:
-    # sensor_e_n_z is a list of 3 files of accelerations in the
-    # directions east, north, vertical.
-    # sensor_sources will be a list of source_func for data obtained
-    # from the 3 files: east, north, vertical
-    sensor_sources = []
-    for direction in sensor_e_n_z:
-        # direction is a file which contains sensor data from either
-        # east or north or vertical directions.
-        source_object = source(direction, TIME_INTERVAL, NUM_STEPS)
-        sensor_sources.append(source_object.source_func)
-    # Make a process for this sensor, and append it to the list of
-    # processes.
-    # The sources for this process are in the list sensor_sources.
-    # The process has no input streams from other processes and so
-    # in_stream_names is empty.
-    # It has a single output stream called anomaly_stream.
-    # The computational network is defined by the function compute.
-    proc = make_process(
-        list_source_func=sensor_sources, compute_func=compute,
-        in_stream_names=[], out_stream_names=['anomaly_stream'])
-    processes.append(proc)
 
-# Make a process for the aggregation sensor.
-# This process has no sources.
-# It gets anomaly streams from each of the three sensor processes.
-# We call the anomaly stream from sensor j, "anomaly_j", for j =1,2,3
-# We could use any name.
-proc = make_process(
-    list_source_func=[], compute_func=detect_regional_anomalies,
-    in_stream_names=['anomaly_0', 'anomaly_1', 'anomaly_2'],
-    out_stream_names=[])
-processes.append(proc)
+# Sensor data in horizontal (e, n) and vertical (z)
+# directions for 3 sensors.
+source_files = [
+    ['S0515.HNE.txt', 'S0515.HNN.txt', 'S0515.HNZ.txt'],
+    ['S0516.HNE.txt', 'S0516.HNN.txt', 'S0516.HNZ.txt'],
+    ['S0517.HNE.txt', 'S0517.HNN.txt', 'S0517.HNZ.txt']
+    ]
 
-# RUN MULTIPROCESS APPLICATION
-# Create and run a multiprocess application with the four
-# processes[0,1,2,3]
-# The output stream called 'anomaly_stream' of processes[0] is
-# connected to the input stream called 'anomaly_0' of processes[3]
-# which is the same as processes[-1].
-# Likewise, the output stream of processes[1], called 'anomaly_stream'
-# is connected to the input stream called 'anomaly_1' of processes[3].
-# Similarly for processes[2].
+sensors = {'S1':
+           {'e': 'S0515.HNE.txt',
+            'n': 'S0515.HNN.txt',
+            'z': 'S0515.HNZ.txt'
+           },
+           'S2':
+           {'e': 'S0516.HNE.txt',
+            'n': 'S0516.HNN.txt',
+            'z': 'S0516.HNZ.txt'
+           },
+           'S3':
+           {'e': 'S0517.HNE.txt',
+            'n': 'S0517.HNN.txt',
+            'z': 'S0517.HNZ.txt'
+           }
+         }
+
+source_sensor_direction = {}
+for sensor_name in sensors.keys():
+    source_sensor_direction[sensor_name] = {}
+    for direction in ['e', 'n', 'z']:
+        source_sensor_direction[sensor_name][direction] = \
+          source_float_file(
+              filename=sensors[sensor_name][direction],
+              time_interval=0.0005,
+              num_steps=10000).source_func
+
+source_processes = [
+    make_process(
+        compute_func=f,
+        in_stream_names=['e', 'n', 'z'],
+        out_stream_names=['out'],
+        connect_sources=[
+            (direction,
+             source_sensor_direction[sensor_name][direction])
+            for direction in ['e', 'n', 'z']])
+    for sensor_name in sensors.keys()]
+
+aggregation_process = make_process(
+    compute_func=g,
+    in_stream_names=[
+      'in_'+ str(i) for i in range(len(sensors))],
+    out_stream_names=[],
+    connect_sources=[])
+
 run_multiprocess(
-    processes=processes,
-    connections=[
-        (processes[0], 'anomaly_stream', processes[-1], 'anomaly_0'),
-        (processes[1], 'anomaly_stream', processes[-1], 'anomaly_1'),
-        (processes[2], 'anomaly_stream', processes[-1], 'anomaly_2')
-        ])                
-
+    processes=source_processes + [aggregation_process],
+    connections = [
+        (source_processes[i],  'out',
+         aggregation_process, 'in_'+str(i))
+        for i in range(len(sensors))])
