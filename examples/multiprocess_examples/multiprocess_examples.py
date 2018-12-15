@@ -12,14 +12,11 @@ sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
 sys.path.append(os.path.abspath("../timing"))
 
 from multicore import StreamProcess
-#single_process_single_source
-#from multicore import single_process_multiple_sources
 from multicore import make_process, run_multiprocess
-#from multicore import process_in_multicore
 from stream import Stream
 from op import map_element, map_window
 from merge import zip_stream, blend
-from source import source_function
+from source import source_func_to_stream
 from sink import stream_to_file
 from timing import offsets_from_ntp_server
 from print_stream import print_stream
@@ -81,7 +78,7 @@ def multiprocess_example_1():
     # ----------------------------------------------------------------    
     # STEP 1: DEFINE SOURCES
     def source_0(out_stream):
-        return source_function(
+        return source_func_to_stream(
             func=increment_state, out_stream=out_stream,
             time_interval=0.1, num_steps=10, state=0, window_size=1,
             name='source')
@@ -103,9 +100,10 @@ def multiprocess_example_1():
     # agents, and this output stream is called 's'. It has a single
     # source agent: source_0().
     proc_0 = make_process(
-        list_source_func=[source_0], compute_func=compute_0,
-        process_name='process_0',
-        in_stream_names=[], out_stream_names=['s'])
+        compute_func=compute_0,
+        in_stream_names=['in'],
+        out_stream_names=['s'],
+        connect_sources=[('in', source_0)])
 
     # ----------------------------------------------------------------
     # MAKE PROCESS proc_1
@@ -133,10 +131,10 @@ def multiprocess_example_1():
     # This process has a single input stream, called 't', produced by
     # proc_1. It has no output streams.
     proc_1 = make_process(
-        list_source_func=[], compute_func=compute_1,
-        process_name='process_1',
-        in_stream_names=['t'], out_stream_names=[],
-        )
+        compute_func=compute_1,
+        in_stream_names=['t'],
+        out_stream_names=[],
+        connect_sources=[])
 
     # ----------------------------------------------------------------
     # STEP 4: MAKE AND RUN THE MULTIPROCESS APP.
@@ -202,10 +200,10 @@ def clock_offset_estimation_multiprocess():
     # This process has a single source, no input stream, and an output
     # stream called 's'
     proc_0 = make_process(
-        list_source_func=[source_0], compute_func=compute,
-        process_name='process_1',
-        in_stream_names=[], out_stream_names=['s'],
-        )
+        compute_func=compute,
+        in_stream_names=['in'],
+        out_stream_names=['s'],
+        connect_sources=[('in', source_0)])
 
     # ----------------------------------------------------------------
     # MAKE PROCESS proc_1
@@ -231,12 +229,12 @@ def clock_offset_estimation_multiprocess():
     # This process has a single source, no input stream, and an output
     # stream called 's'
     proc_1 = make_process(
-        list_source_func=[source_1], compute_func=compute,
-        process_name='process_1',
-        in_stream_names=[], out_stream_names=['s'],
-        )
+        compute_func=compute,
+        in_stream_names=['in'],
+        out_stream_names=['s'],
+        connect_sources=[('in', source_1)])
 
-# ----------------------------------------------------------------
+    # ----------------------------------------------------------------
     # MAKE PROCESS proc_2
     # proc_2 has two input streams and no output stream.
     # It has no sources.
@@ -262,10 +260,10 @@ def clock_offset_estimation_multiprocess():
     # This process has no sources, two input streams, and no output
     # streams. We call the input streams 'u' and 'v'.
     proc_2 = make_process(
-        list_source_func=[], compute_func=compute,
-        process_name='process_2',
-        in_stream_names=['u', 'v'], out_stream_names=[],
-        )
+        compute_func=compute,
+        in_stream_names=['u', 'v'],
+        out_stream_names=[],
+        connect_sources=[])
 
     # ----------------------------------------------------------------
     # STEP 4: MAKE AND RUN THE MULTIPROCESS APP.
