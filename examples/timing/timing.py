@@ -7,7 +7,7 @@ The key point of this module is that you develop these applications in
 the following steps:
 (1) Write terminating functions that call ntp and that return a time
 offset from the local computer clock. 
-(2) Wrap these functions using the source_function wrapper to get an
+(2) Wrap these functions using the source_func_to_stream wrapper to get an
 source agent that generates a stream of offsets or corrected times.
 (3) Make processes using these sources by using the wrapper
                     single_process_single_source
@@ -27,7 +27,7 @@ agents are created in two steps:
   and obtain time offsets between the time read by the local system
   clock and the ntp services. The different functions use multiple ntp
   services in different ways, e.g., use the max or the median value.
-  (b) Wrap these terminating functions using the source_function
+  (b) Wrap these terminating functions using the source_func_to_stream
   wrapper to create agents that execute in their own threads.
 (3) Make processes using the wrapper single_process_single_source;
 test the processes.
@@ -48,7 +48,7 @@ from print_stream import print_stream
 # op, sink and source are in agent_types
 from op import map_element, map_window
 from sink import sink_element
-from source import source_function
+from source import source_func_to_stream
 # multicore is in multiprocessing
 from multicore import single_process_single_source
 
@@ -319,7 +319,7 @@ def offsets_from_ntp_server(
         0, then the stream never stops.
     
     """
-    return source_function(
+    return source_func_to_stream(
         func=clock_offset_from_ntp_server,
         out_stream=out_stream,
         time_interval=time_interval,
@@ -379,7 +379,7 @@ def offsets_from_first_ntp_server(
         0, then the stream never stops.
 
     """
-    return source_function(
+    return source_func_to_stream(
         func=clock_offset_from_first_ntp_server,
         out_stream=out_stream,
         time_interval=time_interval, num_steps=num_steps,
@@ -444,7 +444,7 @@ def times_and_offsets_from_first_ntp_server(
         0, then the stream never stops.
 
     """
-    return source_function(
+    return source_func_to_stream(
         func=time_and_offset,
         out_stream=out_stream,
         time_interval=time_interval, num_steps=num_steps,
@@ -508,7 +508,7 @@ def offsets_from_average_of_ntp_servers(
         0, then the stream never stops.
 
     """
-    return source_function(
+    return source_func_to_stream(
         func=clock_offset_from_average_of_ntp_servers,
         out_stream=out_stream,
         time_interval=time_interval, num_steps=num_steps,
@@ -584,7 +584,7 @@ def offsets_from_median_of_ntp_servers(
         0, then the stream never stops.
 
     """
-    return source_function(
+    return source_func_to_stream(
         func=clock_offset_from_median_of_ntp_servers,
         out_stream=out_stream,
         time_interval=time_interval, num_steps=num_steps,
