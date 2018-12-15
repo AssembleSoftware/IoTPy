@@ -49,16 +49,16 @@ def test_source():
             output_file.write(str(i) + '\n')
 
     scheduler.name_to_stream = {'s': s, 'r':r, 'a':a}
-    vv = source_function(
+    vv = source_func_to_stream(
         func=random_integer, out_stream=s, num_steps=5,
         name='random', window_size=2,
         test_list=test_list, a=10, b=20)
     
-    ww = source_list(
+    ww = source_list_to_stream(
         in_list=range(10), out_stream=r, num_steps=5,
         name='read list', window_size=2)
         
-    xx = source_file(
+    xx = source_file_to_stream(
         func=lambda x: 2*int(x), out_stream=a, filename='test.dat',
         time_interval=0.5, num_steps=None)
     
