@@ -34,21 +34,41 @@ agent gets messages on output streams of func and places copies
 of the messages on the input queues of other processes.
 
 """
-
-from Stream import Stream, _close, _no_value
-from Operators import stream_agent, stream_agent
-from multiprocessing import Process, Queue
-from RemoteQueue import RemoteQueue
-import socket
-import thread
-import json
-import time
-from server import create_server_thread
-import logging
-import pika
 import sys
+import os
+sys.path.append(os.path.abspath("../../IoTPy/multiprocessing"))
+sys.path.append(os.path.abspath("../../IoTPy/core"))
+sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
+sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
+sys.path.append(os.path.abspath("../timing"))
 
-logging.basicConfig(filename="make_process_log.log", filemode='w', level=logging.INFO)
+from multicore import StreamProcess
+#single_process_single_source
+#from multicore import single_process_multiple_sources
+from multicore import make_process, run_multiprocess
+#from multicore import process_in_multicore
+from stream import Stream
+from op import map_element, map_window
+from merge import zip_stream, blend
+from source import source_function
+from sink import stream_to_file
+from timing import offsets_from_ntp_server
+from print_stream import print_stream
+
+
+## from op import stream_agent, stream_agent
+## from multiprocessing import Process, Queue
+## from RemoteQueue import RemoteQueue
+## import socket
+## import thread
+## import json
+## import time
+## from server import create_server_thread
+## import logging
+## import pika
+## import sys
+
+## logging.basicConfig(filename="make_process_log.log", filemode='w', level=logging.INFO)
 
 class make_process(object):
     """
@@ -315,7 +335,8 @@ def make_output_manager(output_streams, output_conn_list):
 
 def make_process(
         input_stream_names, output_stream_names, func,
-        input_queue, output_conn_list, host, port):
+        input_queue, output_conn_list, host, port,
+        *args, **kwargs):
     """ Makes a process that gets messages on its single
     input queue, processes the messages and puts messages
     on its output queues. An output queue of this process
