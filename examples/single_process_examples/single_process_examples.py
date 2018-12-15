@@ -24,7 +24,7 @@ from stream import Stream
 # op, merge, source, sink are in agent_types
 from op import map_element, map_window
 from merge import zip_stream, blend
-from source import source_function
+from source import source_func_to_stream
 from sink import stream_to_file
 # timing is in examples.
 from timing import offsets_from_ntp_server
@@ -70,7 +70,7 @@ def single_process_single_source_example_1():
         # puts the next element of the sequence in stream s,
         # and starts the sequence with value 0. The elements on
         # out_stream will be 1, 2, 3, ...
-        return source_function(
+        return source_func_to_stream(
             func=generate_sequence, out_stream=out_stream,
             time_interval=0.1, num_steps=4, state=0)
 
@@ -141,7 +141,7 @@ def single_process_multiple_sources_example_1():
         # puts the next element of the sequence in out_stream,
         # and starts the sequence with value 0. The elements on
         # out_stream will be 1, 2, 3, ...
-        return source_function(
+        return source_func_to_stream(
             func=generate_sequence, out_stream=out_stream,
             time_interval=0.1, num_steps=10, state=0)
 
@@ -152,7 +152,7 @@ def single_process_multiple_sources_example_1():
         # Return an agent which takes 10 steps, and sleeps for 0.1
         # seconds between successive steps, and puts a random number
         # on out_stream at each step.
-        return source_function(
+        return source_func_to_stream(
             func=random.random, out_stream=out_stream,
             time_interval=0.1, num_steps=10)
 
