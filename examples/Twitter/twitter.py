@@ -208,11 +208,11 @@ def print_text_followers_retweet_friends(
         sink_element(func=h, in_stream=s)
 
     # The function that generates the source stream.
-    def f(s):
+    def f(stream):
         return twitter_to_stream(
             consumer_key, consumer_secret,
             access_token, access_token_secret,
-            trackwords, out_stream=s, num_steps=num_steps)
+            trackwords, out_stream=stream, num_steps=num_steps)
 
     # Create a single process with a single source
     # specified by function f, and a computational function
