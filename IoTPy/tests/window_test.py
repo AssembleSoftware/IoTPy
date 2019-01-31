@@ -333,14 +333,22 @@ def test_window_agents():
     q = StreamArray('q', dimension=2)
     r = StreamArray('r', dimension=2)
     s = StreamArray('s', dimension=2)
+    t = StreamArray('t', dimension=2)
 
     #----------------------------------------------------------------
     # Test window map agent with stream arrays and a NumPy function
+    # f() and ff() differ only in the axis.
     def f(input_array):
         return np.mean(input_array, axis=0)
+    def ff(input_array):
+        return np.mean(input_array, axis=1)
     map_window(
         func=f, in_stream=x, out_stream=y,
         window_size=2, step_size=2, name='window map agent for arrays')
+    map_window(
+        func=ff, in_stream=x, out_stream=t,
+        window_size=2, step_size=2, name='window map agent for arrays ff')
+    
     #----------------------------------------------------------------
 
     #----------------------------------------------------------------
@@ -421,6 +429,8 @@ def test_window_agents():
                           np.array([[1., 5.], [7., 11.]]))
     assert np.array_equal(recent_values(y),
                           np.array([[(1.+7.)/2.0, (5.+11.)/2.]]))
+    assert np.array_equal(recent_values(t),
+                          np.array([[(1.+5.)/2.0, (7.+11.)/2.]]))
     assert np.array_equal(recent_values(z), np.array([[1. + 7., 5. + 11]]))
     assert np.array_equal(recent_values(b),
                           [np.array([1.+ 7. + 0. + 2., 5. + 11. + 1. + 3.])])
