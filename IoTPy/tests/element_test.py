@@ -2,6 +2,7 @@
 This module tests element_agent.py
 
 """
+import numpy as np
 
 import sys
 import os
@@ -574,9 +575,23 @@ def test_map_list():
     assert recent_values(z) == f(x_values)
     assert recent_values(w) == g(x_values)
 
-
-
+def test_stream_arrays_2():
+    """
+    Example where the input stream of an agent is a stream array and
+    its output stream is not a stream array.
+    """
+    scheduler = Stream.scheduler
+    x = StreamArray(name='x', dimension=3, dtype=float)
+    y = Stream()
+    map_element(func=np.median, in_stream=x, out_stream=y)
+    x.append(np.array([1., 2., 3.]))
+    scheduler.step()
+    assert y.recent[:y.stop] == [2.0]
+    x.extend(np.array([[4., 5., 6.], [7., 8., 9.]]))
+    scheduler.step()
+    print y.recent[:y.stop]
     
+
 def test_element():
     test_1()
     test_2()
@@ -589,6 +604,7 @@ def test_element():
     test_element_simple()
     test_timed_window()
     test_map_list()
+    test_stream_arrays_2()
     print 'TEST OF OP (ELEMENT) IS SUCCESSFUL'
     
 if __name__ == '__main__':
