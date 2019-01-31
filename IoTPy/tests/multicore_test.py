@@ -363,7 +363,7 @@ def multiprocess_example_1():
     # STEP 2: Define the computational network:
     #              compute(in_streams, out_streams)
     # where in_streams and out_streams are lists of streams.
-    # STEP 3: Call single_process_multiple_sources()
+    # STEP 3: Call make_process()
     #
     # Carry out the above three steps for each process
     # STEP 4: The last step is to specify the connections between
