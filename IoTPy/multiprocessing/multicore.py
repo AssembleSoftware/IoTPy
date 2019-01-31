@@ -197,7 +197,7 @@ class StreamProcess(object):
 
 def make_process(
         compute_func, in_stream_names, out_stream_names,
-        connect_sources, connect_actuators=[],
+        connect_sources=[], connect_actuators=[],
         process_name='unnamed'):
     """
     Makes a process which computes the function compute_func
@@ -207,7 +207,7 @@ def make_process(
     Parameters
     ----------
     compute_func: function
-       A function with parameters in_streams, out_streams
+       A function with parameters in_streams, out_streams.
        The lengths of in_stream_names and out_stream_names
        must equal the lengths of the parameters in_streams
        and out_streams, respectively.
