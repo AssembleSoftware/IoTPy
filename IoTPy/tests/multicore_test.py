@@ -38,6 +38,8 @@ def identity(x): return x
 
 def single_process_single_source_example_1():
     """
+    The application in this example consists of single process.
+    The process has a single source and no actuator.
     The single source generates 1, 2, 3, 4, .....
     The compute function multiplies this sequence by 10
     and puts the result in the file called test.dat
@@ -46,13 +48,17 @@ def single_process_single_source_example_1():
     function is called then, test.dat will contain 10, 20, 30, 40
     on separate lines.
 
-    The steps for creating the process are:
-    (1) Define the source: source(out_stream), where out_stream is a
-        stream, and is stream into which source data is output.
-    (2) Define the computational network: compute(in_stream), where
-        in_stream is a stream, and is the only input stream of the
-        network. 
-    (3) Create and run the process.
+    The steps for creating a process are:
+    (1) Define the sources.
+        In this example we have two sources, source_0 and source_1
+    (2) Define the actuators.
+        In this example we have no actuators.
+    (3) Define compute_func
+    (4) Create the process by calling make_process()
+
+    Final step
+    After creating all processes, specify the connections between
+    processes and run the application by calling run_multiprocess.
 
     """
 
@@ -73,40 +79,41 @@ def single_process_single_source_example_1():
             func=generate_sequence, out_stream=out_stream,
             time_interval=0.1, num_steps=4, state=0)
 
-    # STEP 2: DEFINE THE COMPUTATIONAL NETWORK OF AGENTS
-    def compute(in_stream):
-        # A trivial example of a network of agents consisting
-        # of two agents where the network has a single input
-        # stream: in_stream.
-        # The first agent applies function f to each element 
+    # STEP 2: DEFINE ACTUATORS
+    # This example has no actuators
+    
+    # STEP 3: DEFINE COMPUTE_FUNC
+    def compute_func(in_streams, out_streams):
+        # This is a simple example of a composed agent consisting
+        # of two component agents where the network has a single input
+        # stream and no output stream.
+        # The first component agent applies function f to each element 
         # of in_stream, and puts the result in its output stream t.
-        # The second agent puts values in its input stream t
+        # The second component agent puts values in its input stream t
         # on a file called test.dat.
         # test.dat will contain 10, 20, 30, ....
 
         def f(x): return x*10
         t = Stream()
         map_element(
-            func=f, in_stream=in_stream, out_stream=t)
+            func=f, in_stream=in_streams[0], out_stream=t)
         stream_to_file(in_stream=t, filename='test.dat')
-        out_streams=[]
 
-    # STEP 3: CREATE AND RUN THE PROCESS
-    # Use single_process_multiple_sources() to create the process. 
-    # Create a process with two threads: a source thread and
-    # a compute thread. The source thread executes the function
-    # g, and the compute thread executes function h.
-    single_process_single_source(
-        source_func=source, compute_func=compute)
-    ## proc = make_process(
-    ##     compute_func=compute,
-    ##     in_stream_names=['in'],
-    ##     out_stream_names=[],
-    ##     connect_sources=[('in', source)],
-    ##     connect_actuators=[],
-    ##     process_name='single source test')
-    ## run_multiprocess(processes=[proc], connections=[])
+    # STEP 4: CREATE PROCESSES
+    # This process has a single input stream that we call 'in' and it
+    # has no output streams. We connect the source to the input stream
+    # called 'in'.
+    proc = make_process(
+        compute_func=compute_func,
+        in_stream_names=['in'],
+        out_stream_names=[],
+        connect_sources=[('in', source)],
+        connect_actuators=[])
 
+    # FINAL STEP: RUN APPLICATION
+    # Since this application has a single process it has no
+    # connections between processes.
+    run_multiprocess(processes=[proc], connections=[])
 
 # ----------------------------------------------------------------
 # ----------------------------------------------------------------
@@ -116,23 +123,25 @@ def single_process_single_source_example_1():
 
 def single_process_multiple_sources_example_1():
     """
-    This example has two sources: source_0 generates 1, 2, 3, 4, ...
-    and source_1 generates random numbers. The computation zips the two
-    streams together and writes the result to a file called
-    output.dat.
-    
-    num_steps is the number of values produced by the source. For
-    example, if the smaller of the num_steps for each source is 10,
-    then (1, r1), (2, r2), ..., (10, r10), ... will be appended to the
-    file  output.dat where r1,..., r10 are random numbers.
- 
-    The steps for creating the process are:
-    (1) Define the two sources:
-            source_0(out_stream), source_1(out_stream). 
-    (2) Define the computational network: compute(in_streams) where
-       in_streams is a list of streams. In this example, in_streams is
-       a list of two streams, one from each source.
-    (3) Create and run the process.
+    The application in this example consists of a single process.
+    This process has two sources: source_0 generates 1, 2, 3, 4, ...
+    and source_1 generates random numbers. The agent zips the
+    two streams together and writes the result to a file called
+    output.dat. This file will have
+           (1, r1), (2, r2), (3, r3), ...
+    where r1, r2,.... are random numbers.
+
+    The steps for creating a process are:
+    (1) Define the sources.
+        In this example we have two sources, source_0 and source_1
+    (2) Define the actuators.
+        In this example we have no actuators.
+    (3) Define compute_func
+    (4) Create the process by calling make_process()
+
+    Final step
+    After creating all processes, specify the connections between
+    processes and run the application by calling run_multiprocess. 
 
     """
     import random
@@ -144,7 +153,7 @@ def single_process_multiple_sources_example_1():
         def generate_sequence(state):
             return state+1, state+1
 
-        # Return an agent which takes 10 steps, and
+        # Return a source which takes 10 steps, and
         # sleeps for 0.1 seconds between successive steps, and
         # puts the next element of the sequence in out_stream,
         # and starts the sequence with value 0. The elements on
@@ -157,23 +166,25 @@ def single_process_multiple_sources_example_1():
         # A simple source which outputs random numbers on
         # out_stream.
 
-        # Return an agent which takes 10 steps, and sleeps for 0.1
+        # Return a source which takes 10 steps, and sleeps for 0.1
         # seconds between successive steps, and puts a random number
         # on out_stream at each step.
         return source_func_to_stream(
             func=random.random, out_stream=out_stream,
             time_interval=0.1, num_steps=10)
 
-    # STEP 2: DEFINE THE COMPUTATIONAL NETWORK OF AGENTS
-    def compute(in_streams, out_streams):
-        # in_streams is a list of streams.
-        # This is a simple example of a network of agents consisting
-        # of two agents where the network has two input streams and no
-        # output stream.
-        # The first agent zips the two input streams and puts
+    # STEP 2: DEFINE ACTUATORS
+    # This example has no actuators
+
+    # STEP 3: DEFINE COMPUTE_FUNC
+    def compute_func(in_streams, out_streams):
+        # This is a simple example of a composed agent consisting
+        # of two component agents where the composed agent has two
+        # input streams and no output stream.
+        # The first component agent zips the two input streams and puts
         # the result on its output stream t which is internal to the
         # network. 
-        # The second agent puts values in its input stream t
+        # The second component agent puts values in its input stream t
         # on a file called output.dat.
         from sink import stream_to_file
         # t is an internal stream of the network
@@ -181,25 +192,20 @@ def single_process_multiple_sources_example_1():
         zip_stream(in_streams=in_streams, out_stream=t)
         stream_to_file(in_stream=t, filename='output.dat')
 
-    # STEP 3: CREATE AND RUN THE PROCESS
-    # Use single_process_multiple_sources() to create the process. 
-    # Create a process with three threads: two source threads and
-    # a compute thread. The source threads execute the functions
-    # source_0 and source_1, and the compute thread executes function
-    # compute. 
-    ## single_process_multiple_sources(
-    ##     list_source_func=[source_0, source_1], compute_func=compute)
-    
+    # STEP 4: CREATE PROCESSES
     proc = make_process(
-        compute_func=compute,
+        compute_func=compute_func,
         in_stream_names=['source_0','source_1'],
         out_stream_names=[],
         connect_sources=[('source_0', source_0), ('source_1', source_1)],
         connect_actuators=[],
         process_name='multiple source test')
+
+    # FINAL STEP: RUN APPLICATION
+    # Since this application has a single process it has no
+    # connections between processes.
     run_multiprocess(
-        processes=[proc],
-        connections=[])
+        processes=[proc], connections=[])
 
 # ----------------------------------------------------------------
 # ----------------------------------------------------------------
@@ -208,67 +214,99 @@ def single_process_multiple_sources_example_1():
 # ----------------------------------------------------------------
 
 def simple_actuator_example():
-    def random_integer():
-        return random.randint(0, 10)
-    def g(state):
-        state += 1
-        #print 'state = ', state
-        if state > 10:
-            return None, state
-        else:
-            return state, state
-        
-    def random_source(out_stream):
-        return source_func_to_stream(
-            func=g, out_stream=out_stream, num_steps=15,
-            window_size=1, state=0)
+    """
+    This example has a single source which generates the sequence:
+    1, 2, 3, .... It has a single actuator which gets messages from a
+    queue and prints the message.
     
-    def f(in_streams, out_streams):
-        def pr(v):
-            return v
-        # The streams of the network
-        map_element(func=pr,
-                    in_stream=in_streams[0],
-                    out_stream=out_streams[0])
-    def pri(q):
+    The steps for creating a process are:
+    (1) Define the sources.
+        In this example we have two sources, source_0 and source_1
+    (2) Define the actuators.
+        In this example we have no actuators.
+    (3) Define compute_func
+    (4) Create the process by calling make_process()
+
+    Final step
+    After creating all processes, specify the connections between
+    processes and run the application by calling run_multiprocess.
+
+    """
+    # STEP 1: DEFINE SOURCES
+    def sequence_of_integers(current_integer, max_integer):
+        next_integer = current_integer + 1
+        if next_integer > max_integer:
+            # return next output, next state
+            return None, next_integer
+        else:
+            return next_integer, next_integer
+        
+    def sequence_of_integers_source(out_stream):
+        return source_func_to_stream(
+            func=sequence_of_integers,
+            out_stream=out_stream,
+            num_steps=15, window_size=1, state=0,
+            max_integer=10)
+
+    # STEP 2: DEFINE ACTUATORS
+    def print_from_queue(q):
         while True:
             v = q.get()
             if v is None:
+                # exit loop
                 return True
-            print 'v from q is ', v
+            else:
+                print 'next value in queue is ', v
 
+    # STEP 3: DEFINE COMPUTE_FUNC
+    def f(in_streams, out_streams):
+        def identity(v): return v
+        map_element(func=identity,
+                    in_stream=in_streams[0],
+                    out_stream=out_streams[0])
+
+    # STEP 4: CREATE PROCESSES
     proc=make_process(
         compute_func=f,
         in_stream_names=['in'],
         out_stream_names=['out'],
-        connect_sources=[('in', random_source)],
-        connect_actuators=[['out', pri]]
+        connect_sources=[('in', sequence_of_integers_source)],
+        connect_actuators=[['out', print_from_queue]]
         )
+
+    # FINAL STEP: RUN APPLICATION
+    # Since this application has a single process it has no
+    # connections between processes.
     run_multiprocess(processes=[proc], connections=[]) 
 
     
 def clock_offset_estimation_single_process_multiple_sources():
     """
-    Another test of single_process_multiple_sources().
+    Another test of a single process with multiple sources and no
+    actuators. 
     This process merges offsets received from two ntp sources and
     computes their average over a moving time window, and puts the
     result on a file, average.dat
     This process has two sources, each of which receives ntp offsets
-    from ntp servers. The computational network consists of three
+    from ntp servers. The composed agent consists of three component
     agents: 
-    (1) an agent that merges the two sources, and
-    (2) an agent that computes the average of the merged stream over a
-    window, and
-    (3) a sink agent that puts the averaged stream in file called
-    'average.dat'. 
+    (1) a component agent that merges the two sources, and
+    (2) a component agent that computes the average of the merged
+    stream over a window, and
+    (3) a component sink agent that puts the averaged stream in file
+    called 'average.dat'. 
 
-    The steps for creating the process are:
-    (1) Define the two sources:
-            source_0(out_stream), source_1(out_stream). 
-    (2) Define the computational network: compute(in_streams) where
-       in_streams is a list of streams. In this example, in_streams is
-       a list of two streams, one from each source.
-    (3) Call single_process_multiple_sources()
+    The steps for creating a process are:
+    (1) Define the sources.
+        In this example we have two sources, source_0 and source_1
+    (2) Define the actuators.
+        In this example we have no actuators.
+    (3) Define compute_func
+    (4) Create the process by calling make_process()
+
+    Final steps: After creating all processes, specify the connections
+    between processes and then run the application by calling
+    run_multiprocess.
 
     """
     ntp_server_0 = '0.us.pool.ntp.org'
@@ -294,19 +332,23 @@ def clock_offset_estimation_single_process_multiple_sources():
         return offsets_from_ntp_server(
             out_stream, ntp_server_1, time_interval, num_steps)
 
-    # STEP 2: DEFINE THE COMPUTATIONAL NETWORK OF AGENTS
-    # This network has two input streams, one from each source
+    # STEP 2: DEFINE ACTUATORS
+    # This process has no actuators
+
+    # STEP 3: DEFINE COMPUTE_FUNC
+    # This composed agent has two input streams, one from each
+    # source. 
     # It has two internal streams: merged_stream and averaged_stream.
-    # It has 3 agents.
-    # (1) The networks two input streams feed a blend agent which
-    # outputs merged_stream.
+    # It has 3 component agents:
+    # (1) blend: The composed agent's two input streams feed a blend
+    # agent which outputs merged_stream.
     # (2) The map_window agent reads merged_stream and outputs
     # averaged_stream.
     # (3) The stream_to_file agent inputs averaged_stream. This agent
     # is a sink which puts the stream into the file called
     # 'average.dat'. The file will contain floating point numbers that
     # are the averages of the specified sliding winow.
-    def compute(in_streams):
+    def compute_func(in_streams, out_streams):
         merged_stream = Stream('merge of two ntp server offsets')
         averaged_stream = Stream('sliding window average of offsets')
         blend(
@@ -319,11 +361,17 @@ def clock_offset_estimation_single_process_multiple_sources():
         stream_to_file(
             in_stream=averaged_stream, filename='average.dat')
 
-    # STEP 3: CREATE THE PROCESS
-    # Use single_process_multiple_sources() to create the process.
-    single_process_multiple_sources(
-        list_source_func=[source_0, source_1], compute_func=compute)
+    # STEP 4: CREATE PROCESSES
+    proc=make_process(
+        compute_func=compute_func,
+        in_stream_names=['ntp_0', 'ntp_1'],
+        out_stream_names=[],
+        connect_sources=[('ntp_0', source_0), ('ntp_1', source_1)],
+        connect_actuators=[]
+        )
 
+    # FINAL STEP: RUN APPLICATION
+    run_multiprocess(processes=[proc], connections=[]) 
 
 # ----------------------------------------------------------------
 # ----------------------------------------------------------------
@@ -333,7 +381,8 @@ def clock_offset_estimation_single_process_multiple_sources():
 
 def multiprocess_example_1():
     """
-    A simple example of an app with two processes, proc_0 and proc_1.
+    A simple example of a multiprocess application with two processes,
+    proc_0 and proc_1. 
     proc_0 has a source, no input streams and a single output stream
     called 's'. 
     proc_1 has no sources, a single input stream called 't', and no
@@ -342,12 +391,24 @@ def multiprocess_example_1():
        the output stream called 's' from proc_0 is the input stream
        called 't' in proc_1.
     The source in proc_0 generates 1, 2, 3, 4,.... and the
-    computational network in proc_0 multiplies these values by 10, and
+    agent in proc_0 multiplies these values by 10, and
     so proc_0 outputs 10, 20, 30, 40, ... on its output stream.
-    proc_1 reads the output stream of proc_0, and its computational
-    network multiplies the elements in this stream by 200 and puts the
+    proc_1 reads the output stream of proc_0, and its agent
+    multiplies the elements in this stream by 200 and puts the
     values in a file called 'result.dat' which will contain:
     2000, 4000, 6000, ...
+
+     The steps for creating a process are:
+    (1) Define the sources.
+        In this example we have two sources, source_0 and source_1
+    (2) Define the actuators.
+        In this example we have no actuators.
+    (3) Define compute_func
+    (4) Create the process by calling make_process()
+
+    Final step
+    After creating all processes, specify the connections between
+    processes and run the application by calling run_multiprocess.
 
     """
     # A helper function
@@ -356,20 +417,7 @@ def multiprocess_example_1():
     
     # ----------------------------------------------------------------
     #    DEFINE EACH OF THE PROCESSES
-    # ----------------------------------------------------------------       
-    # The steps for creating a process are:
-    # STEP 1: Define the sources: source(out_stream), where out_stream
-    # is a stream.
-    # STEP 2: Define the computational network:
-    #              compute(in_streams, out_streams)
-    # where in_streams and out_streams are lists of streams.
-    # STEP 3: Call make_process()
-    #
-    # Carry out the above three steps for each process
-    # STEP 4: The last step is to specify the connections between
-    # processes, and then make and run the multiprocess app by
-    # executing run_multiprocess()
-
+    # ----------------------------------------------------------------
 
     # ----------------------------------------------------------------
     # MAKE PROCESS proc_0
@@ -384,8 +432,11 @@ def multiprocess_example_1():
             time_interval=0.1, num_steps=10, state=0, window_size=1,
             name='source')
 
-    # STEP 2: DEFINE THE COMPUTATIONAL NETWORK OF AGENTS
-    # This network consists of a single map_element agent.
+    # STEP 2: DEFINE ACTUATORS
+    # This process has no actuators
+
+    # # STEP 3: DEFINE COMPUTE_FUNC
+    # The agent for this process is a single map_element agent.
     # The map element agent has a single input stream: in_streams[0],
     # and it has a single output stream: out_streams[0]. The elements
     # of the output stream are 10 times the elements of the input
@@ -395,7 +446,7 @@ def multiprocess_example_1():
             func=lambda x: 10*x,
             in_stream=in_streams[0], out_stream=out_streams[0])
 
-    # STEP 3: MAKE A PROCESS
+    # STEP 4: CREATE PROCESSES
     # This process has no input streams and has a single output stream
     # which is the stream produced by the compute_0() network of
     # agents, and this output stream is called 's'. It has a single
@@ -417,7 +468,10 @@ def multiprocess_example_1():
     # STEP 1: DEFINE SOURCES
     # This process has no sources; so skip this step.
 
-    # STEP 2: DEFINE THE COMPUTATIONAL NETWORK OF AGENTS
+    # # STEP 2: DEFINE ACTUATORS
+    # This process has no actuators
+
+    # # STEP 3: DEFINE COMPUTE_FUNC
     # This network consists of a map_element agent and
     # a file_to_stream agent which is a type of sink agent and which
     # puts the elements of result_stream on a file called 'results.dat.'
@@ -429,7 +483,7 @@ def multiprocess_example_1():
             out_stream=result_stream)
         stream_to_file(in_stream=result_stream, filename='result.dat')
 
-    # STEP 3: MAKE A PROCESS
+    # # STEP 4: CREATE PROCESSES
     # This process has a single input stream, called 't', produced by
     # proc_1. It has no output streams.
     proc_1 = make_process(
@@ -441,10 +495,7 @@ def multiprocess_example_1():
         )
 
     # ----------------------------------------------------------------
-    # STEP 4: MAKE AND RUN THE MULTIPROCESS APP.
-    # Make the multiprocess (single VM) application; run it; and wait
-    # for the threads to terminate, if they run for a limited number
-    # of steps.
+    # FINAL STEP: RUN APPLICATION
     # Specify connections: A list of 4-tuples:
     # (process, output stream name, process, input stream name)
     # ----------------------------------------------------------------    
@@ -549,13 +600,14 @@ def clock_offset_estimation_multiprocess():
     # ----------------------------------------------------------------
 
     # STEP 1: DEFINE SOURCES
-    # This process has no sources; so, skip this step.
+    # This process has no sources.
 
-    # STEP 2: DEFINE THE COMPUTATIONAL NETWORK OF AGENTS
-    # The network consists of two agents:
-    # (1) an agent which blends (merges) in_streams and outputs
+    # STEP 2: DEFINE COMPUTE_FUNC
+    # The composed agent consists of two component agents:
+    # (1) blend: an agent which blends (merges) in_streams and outputs
     #     merged_stream, and 
-    # (2) a sink agent which inputs merged_stream and prints it.
+    # (2) stream_to_file: a sink agent which inputs merged_stream and
+    #     prints it.
     def compute(in_streams, out_streams):
         merged_stream = Stream('merge of two ntp server offsets')
         blend(
@@ -576,10 +628,7 @@ def clock_offset_estimation_multiprocess():
         )
 
     # ----------------------------------------------------------------
-    # STEP 4: MAKE AND RUN THE MULTIPROCESS APP.
-    # Make the multiprocess (single VM) application; run it; and wait
-    # for the threads to terminate, if they run for a limited number
-    # of steps.
+    # FINAL STEP: RUN APPLICATION
     # Specify connections: A list of 4-tuples:
     # (process, output stream name, process, input stream name)
     # ----------------------------------------------------------------    
@@ -588,21 +637,21 @@ def clock_offset_estimation_multiprocess():
         connections=[ (proc_0, 's', proc_2, 'u'),
                       (proc_1, 's', proc_2, 'v') ])
 
-def source_from_func_example():
-    def f():
-        return random.random()
-    source_function_object = source_function(
-        func=f, time_interval=0.01, num_steps=10)
-    single_process_single_source(
-        source_func=source_function_object.source_func,
-        compute_func=print_stream)
+## def source_from_func_example():
+##     def f():
+##         return random.random()
+##     source_function_object = source_function(
+##         func=f, time_interval=0.01, num_steps=10)
+##     single_process_single_source(
+##         source_func=source_function_object.source_func,
+##         compute_func=print_stream)
 
-def source_from_list_example():
-    source_list_object = source_list(
-        in_list=range(10), num_steps=10)
-    single_process_single_source(
-        source_func=source_list_object.source_func,
-        compute_func=print_stream)
+## def source_from_list_example():
+##     source_list_object = source_list(
+##         in_list=range(10), num_steps=10)
+##     single_process_single_source(
+##         source_func=source_list_object.source_func,
+##         compute_func=print_stream)
     
 
 # ----------------------------------------------------------------
@@ -628,9 +677,11 @@ if __name__ == '__main__':
     print
     print '-----------------------------------------------------'
     print
-    print 'Starting'
+    print 'Starting simple_actuator_example()'
     simple_actuator_example()
-    print 'Finished'
+    print 'Finished simple_actuator_example()'
+    print 'This example prints: next value in queue is i'
+    print 'for i to max_integer which is set to 10.'
     print
     print '-----------------------------------------------------'
     print
@@ -656,16 +707,3 @@ if __name__ == '__main__':
     print 'offsets from 2 servers will be appended to offsets.dat' 
     print
     print '-----------------------------------------------------'
-    print
-    print 'Starting source_from_func_example()'
-    source_from_func_example()
-    print 'Finished source_from_func_example()'
-    print
-    print '-----------------------------------------------------'
-    print
-    print 'Starting source_from_list_example()'
-    source_from_list_example()
-    print 'Finished source_from_list_example()'
-    print
-    print '-----------------------------------------------------'
-    
