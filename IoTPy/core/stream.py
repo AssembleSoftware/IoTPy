@@ -496,6 +496,16 @@ class Stream(object):
         """
         return self.get_last_n(n)
 
+    def len(self):
+        """
+        Returns: int
+        -------
+            Number of elements in the stream.
+
+        """
+        return self.stop + self.offset
+        
+
     def is_empty(self):
         """
         Returns: boolean
