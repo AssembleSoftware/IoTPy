@@ -1,7 +1,6 @@
 """
 This module contains tests:
-* test_single_process_single_source()
-* test_single_process_multiple_sources()
+
 * offset_estimation_test()
 which tests code from multicore.py in multiprocessing.
 
@@ -17,9 +16,10 @@ sys.path.append(os.path.abspath("../agent_types"))
 sys.path.append(os.path.abspath("../helper_functions"))
 sys.path.append(os.path.abspath("../../examples/timing"))
 
-from multicore import StreamProcess, single_process_single_source
+from multicore import SharedMemoryProcess
+from multicore import shared_memory_process, MulticoreApp
+from multicore import single_process_single_source
 from multicore import single_process_multiple_sources
-from multicore import make_process, run_multiprocess
 from stream import Stream
 from op import map_element, map_window
 from merge import zip_stream, blend
@@ -54,7 +54,7 @@ def single_process_single_source_example_1():
     (2) Define the actuators.
         In this example we have no actuators.
     (3) Define compute_func
-    (4) Create the process by calling make_process()
+    (4) Create the process by calling shared_memory_process()
 
     Final step
     After creating all processes, specify the connections between
@@ -103,17 +103,19 @@ def single_process_single_source_example_1():
     # This process has a single input stream that we call 'in' and it
     # has no output streams. We connect the source to the input stream
     # called 'in'.
-    proc = make_process(
+    proc = shared_memory_process(
         compute_func=compute_func,
         in_stream_names=['in'],
         out_stream_names=[],
         connect_sources=[('in', source)],
-        connect_actuators=[])
+        connect_actuators=[],
+        name='proc')
 
     # FINAL STEP: RUN APPLICATION
     # Since this application has a single process it has no
     # connections between processes.
-    run_multiprocess(processes=[proc], connections=[])
+    vm = MulticoreApp(processes=[proc], connections=[])
+    vm.run()
 
 # ----------------------------------------------------------------
 # ----------------------------------------------------------------
@@ -137,7 +139,7 @@ def single_process_multiple_sources_example_1():
     (2) Define the actuators.
         In this example we have no actuators.
     (3) Define compute_func
-    (4) Create the process by calling make_process()
+    (4) Create the process by calling shared_memory_process()
 
     Final step
     After creating all processes, specify the connections between
@@ -193,19 +195,19 @@ def single_process_multiple_sources_example_1():
         stream_to_file(in_stream=t, filename='output.dat')
 
     # STEP 4: CREATE PROCESSES
-    proc = make_process(
+    proc = shared_memory_process(
         compute_func=compute_func,
         in_stream_names=['source_0','source_1'],
         out_stream_names=[],
         connect_sources=[('source_0', source_0), ('source_1', source_1)],
         connect_actuators=[],
-        process_name='multiple source test')
+        name='multiple source test')
 
     # FINAL STEP: RUN APPLICATION
     # Since this application has a single process it has no
     # connections between processes.
-    run_multiprocess(
-        processes=[proc], connections=[])
+    vm = MulticoreApp(processes=[proc], connections=[])
+    vm.run()
 
 # ----------------------------------------------------------------
 # ----------------------------------------------------------------
@@ -225,7 +227,7 @@ def simple_actuator_example():
     (2) Define the actuators.
         In this example we have no actuators.
     (3) Define compute_func
-    (4) Create the process by calling make_process()
+    (4) Create the process by calling shared_memory_process()
 
     Final step
     After creating all processes, specify the connections between
@@ -266,7 +268,7 @@ def simple_actuator_example():
                     out_stream=out_streams[0])
 
     # STEP 4: CREATE PROCESSES
-    proc=make_process(
+    proc=shared_memory_process(
         compute_func=f,
         in_stream_names=['in'],
         out_stream_names=['out'],
@@ -277,7 +279,8 @@ def simple_actuator_example():
     # FINAL STEP: RUN APPLICATION
     # Since this application has a single process it has no
     # connections between processes.
-    run_multiprocess(processes=[proc], connections=[]) 
+    vm = MulticoreApp(processes=[proc], connections=[])
+    vm.run()
 
     
 def clock_offset_estimation_single_process_multiple_sources():
@@ -302,7 +305,7 @@ def clock_offset_estimation_single_process_multiple_sources():
     (2) Define the actuators.
         In this example we have no actuators.
     (3) Define compute_func
-    (4) Create the process by calling make_process()
+    (4) Create the process by calling shared_memory_process()
 
     Final steps: After creating all processes, specify the connections
     between processes and then run the application by calling
@@ -362,16 +365,18 @@ def clock_offset_estimation_single_process_multiple_sources():
             in_stream=averaged_stream, filename='average.dat')
 
     # STEP 4: CREATE PROCESSES
-    proc=make_process(
+    proc=shared_memory_process(
         compute_func=compute_func,
         in_stream_names=['ntp_0', 'ntp_1'],
         out_stream_names=[],
         connect_sources=[('ntp_0', source_0), ('ntp_1', source_1)],
-        connect_actuators=[]
+        connect_actuators=[],
+        name='proc'
         )
 
     # FINAL STEP: RUN APPLICATION
-    run_multiprocess(processes=[proc], connections=[]) 
+    vm = MulticoreApp(processes=[proc], connections=[])
+    vm.run()
 
 # ----------------------------------------------------------------
 # ----------------------------------------------------------------
@@ -404,7 +409,7 @@ def multiprocess_example_1():
     (2) Define the actuators.
         In this example we have no actuators.
     (3) Define compute_func
-    (4) Create the process by calling make_process()
+    (4) Create the process by calling shared_memory_process()
 
     Final step
     After creating all processes, specify the connections between
@@ -451,12 +456,12 @@ def multiprocess_example_1():
     # which is the stream produced by the compute_0() network of
     # agents, and this output stream is called 's'. It has a single
     # source agent: source_0().
-    proc_0 = make_process(
+    proc_0 = shared_memory_process(
         compute_func=compute_0,
         in_stream_names=['in'],
         out_stream_names=['s'],
         connect_sources=[('in', source_0)],
-        process_name='process_0')
+        name='process_0')
 
     # ----------------------------------------------------------------
     # MAKE PROCESS proc_1
@@ -486,22 +491,23 @@ def multiprocess_example_1():
     # # STEP 4: CREATE PROCESSES
     # This process has a single input stream, called 't', produced by
     # proc_1. It has no output streams.
-    proc_1 = make_process(
+    proc_1 = shared_memory_process(
         compute_func=compute_1,
         in_stream_names=['t'],
         out_stream_names=[],
         connect_sources=[],
-        process_name='process_1'
+        name='process_1'
         )
 
     # ----------------------------------------------------------------
     # FINAL STEP: RUN APPLICATION
     # Specify connections: A list of 4-tuples:
     # (process, output stream name, process, input stream name)
-    # ----------------------------------------------------------------    
-    run_multiprocess(
+    # ----------------------------------------------------------------
+    vm = MulticoreApp(
         processes=[proc_0, proc_1],
         connections=[(proc_0, 's', proc_1, 't')])
+    vm.run()
 
 
 def clock_offset_estimation_multiprocess():
@@ -554,12 +560,12 @@ def clock_offset_estimation_multiprocess():
     # STEP 3: CREATE THE PROCESS
     # This process has a single source, no input stream, and an output
     # stream called 's'
-    proc_0 = make_process(
+    proc_0 = shared_memory_process(
         compute_func=compute,
         in_stream_names=['in'],
         out_stream_names=['s'],
         connect_sources=[('in', source_0)], 
-        process_name='process_1'
+        name='process_1'
         )
 
     # ----------------------------------------------------------------
@@ -585,12 +591,12 @@ def clock_offset_estimation_multiprocess():
     # STEP 3: CREATE THE PROCESS
     # This process has a single source, no input stream, and an output
     # stream called 's'
-    proc_1 = make_process(
+    proc_1 = shared_memory_process(
         compute_func=compute,
         in_stream_names=['in'],
         out_stream_names=['s'],
         connect_sources=[('in', source_1)],
-        process_name='process_1'
+        name='process_1'
         )
 
 # ----------------------------------------------------------------
@@ -619,48 +625,49 @@ def clock_offset_estimation_multiprocess():
     # STEP 3: CREATE THE PROCESS
     # This process has no sources, two input streams, and no output
     # streams. We call the input streams 'u' and 'v'.
-    proc_2 = make_process(
+    proc_2 = shared_memory_process(
         compute_func=compute,
         in_stream_names=['u', 'v'],
         out_stream_names=[],
         connect_sources=[], 
-        process_name='process_2'
+        name='process_2'
         )
 
     # ----------------------------------------------------------------
     # FINAL STEP: RUN APPLICATION
     # Specify connections: A list of 4-tuples:
     # (process, output stream name, process, input stream name)
-    # ----------------------------------------------------------------    
-    run_multiprocess(
+    # ----------------------------------------------------------------
+    vm = MulticoreApp(
         processes=[proc_0, proc_1, proc_2],
         connections=[ (proc_0, 's', proc_2, 'u'),
                       (proc_1, 's', proc_2, 'v') ])
+    vm.run()
 
-## def source_from_func_example():
-##     def f():
-##         return random.random()
-##     source_function_object = source_function(
-##         func=f, time_interval=0.01, num_steps=10)
-##     single_process_single_source(
-##         source_func=source_function_object.source_func,
-##         compute_func=print_stream)
+def source_from_func_example():
+    def f():
+        return random.random()
+    source_function_object = source_function(
+        func=f, time_interval=0.01, num_steps=10)
+    single_process_single_source(
+        source_func=source_function_object.source_func,
+        compute_func=print_stream)
 
-## def source_from_list_example():
-##     source_list_object = source_list(
-##         in_list=range(10), num_steps=10)
-##     single_process_single_source(
-##         source_func=source_list_object.source_func,
-##         compute_func=print_stream)
+def source_from_list_example():
+    source_list_object = source_list(
+        in_list=range(10), num_steps=10)
+    single_process_single_source(
+        source_func=source_list_object.source_func,
+        compute_func=print_stream)
     
 
 # ----------------------------------------------------------------
 # ----------------------------------------------------------------
 #             TESTS
 # ----------------------------------------------------------------
-# ---------------------------------------------------------------- 
+# ----------------------------------------------------------------
 
-if __name__ == '__main__':
+def single_process_single_source_example_1_test():
     print 'You will see input queue empty a few times.'
     print 'Starting single_process_single_source_example_1()'
     single_process_single_source_example_1()
@@ -668,6 +675,8 @@ if __name__ == '__main__':
     print '10, 20, 30, 40 will be appended to file test.dat'
     print
     print '-----------------------------------------------------'
+
+def single_process_multiple_sources_example_1_test():
     print
     print 'Starting single_process_multiple_sources_example_1()'
     single_process_multiple_sources_example_1()
@@ -676,6 +685,8 @@ if __name__ == '__main__':
     print 'where r1, r2, .. are random numbers.'
     print
     print '-----------------------------------------------------'
+
+def simple_actuator_example_test():
     print
     print 'Starting simple_actuator_example()'
     simple_actuator_example()
@@ -684,6 +695,8 @@ if __name__ == '__main__':
     print 'for i to max_integer which is set to 10.'
     print
     print '-----------------------------------------------------'
+
+def clock_offset_estimation_single_process_multiple_sources_test():
     print
     print 'Starting'
     print 'clock_offset_estimation_single_process_multiple_sources' 
@@ -693,6 +706,8 @@ if __name__ == '__main__':
     print 'The average of offsets will be appended to average.dat'
     print
     print '-----------------------------------------------------'
+
+def multiprocess_example_1_test():
     print
     print 'Starting multiprocess_example_1()'
     multiprocess_example_1()
@@ -700,6 +715,8 @@ if __name__ == '__main__':
     print '2000, 4000, 6000, ... will be appended to result.dat'
     print
     print '-----------------------------------------------------'
+
+def clock_offset_estimation_multiprocess_test():
     print
     print 'Starting clock_offset_estimation_multiprocess()'
     clock_offset_estimation_multiprocess()
@@ -707,3 +724,32 @@ if __name__ == '__main__':
     print 'offsets from 2 servers will be appended to offsets.dat' 
     print
     print '-----------------------------------------------------'
+def source_from_func_example_test():
+    print
+    print 'Starting source_from_func_example'
+    source_from_func_example()
+    print 'Finished source_from_func_example'
+    print 'Output is sequence of 10 random numbers'
+    print
+    print '-----------------------------------------------------'
+def source_from_list_example_test():
+    print
+    print 'Starting source_from_list_example'
+    source_from_list_example()
+    print 'Finished source_from_list_example'
+    print 'Output is 0, 1, ..., 9'
+    print
+    print '-----------------------------------------------------'
+
+def test():
+    single_process_single_source_example_1_test()
+    single_process_multiple_sources_example_1_test()
+    simple_actuator_example_test()
+    clock_offset_estimation_single_process_multiple_sources_test()
+    multiprocess_example_1_test()
+    clock_offset_estimation_multiprocess_test()
+    source_from_func_example_test()
+    source_from_list_example_test()
+
+if __name__ == '__main__':
+    test()
