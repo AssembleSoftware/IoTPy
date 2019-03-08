@@ -97,30 +97,21 @@ def test_source():
 
     q2s_general_queue = Queue.Queue()
     q2s_test_list = range(5)
-    
-    
-    random_thread, random_thread_ready = vv
-    list_thread,list_thread_ready = ww
-    file_thread, file_thread_ready = xx
-    q_thread, q_thread_ready = sqq
-    q2s_thread, q2s_thread_ready = q2sss
+
+    random_thread = vv
+    list_thread = ww
+    file_thread = xx
+    q_thread = sqq
+    q2s_thread = q2sss
     
     random_thread.start()
     list_thread.start()
     file_thread.start()
     q_thread.start()
     q2s_thread.start()
-
-    
-    random_thread_ready.wait()
-    list_thread_ready.wait()
-    file_thread_ready.wait()
-    q_thread_ready.wait()
-    q2s_thread_ready.wait()
-    
     sb.extend(range(5))
     
-    #random_thread.join()
+    random_thread.join()
     list_thread.join()
     file_thread.join()
     q_thread.join()
