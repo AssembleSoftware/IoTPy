@@ -140,8 +140,16 @@ class Stream(object):
     first k elements of the stream remain unchanged.
 
     Any number of agents can read or subscribe to the
-    same stream. A stream is modified by exactly one
-    agent. An agent can reade, write and subscribe
+    same stream. A stream can be modified by more than one
+    agent; however, reasoning about the correctness of an
+    application is much simpler if a stream is modified by
+    exactly one agent. If a stream is modified by multiple
+    agents, then values may be appended to the tail of the
+    stream by different agents in a nondeterministic fashion;
+    testing such programs is difficult. For each stream, we
+    recommend having exactly one agent that writes the stream.
+
+    An agent can reade, write and subscribe
     to the same stream. An agent may subscribe
     to a stream without reading the stream's values; for
     example the agent may subscribe to a clock stream
@@ -157,7 +165,7 @@ class Stream(object):
     name : str, optional
           name of the stream. Though the name is optional
           a name helps with debugging.
-          default : 'NoName'
+          default : 'UnnamedStream'
     initial_value : list or array, optional
           The list (or array) of initial values in the
           stream. 
@@ -309,7 +317,7 @@ class Stream(object):
 
     """
     scheduler = ComputeEngine()
-    def __init__(self, name="NoName", 
+    def __init__(self, name="UnnamedStream", 
                  initial_value=[],
                  num_in_memory=DEFAULT_NUM_IN_MEMORY):
         self.lock = threading.RLock()
