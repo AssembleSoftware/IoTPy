@@ -14,14 +14,10 @@ This module also has a function that waits for data to arrive
 at a queue, and when data arrives it is put on a stream.
 Another function puts data from a function call into a queue.
 
-Each source function is executed in a separate thread. A
-function returns a 2-tuple:
-(1) a thread and
-(2) ready, a threading.Event.
-ready.wait() waits until the thread is ready for execution, and
-is used to start multiple threads at the same time. The source
-threads do not interfere with each other or with the thread
-that carries out computation.
+A source function returns a thread. Each source is executed in a
+separate thread. The source threads do not interfere with each other
+or with the thread that executes the agent that carries out the
+computation in a process.
 
 Functions in the module:
    1. func_to_q: puts data called by a function into a queue.
@@ -61,7 +57,8 @@ def func_to_q(func, q, state=None, sleep_time=0, num_steps=None,
     Value returned by func is appended to the queue q
 
     ----------
-        func: function on state, args, kwargs
+        func: function on state (optional), args (optional), kwargs
+              (optional) 
            Value returned by func is appended to the queue q
         q: Queue.Queue() or multiprocessing.Queue()
         sleep_time: int or float (optional)
@@ -77,15 +74,8 @@ def func_to_q(func, q, state=None, sleep_time=0, num_steps=None,
     -------
         thread: threading.Thread()
             The thread that repeatedly calls function.
-        ready: threading.Event()
-            ready is set to signal that the thread is ready for
-            execution. 
            
     """
-    
-    ready = threading.Event()
-    ready.set()
-
     def thread_target(func, q, state, sleep_time, num_steps, args, kwargs):
         if num_steps is None:
             while True:
@@ -103,8 +93,7 @@ def func_to_q(func, q, state=None, sleep_time=0, num_steps=None,
     return (
         threading.Thread(
         target=thread_target,
-        args=(func, q, state, sleep_time, num_steps, args, kwargs)),
-        ready)
+        args=(func, q, state, sleep_time, num_steps, args, kwargs)))
                 
 
 def q_to_streams(q, out_streams, name='thread_q_to_streams'):
@@ -125,13 +114,10 @@ def q_to_streams(q, out_streams, name='thread_q_to_streams'):
     Variables
     ---------
     name_to_stream: dict. key: stream_name. value: stream
-    ready: threading.Event. Set to indicate thread is ready.
        
     """
     name_to_stream = {stream.name:stream for stream in out_streams}
-    ready = threading.Event()
     def thread_target(q, name_to_stream):
-        ready.set()
         while True:
             v = q.get()
             if v == '_close':
@@ -142,8 +128,7 @@ def q_to_streams(q, out_streams, name='thread_q_to_streams'):
         return
     
     return (
-        threading.Thread(target=thread_target, args=(q, name_to_stream)),
-        ready)
+        threading.Thread(target=thread_target, args=(q, name_to_stream)))
 
 
 def q_to_streams_general(q, func, name='thread_q_to_streams'):
@@ -170,14 +155,9 @@ def q_to_streams_general(q, func, name='thread_q_to_streams'):
     name: str (optional)
        The name of this thread. Useful for debugging.
 
-    Variables
-    ---------
-    ready: threading.Event. Set to indicate thread is ready.
        
     """
-    ready = threading.Event()
     def thread_target(q, name_to_stream):
-        ready.set()
         while True:
             v = q.get()
             if v == '_close':
@@ -188,8 +168,7 @@ def q_to_streams_general(q, func, name='thread_q_to_streams'):
             stream.append(new_data_for_stream)
         return
     return (
-        threading.Thread(target=thread_target, args=(q, name_to_stream)),
-        ready)
+        threading.Thread(target=thread_target, args=(q, name_to_stream)))
 
 
 def source_func_to_stream(
@@ -230,15 +209,12 @@ def source_func_to_stream(
        kwargs: dict
           Keyword arguments of func
 
-    Returns: (thread, ready)
+    Returns: thread
     -------
           thread: threading.Thread
              The thread created by this function. The thread must
              be started and thread.join() may have to be called to
              ensure that the thread terminates execution.
-          ready: threading.Event
-             Signals (sets the event, ready) when the thread is
-             ready to operate.
           name: str
              The name of the thread
     """
@@ -247,10 +223,9 @@ def source_func_to_stream(
         func, stream_name, time_interval, num_steps, window_size,
         state, name)
     scheduler = Stream.scheduler
-    ready = threading.Event()
 
     def thread_target(
-            func, stream_name, time_interval, ready,
+            func, stream_name, time_interval,
             num_steps, window_size, state, args, kwargs):
         """
         thread_target is the function executed by the thread.
@@ -293,9 +268,6 @@ def source_func_to_stream(
         # End of def get_output_list_and_next_state(state)
         #-----------------------------------------------------------------
 
-        # The thread event, ready, is set to indicate that this thread
-        # is ready.
-        ready.set()
         if num_steps is None:
             while True:
                 output_list, state = get_output_list_and_next_state(state)
@@ -317,9 +289,8 @@ def source_func_to_stream(
     return (
         threading.Thread(
             target=thread_target,
-            args=(func, stream_name, time_interval, ready, num_steps,
-              window_size, state, args, kwargs)),
-            ready)
+            args=(func, stream_name, time_interval, num_steps,
+              window_size, state, args, kwargs)))
 
 def source_file_to_stream(
         func, out_stream, filename, time_interval=0,
@@ -361,15 +332,12 @@ def source_file_to_stream(
        kwargs: dict
           Keyword arguments of func
     
-    Returns: (thread, ready)
+    Returns: thread
     -------
           thread: threading.Thread
              The thread created by this function. The thread must
              be started and thread.join() may have to be called to
              ensure that the thread terminates execution.
-          ready: threading.Event
-             Signals (sets the event, ready) when the thread is
-             ready to operate.
           name: str
              The name of the thread The thread must
              be started and thread.join() may have to be called to
@@ -383,10 +351,9 @@ def source_file_to_stream(
         func, stream_name, filename, time_interval,
         num_steps, window_size, state, name)
     scheduler = Stream.scheduler
-    ready = threading.Event()
 
     def thread_target(func, stream_name, filename, time_interval,
-                      num_steps, window_size, state, ready,
+                      num_steps, window_size, state,
                       args, kwargs):
         """
         This is the function executed by the thread.
@@ -418,9 +385,6 @@ def source_file_to_stream(
                     output_list_for_current_window = []
                     time.sleep(time_interval)
                     num_steps_taken += 1
-                # The thread is ready because it has put at least one value
-                # on the scheduler's input queue.
-                ready.set()
                 if num_steps is not None and num_steps_taken >= num_steps:
                     break
         return
@@ -433,8 +397,7 @@ def source_file_to_stream(
         threading.Thread(
             target=thread_target,
             args=(func, stream_name, filename, time_interval, num_steps,
-                  window_size, state, ready, args, kwargs)),
-        ready)
+                  window_size, state, args, kwargs)))
 
 
 def source_list_to_stream(
