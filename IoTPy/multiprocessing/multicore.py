@@ -1,10 +1,16 @@
 
 """
-This module defines a Class, StreamProcess, for making a multiprocess
-program that runs on a multicore (shared-memory) computer.
-
-For distributed computing with multiple computers with different IP 
-addresses, see the module DistributedComputing.py.
+This module has 3 parts:
+(0) It has a Class, SharedMemoryProcess, for making a multiprocess
+    program that runs on a multicore (shared-memory) computer.
+    For distributed computing with multiple computers with different
+    IP addresses, see the module distributed.py.
+(1) It has a function shared_memory_process which makes and returns a
+    multicore process.
+(2) It has a class, MulticoreApp, for making an application consisting
+    of a single multicore computer (and no message passing to other
+    computers). A MulticoreApp consists of a set of SharedMemoryProcesses
+    and connections between them.
 
 """
 import multiprocessing
@@ -21,16 +27,34 @@ sys.path.append(os.path.abspath("../core"))
 from sink import stream_to_queue
 from compute_engine import ComputeEngine
 from stream import Stream
+#from distributed import make_distributed_process
 
-class StreamProcess(object):
+#--------------------------------------------------------------
+#           PART 0. SharedMemoryProcess
+#--------------------------------------------------------------
+class SharedMemoryProcess(object):
     """
     Class for creating and executing a process in a shared-memory
-    machine.
+    multicomputer. This class has an attribute called 'process' of type
+    multiprocessing.Process which is the process that executes code.
+    A SharedMemoryProcess communicates only with other
+    SharedMemoryProcess on a multicomputer, by using shared memory. It
+    does not use message passing and cannot communicate with other
+    computers. For distributed applications see distributed.py and
+    VM.py 
 
     Parameters
     ----------
        func: function
           The function that is encapsulated to create this process.
+          This function is returned by shared_memory_process()
+       in_stream_names: list
+          Names of input streams of this process where a name is either a
+          str or a pair (str, int). For example, the pairs ('velocity', 0),
+          ('velocity', 1), ... refer to a list of 'velocity' in_streams. 
+       out_stream_names: list
+          Names of output streams of this process where a name is either a
+          str or a pair (str, int).
        name: str (optional)
           Name given to the process. The name helps with debugging.
 
@@ -40,8 +64,11 @@ class StreamProcess(object):
        All sources put their data, tagged with the name of the
        destination stream, in this queue.
     out_to_in: defaultdict(list)
+       Identifies connections from an out_stream of this process to an
+       in_stream of another process in the same shared-memory
+       multicomputer. 
        key: str
-            Name of an out_stream
+            Name of an out_stream of this process
        value: name_and_queue_list
               list of pairs (2-tuples) where each pair is:
               (1) name: pickled object
@@ -49,52 +76,79 @@ class StreamProcess(object):
                   of a function in the receiver process. This
                   name may be different from the name of the 
                   stream in the sending process attached to it.
-                  e.g. str: the name of the target stream, or
-                  e.g. pair (str, int) where str is the name
+                  This name is typically a str: the name of the
+                  target stream. This name can also be a
+                  pair (str, int) where str is the name
                   of an array of target streams and int is an index
                   into the array. 
-              (2) stream_process: StreamProcess
-                      The receiver stream process.
+              (2) shared_memory_process: SharedMemoryProcess
+                      The receiver process.
     process: multiprocessing.Process
-       The process that executes the threads running the sources and
-       the encapsulated function. This process is created by the call
-       connect_process().
+       The core process of SharedMemoryProcess. This process executes the
+       the source threads, the actuator threads and the computation
+       thread. This process is created by the call
+       self.create_process().
     
     Methods
     -------
-    * attach_stream: specifies that a sending stream on this process
-    is the same as a receiving stream in some other process.
-    * connect_processor: connects all the attached output streams of
-    func in this process to input streams of functions in other processes
-    * target_of_connect_process: the target function for make process. This
-    function calls the encapsulated function func, and starts threads.
-    * connect_process: makes a multiprocessing.Process with the target:
-    target_of_connect_process. Assigns self.process to this process.
     * start: starts self.process
     * join: joins self.process
+    * attach_stream: specifies that a sending stream on this process
+      is the same as a receiving stream in some other process.
+    * connect_processes: connects all the attached output streams of
+      this process to input streams of other processes in the same
+      shared-memory space.
+    * target_of_create_process: the target function for
+      shared_memory_process(). This function calls the encapsulated function
+      func(), and starts source, actuator and computation threads. 
+    * create_process: makes a multiprocessing.Process with the target:
+      target_of_create_process(). Assigns self.process to this process.
 
     """
-    def __init__(self, func, name='StreamProcess'):
+    def __init__(self, func, in_stream_names, out_stream_names,
+                 name='SharedMemoryProcess'): 
         self.func = func
+        self.in_stream_names = in_stream_names
+        self.out_stream_names = out_stream_names
         self.name = name
         self.in_queue = multiprocessing.Queue()
         self.out_to_in = defaultdict(list)
         self.process = None
+
     def start(self):
         self.process.start()
+
     def join(self):
         self.process.join()
+    
     def attach_stream(
             self, sending_stream_name, receiving_process,
-            receiving_stream_name):   
-        self.out_to_in[sending_stream_name].append(
-            (receiving_stream_name, receiving_process))
-    def connect_processor(self, out_streams):
+            receiving_stream_name):
         """
         Parameters
-    ,     ----------
+        ----------
+        sending_stream_name: str
+           The name of an output stream of the sending
+            SharedMemoryProcess. 
+        receiving_process: SharedMemoryProcess
+           The process receiving the stream sent by self.process.
+        receiving_stream_name: str
+           The name of input stream of the receiving
+           SharedMemoryProcess. 
+
+        """
+        self.out_to_in[sending_stream_name].append(
+            (receiving_stream_name, receiving_process))
+
+    def connect_processes(self, out_streams):
+        """
+        Connects output streams of processes to input streams of
+        processes.
+
+        Parameters
+        ----------
         out_streams: list of Stream
-            list of output streams of the function. Each of these
+            list of output streams of the process. Each of these
             output streams must have a unique name.
 
         Notes
@@ -117,9 +171,10 @@ class StreamProcess(object):
             # stream_procs is a list of pairs, where each pair is:
             # (receiving stream name, receiving stream processor)
             for receiver_stream_name, receiver_proc in stream_procs:
+                # Get the sending stream from its name.
                 sending_stream = name_to_stream[sending_stream_name]
-                # stream_to_queue is an agent that puts tuples on the 
-                # receiving queue where each tuple is:
+                # stream_to_queue(....) is an agent that puts tuples on the 
+                # input queue of the receiving process where each tuple is:
                 # (receiver stream name, element of the sending stream)
                 # For help in debugging we give a name to this agent
                 # which is:
@@ -131,74 +186,85 @@ class StreamProcess(object):
                           receiver_stream_name)
                           )
 
-    def target_of_connect_process(self):
+    def create_process(self):
         """
-        Returns
-        -------
-           None
-
-        """
-        # SETUP
-        # Create a new Stream.scheduler and set its input
-        # queue to in_queue so that streams from other
-        # processes that are fed to in_queue are operated
-        # on by the scheduler.
-        Stream.scheduler = ComputeEngine(self.name)
-        Stream.scheduler.input_queue = self.in_queue
-        # Obtain the externalities of func, i.e. its
-        # source threads, actuator threads,and input and output
-        # streams. Put in_stream names in the dict name_to_stream
-        source_threads, actuator_threads, in_streams, out_streams = \
-          self.func() 
-        name_to_stream = {s.name: s for s in in_streams}
-        Stream.scheduler.name_to_stream = name_to_stream
-        # Connect the output streams to other processes
-        self.connect_processor(out_streams)
-
-        # START THREADS AND THE SCHEDULER
-        # Start the source threads
-        for ss in source_threads:
-            ss_thread, ss_ready = ss
-            ss_thread.start()
-        # Start the actuator threads.
-        for actuator_thread in actuator_threads:
-            actuator_thread.start()
-        # Wait for source threads to be ready to execute, and
-        # then start executing them.
-        for ss in source_threads:
-            ss_thread, ss_ready = ss
-            ss_ready.wait()
-        # Start the scheduler for this process
-        Stream.scheduler.start()
-
-        # JOIN THREADS
-        # Join the actuator threads.
-        for actuator_thread in actuator_threads:
-            actuator_thread.join()
-        # Join the source threads. The source threads may
-        # execute for ever in which case this join() will not
-        # terminate.
-        for ss in source_threads:
-            ss_thread, ss_ready = ss
-            ss_thread.join()
-        # Join the scheduler for this process. The scheduler
-        # may execute for ever, and so this join() may not
-        # terminate. You can set the scheduler to run for a
-        # fixed number of steps during debugging.
-        Stream.scheduler.join()
-
-    def connect_process(self):
-        """
-        See target_of_connect_process()
+        Create the multiprocessing.Process that is the core of this
+        SharedMemoryProcess. 
 
         """
+        def target_of_create_process():
+            """
+            Returns
+            -------
+               None
+
+            """
+            # SETUP
+            # Create a new Stream.scheduler and set its input
+            # queue to in_queue so that streams from other
+            # processes that are fed to in_queue are operated
+            # on by the scheduler.
+            Stream.scheduler = ComputeEngine(self.name)
+            # input_queue is the queue into which all streams for this
+            # process are routed.
+            Stream.scheduler.input_queue = self.in_queue
+            # Obtain the externalities of func, i.e. its
+            # source threads, actuator threads,and input and output
+            # streams. Put in_stream names in the dict name_to_stream
+            source_threads, actuator_threads, in_streams, out_streams = \
+              self.func()
+            # The scheduler for a process uses a dict name_to_stream
+            # from stream name to stream.
+            name_to_stream = {s.name: s for s in in_streams}
+            Stream.scheduler.name_to_stream = name_to_stream
+            # Connect the output streams of ths process to input
+            # streams of other processes as specified in the dict
+            # self.out_to_in. 
+            self.connect_processes(out_streams)
+
+            # START THREADS AND THE SCHEDULER
+            # Start the source threads
+            for ss in source_threads:
+                ss_thread, ss_ready = ss
+                ss_thread.start()
+            # Start the actuator threads.
+            for actuator_thread in actuator_threads:
+                actuator_thread.start()
+            # Wait for source threads to be ready to execute, and
+            # then start executing them.
+            ## for ss in source_threads:
+            ##     ss_thread, ss_ready = ss
+            ##     ss_ready.wait()
+            # Start the scheduler for this process
+            Stream.scheduler.start()
+
+            # JOIN THREADS
+            # Join the actuator threads.
+            for actuator_thread in actuator_threads:
+                actuator_thread.join()
+            # Join the source threads. The source threads may
+            # execute for ever in which case this join() will not
+            # terminate.
+            for ss in source_threads:
+                ss_thread, ss_ready = ss
+                ss_thread.join()
+            # Join the scheduler for this process. The scheduler
+            # may execute for ever, and so this join() may not
+            # terminate. You can set the scheduler to run for a
+            # fixed number of steps during debugging.
+            Stream.scheduler.join()
+
         self.process = multiprocessing.Process(
-            target=self.target_of_connect_process)
+            target=target_of_create_process)
 
-def make_process(
+
+#--------------------------------------------------------------
+#           PART 1. shared_memory_process
+#--------------------------------------------------------------
+def shared_memory_process(
         compute_func, in_stream_names, out_stream_names,
         connect_sources=[], connect_actuators=[],
-        process_name='unnamed'):
+        name='unnamed'):
     """
     Makes a process which computes the function compute_func
     on streams arriving from other processes and sources, and
@@ -226,28 +292,41 @@ def make_process(
        runs in its own thread.
     
     """
-    # CHECK PARAMETER TYPES
-    assert isinstance(in_stream_names, list)
-    assert isinstance(out_stream_names, list)
-    assert isinstance(connect_sources, list)
-    assert isinstance(connect_actuators, list)
-    assert callable(compute_func)
-    for in_stream_name in in_stream_names:
-        assert isinstance(in_stream_name, str)
-    for out_stream_name in out_stream_names:
-        assert isinstance(out_stream_name, str)
-    for connect_source in connect_sources:
-        assert (isinstance(connect_source, tuple) or
-                isinstance(connect_source, list))
-        assert connect_source[0] in in_stream_names
-        assert callable(connect_source[1])
-    for connect_actuator in connect_actuators:
-        assert (isinstance(connect_actuator, tuple) or
-                isinstance(connect_actuator, list))
-        assert connect_actuator[0] in out_stream_names
-        assert callable(connect_actuator[1])
+    def check_shared_memory_parameters():
+        # CHECK PARAMETER TYPES
+        assert isinstance(in_stream_names, list)
+        assert isinstance(out_stream_names, list)
+        assert isinstance(connect_sources, list)
+        assert isinstance(connect_actuators, list)
+        assert callable(compute_func)
+        for in_stream_name in in_stream_names:
+            assert (isinstance(in_stream_name, str) or
+                    ((isinstance(in_stream_name, list) or
+                    isinstance(in_stream_name, tuple))
+                    and
+                    (isinstance(in_stream_name[0], str) and
+                     isinstance(in_stream_name[1], int)))
+                     )
+        for out_stream_name in out_stream_names:
+            assert (isinstance(out_stream_name, str) or
+                    ((isinstance(out_stream_name, list) or
+                    isinstance(out_stream_name, tuple))
+                    and
+                    (isinstance(out_stream_name[0], str) and
+                     isinstance(out_stream_name[1], int)))
+                     )
+        for connect_source in connect_sources:
+            assert (isinstance(connect_source, tuple) or
+                    isinstance(connect_source, list))
+            assert connect_source[0] in in_stream_names
+            assert callable(connect_source[1])
+        for connect_actuator in connect_actuators:
+            assert (isinstance(connect_actuator, tuple) or
+                    isinstance(connect_actuator, list))
+            assert connect_actuator[0] in out_stream_names
+            assert callable(connect_actuator[1])
 
-    def make_process_f():
+    def shared_memory_process_f():
         # Step 1
         # Create in_streams and out_streams given their names.
         in_streams = [Stream(in_stream_name)
@@ -260,31 +339,32 @@ def make_process(
         # The key is a stream name and the value is the stream with
         # that name. Do this for all the input and output streams.
         for in_stream in in_streams:
-            Stream.scheduler.name_to_stream[in_stream.name] = in_stream
+            Stream.scheduler.name_to_stream[in_stream.name] = \
+              in_stream
         for out_stream in out_streams:
-            Stream.scheduler.name_to_stream[out_stream.name] = out_stream
+            Stream.scheduler.name_to_stream[out_stream.name] = \
+              out_stream 
 
         # Step 3
-        # Execute compute_func which sets up the network of agents
+        # Execute compute_func which sets up the agent
         # that ingests in_streams and writes out_streams.
         compute_func(in_streams, out_streams)
 
-        
-        # Step 1
-        # Compute source_threads which is a list where an element of
+        # Step 4
+        # Determine source_threads which is a list where an element of
         # the list is a source thread.
-        # A source_thread is defined by:
-        # source_func(source_stream).
+        # A source_thread is defined by:  source_func(source_stream).
         # This thread executes the source function and puts data from
         # the source on source_stream.
         source_threads = []
         for connect_source in connect_sources:
             source_stream_name, source_f = connect_source
+            # Get the source stream from its name.
             source_stream = \
               Stream.scheduler.name_to_stream[source_stream_name]
             source_threads.append(source_f(source_stream))
 
-        # Step 2
+        # Step 5
         # Compute actuator_threads which is a list, where an element
         # of the list is an actuator thread. An actuator thread is
         # defined by actuator_func(q) where q is a queue.
@@ -293,109 +373,117 @@ def make_process(
         actuator_threads = []
         for connect_actuator in connect_actuators:
             stream_name, actuator_func = connect_actuator
+            # Get the stream from its name
             actuator_stream = \
               Stream.scheduler.name_to_stream[stream_name]
+            # q is the queue into which this actuator stream's
+            # elements are placed.
             q = Queue.Queue()
+            # Create an agent that puts the stream in the queue.
             stream_to_queue(actuator_stream, q)
             actuator_thread =  threading.Thread(
                 target=actuator_func,
                 args=[q])
             actuator_threads.append(actuator_thread)
-        return (source_threads, actuator_threads, in_streams, out_streams)
+        return (source_threads, actuator_threads, in_streams,
+                out_streams)  
 
     # make the process
-    return StreamProcess(func=make_process_f, name=process_name)
+    check_shared_memory_parameters()
+    return SharedMemoryProcess(shared_memory_process_f, in_stream_names,
+                         out_stream_names, name)
 
-
-def check_processes(process_list):
-    assert isinstance(process_list, list), \
-      "process_list must be a list"
-    assert process_list, "process_list must not be empty"
-    for process in process_list:
-        assert isinstance(process, StreamProcess)
-    return True
-
-def check_connections(connection_list):
-    assert isinstance(connection_list, list) \
-      or isinstance(connection_list, tuple), \
-      "connection_list must be a list or tuple"
-    for connection in connection_list:
-        assert isinstance(connection, list) or \
-          isinstance(connection, tuple),\
-          "A connection must be a list or tuple"
-        assert len(connection) == 4,\
-          "Connection must have length 4"
-    return True
-
-def check_process_in_connections(process_list, connection_list):
-    process_dict = {
-        process_name : function for
-        (process_name, function) in process_list
-        }
-    for connection in connection_list:
-        out_proc, out_stream, in_proc, in_stream = connection
-        assert out_proc in process_dict, \
-          "output process in connection is not in process list"
-        assert in_proc in process_dict, \
-          "input process in connection is not in process list"
-    return True
-
-def connect_stream(sender, sending_stream_name,
-                   receiver, receiving_stream_name):
-    sender.attach_stream(
-        sending_stream_name, receiver, receiving_stream_name
-        )
-
-def connect_streams(processes, connections):
+#--------------------------------------------------------------
+#           Part 2: MulticoreApp
+#--------------------------------------------------------------
+class MulticoreApp(object):
     """
+    Makes a multicore application from a collection of processes and
+    connections between their output and input streams.
+
     Parameters
     ----------
-       processes: list of StreamProcess
-       connections: list of 4-tuples
-           each 4-tuple is (sender, sending_stream_name,
-                            receiver, receiving_stream_name)
-           where sender, receiver are StreamProcess in
-           processes.
-           sending_stream_name is a str and is the name of
-           an output stream of sender.
-           receiving_stream_name is a str and is the name of
-           an input stream of receiver.
-    Makes the connection for each 4-tuple
-      
-    """
-    for connection in connections:
-        sender, sending_stream_name, \
-          receiver, receiving_stream_name = connection
-        assert sender in processes
-        assert receiver in processes
-        assert isinstance(sending_stream_name, str)
-        assert isinstance(receiving_stream_name, str)
-        connect_stream(sender, sending_stream_name,
-                       receiver, receiving_stream_name)
-    
-def run_multiprocess(processes, connections=[]):
-    check_processes(processes)
-    check_connections(connections)
-    connect_streams(processes, connections)
-    for process in processes:
-        process.connect_process()
-    for process in processes:
-        process.start()
-    for process in processes:
-        process.join()
+    processes: list
+       list of SharedMemoryProcess where each SharedMemoryProcess is created by
+       calling shared_memory_process().
+    connections: list
+       list of 4-tuples where each tuple is:
+       (0) sending SharedMemoryProcess,
+       (1) name of out_stream of the sender
+       (2) receiving SharedMemoryProcess
+       (3) name of in_stream of the receiver
+    name: str, optional
+       The name of the MulticoreApp. The default is
+       'unnamed_MulticoreApp'. 
     
 
+    """
+    def __init__(self, processes, connections,
+                 name='unnamed_MulticoreApp'): 
+        self.processes = processes
+        self.connections = connections
+        self.check_parameters()
+        self.connect_streams()
+        for process in processes:
+            process.create_process()
+
+    def check_parameters(self):
+        assert isinstance(self.processes, list)
+        for proc in self.processes:
+            assert isinstance(proc, SharedMemoryProcess)
+        assert isinstance(self.connections, list)
+        for connection in self.connections:
+            assert (isinstance(connection, list) or
+                    isinstance(connection, tuple))
+            assert len(connection) == 4
+            sender, sending_stream_name, \
+              receiver, receiving_stream_name = connection
+            assert sender in self.processes
+            assert receiver in self.processes
+            assert sending_stream_name in sender.out_stream_names
+            assert receiving_stream_name in receiver.in_stream_names
+        
+    def start(self):
+        for process in self.processes:
+            process.start()
+    def join(self):
+        for process in self.processes:
+            process.join()
+    def run(self):
+        self.start()
+        self.join()
+    def connect_streams(self):
+        """
+        Insert connections into the dict out_to_in of each
+        sending SharedMemoryProcess.
+
+        """
+        for connection in self.connections:
+            sender, sending_stream_name, \
+              receiver, receiving_stream_name = connection
+            sender.out_to_in[sending_stream_name].append(
+                (receiving_stream_name, receiver))
+
+def run_multiprocess(processes, connections=[]):
+    mp = MulticoreApp(processes, connections)
+    mp.start()
+    mp.join()
+
+#--------------------------------------------------------------
+# Functions to simplify testing of single process applications.
+#--------------------------------------------------------------
 def single_process_single_source(
         source_func, compute_func):
     assert callable(source_func)
     assert callable(compute_func)
     def g(in_streams, out_streams):
         return compute_func(in_streams[0])
-    proc = make_process(
+    proc = shared_memory_process(
         compute_func=g, in_stream_names=['in'], out_stream_names=[],
         connect_sources=[['in', source_func]]
         )
-    run_multiprocess(processes=[proc], connections=[])
+    vm = MulticoreApp(processes=[proc], connections=[])
+    vm.run()
 
 def single_process_multiple_sources(list_source_func, compute_func):
     in_stream_names = [
@@ -406,10 +494,12 @@ def single_process_multiple_sources(list_source_func, compute_func):
     def f(in_streams, out_streams):
         return compute_func(in_streams)
 
-    proc = make_process(
+    proc = shared_memory_process(
         f, in_stream_names, out_stream_names,
         connect_sources)
-    run_multiprocess(processes=[proc], connections=[])
+    vm = MulticoreApp(processes=[proc], connections=[])
+    vm.run()
+
     
     
     
