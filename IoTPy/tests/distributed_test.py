@@ -77,9 +77,9 @@ def test_1():
     #===================================================================
     # 2. ATTACH STREAMS
     #===================================================================
-    pqfs.attach_stream(
+    pqfs.attach_remote_stream(
         sending_stream_name='t',
-        receiving_process=pqgs,
+        receiving_process_name='g',
         receiving_stream_name='t'
         )
 
@@ -116,7 +116,7 @@ def test_2():
         s = Stream('s')
         t = Stream('t')
         def f(): return random.random()
-        def g(x): return {'h':int(100*x), 't':int(10*x)}
+        def g(x): return {'key0': int(100*x), 'key1':int(10*x)}
         map_element(g, s, t)
         random_source = source_func_to_stream(
             func=f, out_stream=s, time_interval=0.1, num_steps=10)
@@ -150,9 +150,9 @@ def test_2():
     #===================================================================
     # 2. ATTACH STREAMS
     #===================================================================
-    proc0.attach_stream(
+    proc0.attach_remote_stream(
         sending_stream_name='t',
-        receiving_process=proc1,
+        receiving_process_name='process 1',
         receiving_stream_name='u'
         )
 
