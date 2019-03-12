@@ -129,8 +129,9 @@ class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
 
     def get_thread_object(self):
         self.setup()
-        return (threading.Thread(target=self.start),
-            self.ready)
+        return threading.Thread(target=self.start)
+        ## return (threading.Thread(target=self.start),
+        ##     self.ready)
 
 def twitter_to_stream(
         consumer_key, consumer_secret,
@@ -161,8 +162,6 @@ def twitter_to_stream(
         access_token, access_token_secret,
         trackwords, out_stream, num_steps)
     return obj.get_thread_object()
-
-
 
 
 def print_text_followers_retweet_friends(
