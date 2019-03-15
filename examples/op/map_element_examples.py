@@ -1,6 +1,6 @@
 """
 This module contains examples of agents created using the map_element
-wrapper.
+wrapper. See IoTPy/IoTPy/tests/element_test.py for more examples.
 
 map_element is a function in IoTPy/IoTPy/agents_types/op.py
 
@@ -50,19 +50,14 @@ y = Stream('y')
 # GENERIC EXAMPLE
 # f is a function from an element of the input stream to an element of
 # the output stream.
-def f(v): pass
-map_element(func=f, in_stream=x, out_stream=y) 
-#y[j] = f(x[j]) for j = 0, 1, 2,...
+# map_element(func=f, in_stream=x, out_stream=y) 
+# y[j] = f(x[j]) for j = 0, 1, 2,...
 
 # EXAMPLE 1
-# The output stream s double the input stream
-def f(in_stream_element):
-    out_stream_element = 2*in_stream_element
-    return out_stream_element
+def f(v): return 2*v
 map_element(func=f, in_stream=x, out_stream=y) 
 #y[j] = 2*x[j] for j = 0, 1, 2,...
 
-# Note that we could also write f as f(v): return 2*v
 
 #----------------------------------------------------------------    
 # EXAMPLE: map_element with no state and with keyword arguments
@@ -72,9 +67,8 @@ map_element(func=f, in_stream=x, out_stream=y)
 # The first argument of func is an in_stream element. The remaining
 # arguments are passed as keyword arguments specified in map_element.
  
-def multiply_and_add(in_stream_element, multiplicand, addend):
-    out_stream_element = multiplicand*in_stream_element + addend
-    return out_stream_element
+def multiply_and_add(v, multiplicand, addend):
+    return multiplicand * v + addend
 
 map_element(func=multiply_and_add, in_stream=x, out_stream=y,
             multiplicand=2, addend=10)
