@@ -17,7 +17,7 @@ sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
 sys.path.append(os.path.abspath("../timing"))
 
 # multicore is in multiprocessing
-from multicore import StreamProcess, single_process_single_source
+from multicore import single_process_single_source
 from multicore import single_process_multiple_sources
 # stream is in core
 from stream import Stream
