@@ -145,15 +145,16 @@ class Stream(object):
     application is much simpler if a stream is modified by
     exactly one agent. If a stream is modified by multiple
     agents, then values may be appended to the tail of the
-    stream by different agents in a nondeterministic fashion;
-    testing such programs is difficult. For each stream, we
-    recommend having exactly one agent that writes the stream.
+    stream by different agents in a nondeterministic fashion.
+    Testing nondeterministic programs is difficult because
+    successive runs with the same input may produce different
+    outputs. For each stream, we recommend having exactly one
+    agent that writes the stream.
 
-    An agent can reade, write and subscribe
-    to the same stream. An agent may subscribe
-    to a stream without reading the stream's values; for
-    example the agent may subscribe to a clock stream
-    so that the agent is woken up whenever the clock
+    An agent can reade, write and subscribe to the same stream.
+    An agent may subscribe to a stream without reading the
+    stream's values; for example the agent may subscribe to a clock
+    stream so that the agent is woken up whenever the clock
     stream has a new value.
 
     The most recent values of a stream are stored either
@@ -180,21 +181,21 @@ class Stream(object):
     Attributes
     ----------
     recent : list or NumPy array.
-          A list or array whose elements up to stop contain
+          A list or array whose elements up to self.stop contain
           the most recent elements of the stream.
           recent is a buffer that is written and read by
           agents.
           recent[:stop] contains the most recent elements of
           the stream. The elements of recent[stop:] are garbage.
           The length of recent is: 2*num_in_memory
-          Twice num_in_memory is used for reasons explained
-          in the implementation.
+          2*num_in_memory is used for reasons explained
+          in the documentation about the implementation.
     stop : int
           index into the list recent.
-                     0 <= s.stop < len(s.recent)
-          s.recent[:s.stop] contains the s.stop most recent
-          values of stream s.
-          s.recent[s.stop:] contains arbitrary (garbage) values.
+                     0 <= self.stop < len(self.recent)
+          recent[:stop] contains the stop most recent
+          values of this stream.
+          recent[stop:] contains arbitrary (garbage) values.
           The length of a stream is the number of elements in it.
           If the length of stream s is more than num_in_memory
           then:   s.stop >= s.num_in_memory
@@ -270,8 +271,8 @@ class Stream(object):
 
     In most (but not all) cases, a reader r of a stream
     s wants to be woken up when s is modified. So, the
-    default case is when a reader of a stream is woken
-    up when the stream is modified. In some cases, however,
+    default case is: a reader of a stream is woken up
+    whenever the stream is modified. In some cases, however,
     a reader of a stream does not want to be woken up when
     the stream is modified, but wants to be woken up only
     when some other event - such as the next clock tick -
@@ -349,7 +350,8 @@ class Stream(object):
 
     def delete_reader(self, reader):
         """
-        Delete this reader from this stream.
+        Delete this reader from the set of agents that read this
+        stream. 
         """
         if reader in self.start:
             del self.start[reader]
@@ -370,30 +372,17 @@ class Stream(object):
         """
         self.subscribers_set.discard(agent)
 
-    def call(self, agent):
-        """
-        Register a subscriber for this stream.
-        """
-        self.subscribers_set.add(agent)
-
-    def delete_caller(self, agent):
-        """
-        Delete a subscriber for this stream.
-        """
-        self.subscribers_set.discard(agent)
-
     def wakeup_subscribers(self):
-        # Put subscribers into the compute_engine's
-        # queue. The agents in this queue will
-        # be woken up later.
+        # Put subscribers (i.e. agents in self.subscribers_set) into
+        # the compute_engine's queue. The agents in this queue will be
+        # woken up later. 
         for subscriber in self.subscribers_set:
             self.scheduler.put(subscriber)
 
 
     def append(self, value):
         """
-        Append a single value to the end of the
-        stream.
+        Append a single value to the end of the stream.
         """
         self.recent[self.stop] = value
         self.stop += 1
@@ -403,8 +392,6 @@ class Stream(object):
             self._set_up_next_recent()
         # Inform subscribers that the stream has been modified.
         self.wakeup_subscribers()
-        ## for subscriber in self.subscribers_set:
-        ##     subscriber.next()
 
     
     def extend(self, value_list):
@@ -442,6 +429,8 @@ class Stream(object):
         if self.stop + len(value_list) >= len(self.recent):
             self._set_up_next_recent()
 
+        # Check that this method is not putting a value_list that is
+        # too large for specified num_in_memory.
         assert(self.stop+len(value_list) < len(self.recent)), \
           'num_in_memory is too small to store the stream, {0}. ' \
           ' Currently the stream has {1} elements in main memory. ' \
@@ -449,13 +438,12 @@ class Stream(object):
           ' The length of the buffer, recent, is only {3}. '.format(
               self.name, self.stop, len(value_list), len(self.recent))
 
-        # Put value_list into the appropriate slice of self.recent.
+        # Put value_list into the appropriate slice of self.recent and
+        # update stop.
         self.recent[self.stop: self.stop+len(value_list)] = value_list
         self.stop = self.stop+len(value_list)
         # Inform subscribers that the stream has been modified.
         self.wakeup_subscribers()
-        ## for subscriber in self.subscribers_set:
-        ##     subscriber.next()
 
     def set_name(self, name):
         self.name = name
@@ -491,10 +479,6 @@ class Stream(object):
             The list of the last n elements of the stream. If the
             number of elements in the stream is less than n, then
             it returns all the elements in the stream.
-        Note
-        ----
-
-             Requirement: n >= self.min_history
         """
         return self.recent[max(self.stop-n, 0) : self.stop]
     
@@ -518,7 +502,8 @@ class Stream(object):
         """
         Returns: boolean
         -------
-            True if and only if this stream is empty.
+            True if and only if this stream is empty,
+            i.e., self.len == 0
 
         """
         return self.stop + self.offset == 0
