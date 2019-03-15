@@ -136,7 +136,6 @@ class Agent(object):
         self.call_streams = call_streams
         self.name = name
         
-        
         # The default (i.e. when call_streams is None) is that
         # the agent executes a state transition when any
         # of its input streams is modified. If call_streams
