@@ -17,7 +17,7 @@ sys.path.append(os.path.abspath("../helper_functions"))
 sys.path.append(os.path.abspath("../../examples/timing"))
 
 from multicore import SharedMemoryProcess
-from multicore import shared_memory_process, MulticoreApp
+from multicore import shared_memory_process, Multiprocess
 from multicore import single_process_single_source
 from multicore import single_process_multiple_sources
 from stream import Stream
@@ -114,7 +114,7 @@ def single_process_single_source_example_1():
     # FINAL STEP: RUN APPLICATION
     # Since this application has a single process it has no
     # connections between processes.
-    vm = MulticoreApp(processes=[proc], connections=[])
+    vm = Multiprocess(processes=[proc], connections=[])
     vm.run()
 
 # ----------------------------------------------------------------
@@ -206,7 +206,7 @@ def single_process_multiple_sources_example_1():
     # FINAL STEP: RUN APPLICATION
     # Since this application has a single process it has no
     # connections between processes.
-    vm = MulticoreApp(processes=[proc], connections=[])
+    vm = Multiprocess(processes=[proc], connections=[])
     vm.run()
 
 # ----------------------------------------------------------------
@@ -256,7 +256,7 @@ def simple_actuator_example():
             v = q.get()
             if v is None:
                 # exit loop
-                return True
+                return
             else:
                 print 'next value in queue is ', v
 
@@ -279,7 +279,7 @@ def simple_actuator_example():
     # FINAL STEP: RUN APPLICATION
     # Since this application has a single process it has no
     # connections between processes.
-    vm = MulticoreApp(processes=[proc], connections=[])
+    vm = Multiprocess(processes=[proc], connections=[])
     vm.run()
 
     
@@ -375,7 +375,7 @@ def clock_offset_estimation_single_process_multiple_sources():
         )
 
     # FINAL STEP: RUN APPLICATION
-    vm = MulticoreApp(processes=[proc], connections=[])
+    vm = Multiprocess(processes=[proc], connections=[])
     vm.run()
 
 # ----------------------------------------------------------------
@@ -504,7 +504,7 @@ def multiprocess_example_1():
     # Specify connections: A list of 4-tuples:
     # (process, output stream name, process, input stream name)
     # ----------------------------------------------------------------
-    vm = MulticoreApp(
+    vm = Multiprocess(
         processes=[proc_0, proc_1],
         connections=[(proc_0, 's', proc_1, 't')])
     vm.run()
@@ -599,7 +599,7 @@ def clock_offset_estimation_multiprocess():
         name='process_1'
         )
 
-# ----------------------------------------------------------------
+    # ----------------------------------------------------------------
     # MAKE PROCESS proc_2
     # proc_2 has two input streams and no output stream.
     # It has no sources.
@@ -638,11 +638,12 @@ def clock_offset_estimation_multiprocess():
     # Specify connections: A list of 4-tuples:
     # (process, output stream name, process, input stream name)
     # ----------------------------------------------------------------
-    vm = MulticoreApp(
+    vm = Multiprocess(
         processes=[proc_0, proc_1, proc_2],
         connections=[ (proc_0, 's', proc_2, 'u'),
                       (proc_1, 's', proc_2, 'v') ])
     vm.run()
+
 
 def source_from_func_example():
     def f():
@@ -685,7 +686,6 @@ def single_process_multiple_sources_example_1_test():
     print 'where r1, r2, .. are random numbers.'
     print
     print '-----------------------------------------------------'
-
 def simple_actuator_example_test():
     print
     print 'Starting simple_actuator_example()'
@@ -695,7 +695,6 @@ def simple_actuator_example_test():
     print 'for i to max_integer which is set to 10.'
     print
     print '-----------------------------------------------------'
-
 def clock_offset_estimation_single_process_multiple_sources_test():
     print
     print 'Starting'
@@ -706,7 +705,6 @@ def clock_offset_estimation_single_process_multiple_sources_test():
     print 'The average of offsets will be appended to average.dat'
     print
     print '-----------------------------------------------------'
-
 def multiprocess_example_1_test():
     print
     print 'Starting multiprocess_example_1()'
@@ -715,7 +713,6 @@ def multiprocess_example_1_test():
     print '2000, 4000, 6000, ... will be appended to result.dat'
     print
     print '-----------------------------------------------------'
-
 def clock_offset_estimation_multiprocess_test():
     print
     print 'Starting clock_offset_estimation_multiprocess()'
