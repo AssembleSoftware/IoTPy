@@ -224,9 +224,11 @@ class SharedMemoryProcess(object):
 
             # START THREADS AND THE SCHEDULER
             # Start the source threads
-            for ss in source_threads:
-                ss_thread, ss_ready = ss
-                ss_thread.start()
+            for source_thread in source_threads:
+                source_thread.start()
+            ## for ss in source_threads:
+                ## ss_thread, ss_ready = ss
+                ## ss_thread.start()
             # Start the actuator threads.
             for actuator_thread in actuator_threads:
                 actuator_thread.start()
@@ -245,9 +247,11 @@ class SharedMemoryProcess(object):
             # Join the source threads. The source threads may
             # execute for ever in which case this join() will not
             # terminate.
-            for ss in source_threads:
-                ss_thread, ss_ready = ss
-                ss_thread.join()
+            for source_thread in source_threads:
+                source_thread.join()
+            ## for ss in source_threads:
+            ##     ss_thread, ss_ready = ss
+            ##     ss_thread.join()
             # Join the scheduler for this process. The scheduler
             # may execute for ever, and so this join() may not
             # terminate. You can set the scheduler to run for a
@@ -394,9 +398,9 @@ def shared_memory_process(
                          out_stream_names, name)
 
 #--------------------------------------------------------------
-#           Part 2: MulticoreApp
+#           Part 2: Multiprocess
 #--------------------------------------------------------------
-class MulticoreApp(object):
+class Multiprocess(object):
     """
     Makes a multicore application from a collection of processes and
     connections between their output and input streams.
@@ -413,13 +417,13 @@ class MulticoreApp(object):
        (2) receiving SharedMemoryProcess
        (3) name of in_stream of the receiver
     name: str, optional
-       The name of the MulticoreApp. The default is
-       'unnamed_MulticoreApp'. 
+       The name of the Multiprocess. The default is
+       'unnamed_Multiprocess'. 
     
 
     """
     def __init__(self, processes, connections,
-                 name='unnamed_MulticoreApp'): 
+                 name='unnamed_Multiprocess'): 
         self.processes = processes
         self.connections = connections
         self.check_parameters()
@@ -465,7 +469,7 @@ class MulticoreApp(object):
                 (receiving_stream_name, receiver))
 
 def run_multiprocess(processes, connections=[]):
-    mp = MulticoreApp(processes, connections)
+    mp = Multiprocess(processes, connections)
     mp.start()
     mp.join()
 
@@ -482,7 +486,7 @@ def single_process_single_source(
         compute_func=g, in_stream_names=['in'], out_stream_names=[],
         connect_sources=[['in', source_func]]
         )
-    vm = MulticoreApp(processes=[proc], connections=[])
+    vm = Multiprocess(processes=[proc], connections=[])
     vm.run()
 
 def single_process_multiple_sources(list_source_func, compute_func):
@@ -497,7 +501,7 @@ def single_process_multiple_sources(list_source_func, compute_func):
     proc = shared_memory_process(
         f, in_stream_names, out_stream_names,
         connect_sources)
-    vm = MulticoreApp(processes=[proc], connections=[])
+    vm = Multiprocess(processes=[proc], connections=[])
     vm.run()
 
     
