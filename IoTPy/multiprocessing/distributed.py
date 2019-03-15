@@ -115,7 +115,7 @@ class DistributedProcess(SharedMemoryProcess):
 
     """
     def __init__(self, func, in_stream_names, out_stream_names,
-                 host_name, name): 
+                 host_name, name='UnnamedDistributedProcess'):  
         self.func = func
         self.in_stream_names = in_stream_names
         self.out_stream_names = out_stream_names
@@ -196,10 +196,7 @@ class DistributedProcess(SharedMemoryProcess):
         # The next four lines are standard from RabbitMQ/pika
         # for direct exchanges.
         self.connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host='localhost'))
-        ## print 'self.host_name is ', self.host_name
-        ## self.connection = pika.BlockingConnection(
-        ##     pika.ConnectionParameters(host=self.host_name)) 
+            pika.ConnectionParameters(host=self.host_name)) 
         self.channel = (self.connection).channel()
         self.channel.exchange_declare(
             exchange='the_exchange', exchange_type='direct')
@@ -262,16 +259,10 @@ class DistributedProcess(SharedMemoryProcess):
                 target=self.channel.start_consuming, args=())
             # Start the source threads
             for ss in source_threads:
-                #ss_thread, ss_ready = ss
                 ss.start()
             # Start the actuator threads.
             for actuator_thread in actuator_threads:
                 actuator_thread.start()
-            # Wait for source threads to be ready to execute, and
-            # then start executing them.
-            ## for ss in source_threads:
-            ##     ss_thread, ss_ready = ss
-            ##     ss_ready.wait()
             # Start the thread that receives messages from RabbitMQ
             self.receive_remote_message_thread.start()
             # Start the scheduler for this process
@@ -285,7 +276,6 @@ class DistributedProcess(SharedMemoryProcess):
             # execute for ever in which case this join() will not
             # terminate.
             for ss in source_threads:
-                #ss_thread, ss_ready = ss
                 ss.join()
             # Join the scheduler for this process. The scheduler
             # may execute for ever, and so this join() may not
@@ -298,13 +288,12 @@ class DistributedProcess(SharedMemoryProcess):
 
 
 #--------------------------------------------------------------
-#           make_distributed_process
+#           distributed_process
 #--------------------------------------------------------------
-def make_distributed_process(
+def distributed_process(
         compute_func, in_stream_names, out_stream_names,
         connect_sources=[], connect_actuators=[],
-        publishers=[], subscribers=[],
-        host_name='local_host',
+        host_name='localhost',
         name='UnnamedDistributedProcess'):
     """
     Makes a process which computes the function compute_func
@@ -377,20 +366,6 @@ def make_distributed_process(
                     isinstance(connect_actuator, list))
             assert connect_actuator[0] in out_stream_names
             assert callable(connect_actuator[1])
-        assert isinstance(publishers, list)
-        for publisher in publishers:
-            assert (isinstance(publisher, list) or
-                    instance(publisher, tuple))
-            assert isinstance(publisher[0], DistributedProcess)
-            assert isinstance(publisher[1], str)
-            assert isinstance(publisher[2], str)
-        assert isinstance(publishers, list)
-        for subscriber in subscribers:
-            assert (isinstance(subscriber, list) or
-                    instance(subscriber, tuple))
-            assert isinstance(subscriber[0], DistributedProcess)
-            assert isinstance(subscriber[1], str)
-            assert isinstance(subscriber[2], str)
 
     def make_process_f():
         # Step 1
