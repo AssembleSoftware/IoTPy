@@ -21,8 +21,6 @@ from recent_values import recent_values
 from op import filter_element
 
 scheduler = Stream.scheduler
-# In the following, x is a stream that must be declared
-# before the functions are called.
 x = Stream('x')
 #----------------------------------------------------------------    
 # Filter to only have odd numbers
@@ -45,24 +43,25 @@ filter_element(func=is_even_number, in_stream=x, out_stream=even)
  # Filter to only have positive numbers
 #----------------------------------------------------------------
 # Test filtering
-def positive(v): return v < 0
+def negative(v): return v < 0
 pos = Stream()
-filter_element(func=positive, in_stream=x, out_stream=pos)
+filter_element(func=negative, in_stream=x, out_stream=pos)
 
 #----------------------------------------------------------------  
  # Filter to only have negativenumbers
 #----------------------------------------------------------------
 # Test filtering
-def negative(v): return v >= 0
+def nonpositive(v): return v >= 0
 neg = Stream()
-filter_element(func=negative, in_stream=x, out_stream=neg)
+filter_element(func=nonpositive, in_stream=x, out_stream=neg)
 
 #----------------------------------------------------------------    
 # filter_element with state and no additional arguments
 #----------------------------------------------------------------
 def less_than_n(v, state):
-    # return boolean that filters, next state
-    return v <= state, state+1
+    next_output_element = v <= state
+    next_state = state+1
+    return next_output_element, next_state
 less = Stream()
 filter_element(func=less_than_n, in_stream=x, out_stream=less, state=0)
 # State on j-th step is j.
@@ -71,6 +70,7 @@ filter_element(func=less_than_n, in_stream=x, out_stream=less, state=0)
 #----------------------------------------------------------------    
 # filter_element with state and with additional keyword arguments
 #----------------------------------------------------------------
+# The keyword argument is addend.
 def less_than_n_plus_addend(v, state, addend):
     # return pair: boolean filter, next state
     return v <= state+addend, state+1
@@ -86,22 +86,3 @@ filter_element(func=less_than_n_plus_addend, in_stream=x,
 def threshold(v, threshold): return v > threshold
 thresh = Stream()
 filter_element(func=threshold, in_stream=x, out_stream=thresh, threshold=0)
-
-x.extend(range(-4, 5))
-print 'x'
-print recent_values(x)
-scheduler.step()
-print 'is odd number'
-print recent_values(odd)
-print 'is even number'
-print recent_values(even)
-print 'positive'
-print recent_values(pos)
-print 'negative'
-print recent_values(neg)
-print 'less than n'
-print recent_values(less)
-print 'less than n plus addend'
-print recent_values(less_addend)
-print 'threshold'
-print recent_values(thresh)
