@@ -28,16 +28,17 @@ to input streams of processes in the same VM.
 ## sys.path.append(os.path.abspath("../agent_types"))
 ## sys.path.append(os.path.abspath("../helper_functions"))
 ## sys.path.append(os.path.abspath("../../examples/timing"))
-from multicore import MulticoreApp
+from multicore import Multiprocess
+import time
 
-class VM(MulticoreApp):
+class VM(Multiprocess):
     """
     Class for creating and executing a virtual machine that
     communicates with other virtual machines using message passing.
     Messages are communicated using the AMQP protocol implemented by
     RabbitMQ.
 
-    A VM contains a MulticoreApp which connects processes within the
+    A VM contains a Multiprocess which connects processes within the
     VM by using the shared memory space of the VM.
 
     Parameters
@@ -45,14 +46,14 @@ class VM(MulticoreApp):
     processes: list
        list of DistributedProcess.
     connections: list
-       list of 4-tuples connecting streams in the same MulticoreApp
+       list of 4-tuples connecting streams in the same Multiprocess
        object where each tuple is:
        (0) sending DistributedProcess,
        (1) name of out_stream of the sending DistributedProcess
        (2) receiving DistributedProcess
        (3) name of in_stream of the receiving DistributedProcess
        The sending and receiving DistributedProcess must be in the same
-       MulticoreApp object
+       Multiprocess object
     publishers: list
        list of 3-tuples where each tuple is:
        (0) sending DistributedProcess,
@@ -111,4 +112,5 @@ class VM(MulticoreApp):
     
     def run(self):
         self.start()
+        time.sleep(2)
         self.join()
