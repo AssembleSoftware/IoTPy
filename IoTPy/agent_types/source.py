@@ -64,7 +64,7 @@ def func_to_q(func, q, state=None, sleep_time=0, num_steps=None,
         sleep_time: int or float (optional)
            The thread sleeps for this amount of time (seconds) before
            successive calls to func.
-        num_steps: int (optional)
+        num_steps: int or None (optional)
            The number of calls to func before this thread
            terminates. If num_steps is None then this thread does not
            terminate.
@@ -191,7 +191,8 @@ def source_func_to_stream(
        time_interval: float or int (optional), time in seconds
           An element is placed on the output stream every time_interval
           seconds.
-       num_steps: int (optional)
+       num_steps: int or None (optional)
+          default is None
           source_func_to_stream terminates after num_steps: the number of steps.
           At each step a window_size number of elements is placed on the
           out_stream.
