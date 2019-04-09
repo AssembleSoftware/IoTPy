@@ -130,8 +130,6 @@ class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
     def get_thread_object(self):
         self.setup()
         return threading.Thread(target=self.start)
-        ## return (threading.Thread(target=self.start),
-        ##     self.ready)
 
 def twitter_to_stream(
         consumer_key, consumer_secret,
@@ -167,10 +165,10 @@ def twitter_to_stream(
 def print_text_followers_retweet_friends(
         trackwords, num_steps):
     # Variables that contain the user credentials to access Twitter API 
-    access_token = "999118734320009216-jaE4Rmc6fU11sMmBKb566YTFAJoMPV5"
-    access_token_secret = "6ZxqJdK2RU6iridMX1MzSqr3uNpQsC9fv1E6otpZquLiF"
-    consumer_key = "Iv6RTiO7Quw3ivH0GWPWqbiD4"
-    consumer_secret = "theWmGwcKFG76OtTerxwhrxfX5nSDqGDWB2almLlp2ndRpxACm"
+    access_token = "ENTER YOUR CREDENTIALS"
+    access_token_secret = "ENTER YOUR CREDENTIALS"
+    consumer_key = "ENTER YOUR CREDENTIALS"
+    consumer_secret = "ENTER YOUR CREDENTIALS"
     # trackwords is the list of words that you want to track on Twitter.
     trackwords=['Trump']
 
