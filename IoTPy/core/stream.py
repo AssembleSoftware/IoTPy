@@ -3,6 +3,10 @@ Stream and Agent classes are the building blocks
 of PythonStreams.
 (Version 1.5 May 21, 2017. Created by: K. Mani Chandy)
 """
+import sys
+import os
+sys.path.append(os.path.abspath("../helper_functions"))
+
 
 from system_parameters import DEFAULT_NUM_IN_MEMORY
 import numpy as np
@@ -11,102 +15,15 @@ import Queue
 import logging.handlers
 import threading
 from compute_engine import ComputeEngine
-
+# helper_control is in ../helper_functions.
+from helper_control import TimeAndValue, _multivalue
+from helper_control import _no_value
+from helper_control import remove_novalue_and_open_multivalue
 # TimeAndValue is used for timed messages.
 # When using NumPy arrays, use an array whose first column
 # is a timestamp, and don't use TimeAndValue.
-TimeAndValue = namedtuple('TimeAndValue', ['time', 'value'])
-
-class _close(object):
-    """
-    _close is the message sent on a stream to indicate that the
-    process in which the stream runs should terminate.
-
-    """
-    def __init__(self):
-        pass
-
-class _no_value(object):
-    """
-    _no_value is the message sent on a stream to indicate that no
-    value is sent on the stream at that point. _no_value is used
-    instead of None because you may want an agent to send a message
-    with value None and for the agent receiving that message to
-    take some specific action.
-
-    """
-    def __init__(self):
-        pass
-
-class _changed(object):
-    def __init__(self):
-        pass
-
-class _unchanged(object):
-    def __init__(self):
-        pass
-    
-class _multivalue(object):
-    """
-    When _multivalue([x1, x2, x3,...]) is sent on a stream, the
-    actual values sent are the messages x1, then x2, then x3,....
-    as opposed to a single instance of the class _multivalue.
-    See examples_element_wrapper for examples using _multivalue.
-
-    """
-    def __init__(self, lst):
-        self.lst = lst
-        return
-    
-def remove_novalue_and_open_multivalue(l):
-    """ This function returns a list which is the
-    same as the input parameter l except that
-    (1) _no_value elements in l are deleted and
-    (2) each _multivalue element in l is opened
-        i.e., for an object _multivalue(list_x)
-        each element of list_x appears in the
-        returned list.
-
-    Parameter
-    ---------
-    l : list
-        A list containing arbitrary elements
-        including, possibly _no_value and
-        _multi_value
-
-    Returns : list
-    -------
-        Same as l with every _no_value object
-        deleted and every _multivalue object
-        opened up.
-
-    Example
-    -------
-       l = [0, 1, _no_value, 10, _multivalue([20, 30])]
-       The function returns:
-           [0, 1, 10, 20, 30]
-
-    """
-    if not isinstance(l, list):
-        return l
-    return_list = []
-    for v in l:
-        if (isinstance(v, list) or
-            isinstance(v, np.ndarray) or
-            isinstance(v, tuple)):
-            return_list.append(v)
-        else:
-            if (v == _no_value or
-                v == _unchanged):
-                continue
-            elif (v == _changed):
-                return_list.append(1)
-            elif isinstance(v, _multivalue):
-                return_list.extend(v.lst)
-            else:
-                return_list.append(v)
-    return return_list
-
+# TimeAndValue is in ../helper_functions
+# TimeAndValue = namedtuple('TimeAndValue', ['time', 'value'])
 
 class Stream(object):
     """
@@ -315,7 +232,11 @@ class Stream(object):
 
 
     """
+    # The scheduler is a Class attribute. It is not an
+    # object instance attribute. All instances of Stream
+    # use the same scheduler.
     scheduler = ComputeEngine()
+    
     def __init__(self, name="UnnamedStream", 
                  initial_value=[],
                  num_in_memory=DEFAULT_NUM_IN_MEMORY):
@@ -333,6 +254,7 @@ class Stream(object):
         # way data in recent is compacted. See _set_up_next_recent()
         self.recent = [0] * (2*self.num_in_memory)
         self.extend(initial_value)
+        
 
     def register_reader(self, r, start_index=0):
         """
