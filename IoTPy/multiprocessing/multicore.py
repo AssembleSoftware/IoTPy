@@ -226,17 +226,9 @@ class SharedMemoryProcess(object):
             # Start the source threads
             for source_thread in source_threads:
                 source_thread.start()
-            ## for ss in source_threads:
-                ## ss_thread, ss_ready = ss
-                ## ss_thread.start()
             # Start the actuator threads.
             for actuator_thread in actuator_threads:
                 actuator_thread.start()
-            # Wait for source threads to be ready to execute, and
-            # then start executing them.
-            ## for ss in source_threads:
-            ##     ss_thread, ss_ready = ss
-            ##     ss_ready.wait()
             # Start the scheduler for this process
             Stream.scheduler.start()
 
@@ -249,9 +241,6 @@ class SharedMemoryProcess(object):
             # terminate.
             for source_thread in source_threads:
                 source_thread.join()
-            ## for ss in source_threads:
-            ##     ss_thread, ss_ready = ss
-            ##     ss_thread.join()
             # Join the scheduler for this process. The scheduler
             # may execute for ever, and so this join() may not
             # terminate. You can set the scheduler to run for a
