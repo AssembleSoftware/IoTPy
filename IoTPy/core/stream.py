@@ -45,8 +45,6 @@ class _changed(object):
 class _unchanged(object):
     def __init__(self):
         pass
-
-
     
 class _multivalue(object):
     """
@@ -335,7 +333,6 @@ class Stream(object):
         # way data in recent is compacted. See _set_up_next_recent()
         self.recent = [0] * (2*self.num_in_memory)
         self.extend(initial_value)
-        
 
     def register_reader(self, r, start_index=0):
         """
