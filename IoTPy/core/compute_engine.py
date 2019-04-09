@@ -4,11 +4,12 @@ import multiprocessing
 import Queue
 import sys
 import os
-#sys.path.append(os.path.abspath("../core"))
-#from stream import *
-
-# Add lock for scheduled_agents
-
+sys.path.append(os.path.abspath("../helper_functions"))
+# helper_control is in ../helper_functions
+# max_wait_time is the maximum time that this thread waits to
+# get a new value from a source or other process, before giving
+# up and stopping the process.
+from system_parameters import max_wait_time
 
 class ComputeEngine(object):
     """
@@ -19,34 +20,46 @@ class ComputeEngine(object):
 
     Parameters
     ----------
+    name: str (optional)
+      The name given to the thread in which the
+      computational engine executes. Used in
+      debugging.
+
+    Attributes
+    ----------
     input_queue: multiprocessing.Queue
        Elements for input streams of this thread are put
        in this queue.
     name_to_stream: dict
        key: stream name
        value: stream
-
-    Attributes
-    ----------
     q_agents: Queue.Queue() or multiprocessing.Queue()
        The queue of agents scheduled for execution.
     scheduled_agents: Set
        An agent is in the set if and only if it is
        in the queue. This set is used to ensure that
        each agent appears at most once in the queue.
+    compute_thread: threading.Thread
+       The compute engine runs in this thread.
+    lock: threading.Lock()
+       The lock on using scheduled_agents. Ensures
+       thread safety for scheduling and de-scheduling
+       agents.
+    stopped: Boolean
+       True if and only if this computation is stopped.
+       This attribute can be set to True in
+       compute_engine.
 
     """
-    def __init__(self, name=None):
+    def __init__(self, name='compute_engine_thread'):
+        self.name = name
         self.input_queue = multiprocessing.Queue()
         self.name_to_stream = {}
-        self.name = name
         self.q_agents = Queue.Queue()
         self.scheduled_agents = set()
         self.compute_thread = None
-        self.started = False
-        self.stopped = False
         self.lock = threading.Lock()
-        self.ready = threading.Event()
+        self.stopped = False
         
     def put(self, a):
         """
@@ -65,15 +78,22 @@ class ComputeEngine(object):
 
     def get(self):
         """
-        Waits until q_agents is non-empty, 
-        and then gets and returns the agent at the head
-        of the queue.
+        Waits until q_agents is non-empty, and then gets
+        and returns the agent at the head of the queue.
+        Updates the set, scheduled_agents, to ensure that
+        the set contains exactly those agents in q_agents.
 
         Returns
         -------
         a: Agent
            The agent at the head of the queue of scheduled
            agents.
+
+        Note
+        ----
+        Get the agent at the head of the queue of agents waiting to be
+        executed and discard that agent from the set of
+        waiting-for-scheduling agents. 
 
         """
         with self.lock:
@@ -83,54 +103,58 @@ class ComputeEngine(object):
 
     def start(self):
         def execute_computation():
-            self.ready.set()
-            nnn = 0
             while not self.stopped:
-                input_queue_was_empty = False
+                # Wait at most max_wait_time seconds to get the next
+                # message from self.input_queue. If the message is
+                # obtained then process it; else, stop this iteration
+                # and thread.
                 try:
-                    v = self.input_queue.get(timeout=0.5)
-                    #v = self.input_queue.get()
+                    v = self.input_queue.get(
+                        timeout=max_wait_time)
                 except:
-                    input_queue_was_empty = True
-                    print 'input queue empty.'
-                    # Sleep for SLEEP_TIME seconds
-                    # Stop after LIMIT number of empty gets
-                    SLEEP_TIME = 0.5
-                    LIMIT = 5
-                    nnn += 1
-                    if nnn > LIMIT:
-                        self.stopped = True
-                    time.sleep(SLEEP_TIME)
-                if not input_queue_was_empty:
-                    if v == 'closed':
-                        self.stopped = True
-                        break
+                    print 'Stopped: No more input.'
+                    self.stopped = True
+
+                if not self.stopped:
+                    # Succeeded in getting a message from input_queue.
+                    # This message is:
+                    #     (stream name, element for this stream)
+                    # Get the specified stream and its next element.
                     out_stream_name, new_data_for_stream = v
-                    out_stream = self.name_to_stream[out_stream_name]
+                    # Get the stream from its name
+                    out_stream = self.name_to_stream[out_stream_name] 
                     out_stream.append(new_data_for_stream)
-                # Process the new data for this stream until all agents
-                # finish their work.
-                self.step()
+                    # Take a step of the computation, i.e.
+                    # process the new input data and continue
+                    # executing this thread.
+                    self.step()
+            # Exit loop, and terminate thread when self.stopped is
+            # True. 
+            return
+            
         self.compute_thread = threading.Thread(
-            target=execute_computation, args=())
+            target=execute_computation, name=self.name, args=())
         self.compute_thread.start()
-    
-    def stop(self):
-        self.stopped = True
-        self.compute_thread.join()
-    def join(self):
-        self.compute_thread.join()
+        return
 
     def step(self):
+        """
+        Continues executing the next() step of an
+        agent in the queue of agents until the queue
+        gets empty.
+        Note: Update the set, scheduled_agents, to
+        ensure that this set contains exactly the
+        agents in the queue of agents.
+
+        """
         while self.scheduled_agents:
             a = self.q_agents.get()
-            # This next discard is necessary!! Check.
             self.scheduled_agents.discard(a)
             a.next()
         return
-    
-# Creates one scheduler from compute_engine.py
-#scheduler = ComputeEngine()
+
+    def join(self):
+        self.compute_thread.join()
 
 
         
