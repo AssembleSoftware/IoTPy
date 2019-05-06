@@ -98,7 +98,7 @@ sys.path.append(os.path.abspath("../core"))
 sys.path.append(os.path.abspath("../agent_types"))
 
 from stream import Stream
-from stream import _no_value, _unchanged, _changed
+from helper_control import _no_value, _unchanged, _changed
 from recent_values import recent_values
 from op import signal_element, map_element
 from merge import weave_f
