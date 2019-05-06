@@ -8,7 +8,8 @@ sys.path.append(os.path.abspath("../core"))
 sys.path.append(os.path.abspath("../helper_functions"))
 
 from agent import Agent, InList
-from stream import Stream, StreamArray, _multivalue, _no_value
+from stream import Stream, StreamArray
+from helper_control import _multivalue, _no_value
 from check_agent_parameter_types import *
 
 
@@ -16,7 +17,8 @@ from check_agent_parameter_types import *
 #                     TIMED ZIP
 ####################################################
 
-def timed_zip_agent(in_streams, out_stream, call_streams=None, name=None):
+def timed_zip_map_agent(func, in_streams, out_stream,
+                        call_streams=None, name=None):
     """
     Parameters
     ----------
@@ -103,6 +105,7 @@ def timed_zip_agent(in_streams, out_stream, call_streams=None, name=None):
             # Each list in this sequence consists of the non-time fields.
             next_output = [earliest_time]
             next_output.append(next_output_value)
+            next_output = func(next_output)
 
             # output_list has an element for each time in the input list.
             output_list.append(next_output)
@@ -131,6 +134,11 @@ def timed_zip_agent(in_streams, out_stream, call_streams=None, name=None):
     # 5. list of calling streams
     # 6. Agent name
     return Agent(in_streams, [out_stream], transition, state, call_streams, name)
+
+def timed_zip_agent(in_streams, out_stream, call_streams=None, name=None):
+    func = lambda x: x
+    timed_zip_map_agent(
+        func, in_streams, out_stream, call_streams=None, name=None)
 
 def timed_zip(list_of_streams):
     out_stream = Stream('output of timed zip')
@@ -228,7 +236,8 @@ def timed_window(
 
             # Append the output for this window to the output list.
             # The timestamp for this output is window_end_time.
-            output_list.append((window_end_time,output_increment))
+            if output_increment is not _no_value:
+                output_list.append((window_end_time,output_increment))
             # Move the window forward by one step.
             window_start_time += step_time
             window_end_time = window_start_time + window_duration
