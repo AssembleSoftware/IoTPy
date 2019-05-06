@@ -6,6 +6,7 @@ into a single output stream.
 
 import sys
 import os
+import math
 sys.path.append(os.path.abspath("../helper_functions"))
 sys.path.append(os.path.abspath("../core"))
 sys.path.append(os.path.abspath("../agent_types"))
@@ -18,6 +19,7 @@ from recent_values import recent_values
 from merge import *
 from multi import *
 from op import timed_window, timed_window_f
+
 #--------------------------------------------------------
 #--------------------------------------------------------
 def test_some_merge_agents():
@@ -51,6 +53,10 @@ def test_some_merge_agents():
     #----------------------------------------------------
     # Define agents
     d = zip_map(func=sum, in_streams=[x,u], out_stream=s, name='d')
+    def magnitude(vector):
+        return math.sqrt(sum([w*w for w in vector]))
+    ssssss = Stream()
+    ddd = zip_map(func=magnitude, in_streams=[x,u], out_stream=ssssss)
     zipxu = zip_stream_f([x,u])
     zip_map_xu = zip_map_f(sum, [x,u])
     zip_map_xu_merge = Stream('zip map xu merge')
@@ -89,6 +95,7 @@ def test_some_merge_agents():
     assert recent_values(t) == [5, 8, 10, 20]
     assert recent_values(v_stream) == [20, 26, 30, 50]
     assert recent_values(zip_map_xu) == recent_values(zip_map_xu_merge)
+    print recent_values(ssssss)
 
     #----------------------------------------------------
     u.extend([96, 95])
