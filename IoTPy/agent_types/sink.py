@@ -52,7 +52,7 @@ sys.path.append(os.path.abspath("../helper_functions"))
 
 from agent import Agent, InList
 from stream import Stream, StreamArray
-from stream import _no_value, _multivalue
+from helper_control import _no_value, _multivalue
 from check_agent_parameter_types import *
 from recent_values import recent_values
 from Buffer import Buffer
