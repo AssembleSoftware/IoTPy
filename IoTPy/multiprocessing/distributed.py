@@ -19,6 +19,7 @@ import sys
 import os
 sys.path.append(os.path.abspath("../agent_types"))
 sys.path.append(os.path.abspath("../core"))
+sys.path.append(os.path.abspath("../helper_functions"))
 # sink is in the agent_types folder
 # compute_engine, stream are in the core folder
 from sink import stream_to_queue, sink_element
@@ -27,6 +28,7 @@ from stream import Stream
 #multicore is in the multiprocessing folder.
 from multicore import SharedMemoryProcess
 from multicore import shared_memory_process
+from helper_control import _no_value
 
 #--------------------------------------------------------------
 #           DistributedProcess
@@ -162,6 +164,10 @@ class DistributedProcess(SharedMemoryProcess):
     def create_agent_to_publish_out_stream(
             self, out_stream, publication):
         def f(element_of_stream):
+            # Don't publish _no_value elements
+            if element_of_stream is _no_value:
+                return element_of_stream
+            # Publish elements that are not _no_value
             message = (publication, element_of_stream)
             json_payload = json.dumps(message)
             self.channel.basic_publish(
