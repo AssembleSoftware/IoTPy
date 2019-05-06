@@ -244,12 +244,12 @@ def filter_element(
             return ([[]], state, [in_list.start])
 
         if state is None:
-            output_list = [v for v in input_list if not func(v, *args, **kwargs) ]
+            output_list = [v for v in input_list if func(v, *args, **kwargs) ]
         else:
             output_list = []
             for i in range(len(input_list)):
                 boole, state = func(input_list[i], state, *args, **kwargs)
-                if not boole: output_list.append(input_list[i])
+                if boole: output_list.append(input_list[i])
                 
         return ([output_list], state, [in_list.start+len(input_list)])
     # Finished transition
