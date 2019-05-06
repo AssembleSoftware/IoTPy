@@ -81,7 +81,7 @@ def test_example_2():
     # Execute a step
     scheduler.step()
     # Look at recent values of output streams.
-    assert recent_values(y) == [3, 4]
+    assert recent_values(y) == [0, 1, 2]
 
 def test_example_3():
     # Get scheduler
@@ -284,9 +284,9 @@ def test_element_simple():
     # Test filtering
     def filtering(v): return v <= 2
     # yfilter is a stream consisting of those elements in stream x with
-    # values greater than 2.
+    # values less than or equal to 2.
     # The elements of stream x that satisfy the boolean, filtering(), are
-    # filtered out.
+    # passed through.
     yfilter = filter_element_f(func=filtering, in_stream=x)
     #----------------------------------------------------------------    
 
@@ -410,7 +410,7 @@ def test_element_simple():
     x0 = Stream('x0')
     q0 = Stream('q0')
     # state[i] = i
-    # Discard elements in x0 where x0[i] <= state[i]
+    # Pass through elements in x0 where x0[i] <= state[i]
     filter_element(
         func=less_than_n, in_stream=x0, out_stream=q0, state=0)
     #----------------------------------------------------------------
@@ -424,7 +424,7 @@ def test_element_simple():
 
     #----------------------------------------------------------------
     # Test cycles in the module connection graph
-    filter_element(func=lambda v: v >= 5, in_stream=o, out_stream=n)
+    filter_element(func=lambda v: v <= 5, in_stream=o, out_stream=n)
     map_element(func=lambda v: v+2, in_stream=n, out_stream=o)
     #----------------------------------------------------------------
             
@@ -445,9 +445,9 @@ def test_element_simple():
     # STEP 7: LOOK AT OUTPUT STREAMS
     assert recent_values(x) == [0, 1, 2]
     assert recent_values(y) == [0, 2, 4]
-    assert recent_values(q0) == [3, 6, 8]
+    assert recent_values(q0) == [0, 1, 3]
     assert recent_values(ymap) == recent_values(y)
-    assert recent_values(yfilter) == []
+    assert recent_values(yfilter) == [0, 1, 2]
     assert recent_values(z) == [0, 3, 6]
     assert recent_values(bmap) == recent_values(z)
     assert recent_values(v) == []
@@ -460,7 +460,7 @@ def test_element_simple():
     assert recent_values(u) == recent_values(r)
     assert recent_values(s) == [10, 14, 18]
     assert recent_values(s) == recent_values(t)
-    assert recent_values(q) == [1]
+    assert recent_values(q) == [0, 2]
     assert recent_values(q) == recent_values(p)
     assert recent_values(n) == [0, 2, 4]
     assert recent_values(o) == [2, 4, 6]
@@ -473,7 +473,7 @@ def test_element_simple():
     assert recent_values(x) == [0, 1, 2, 3, 4]
     assert recent_values(y) == [0, 2, 4, 6, 8]
     assert recent_values(ymap) == recent_values(y)
-    assert recent_values(yfilter) == [3, 4]
+    assert recent_values(yfilter) == [0, 1, 2]
     assert recent_values(z) == [0, 3, 6, 9, 12]
     assert recent_values(bmap) == recent_values(z)
     assert recent_values(no_value_stream) == [0, 2, 4]
@@ -485,7 +485,7 @@ def test_element_simple():
     assert recent_values(u) == recent_values(r)
     assert recent_values(s) == [10, 14, 18, 22, 26]
     assert recent_values(s) == recent_values(t)
-    assert recent_values(q) == [1, 3]
+    assert recent_values(q) == [0, 2, 4]
     assert recent_values(q) == recent_values(p)
     #----------------------------------------------------------------        
 
@@ -495,7 +495,7 @@ def test_element_simple():
     assert recent_values(x) == [0, 1, 2, 3, 4]
     assert recent_values(y) == [0, 2, 4, 6, 8]
     assert recent_values(ymap) == recent_values(y)
-    assert recent_values(yfilter) == [3, 4]
+    assert recent_values(yfilter) == [0, 1, 2]
     assert recent_values(z) == [0, 3, 6, 9, 12]
     assert recent_values(bmap) == recent_values(z)
     assert recent_values(v) == [10, 13, 16, 19, 22]
@@ -508,7 +508,7 @@ def test_element_simple():
     assert recent_values(u) == recent_values(r)
     assert recent_values(s) == [10, 14, 18, 22, 26]
     assert recent_values(s) == recent_values(t)
-    assert recent_values(q) == [1, 3]
+    assert recent_values(q) == [0, 2, 4]
     assert recent_values(q) == recent_values(p)
     #----------------------------------------------------------------
 
@@ -529,7 +529,7 @@ def test_element_simple():
     scheduler.step()
     expected_output = np.sin(input_array)
     assert np.array_equal(recent_values(n), expected_output)
-    expected_output = expected_output[expected_output > 0.5]
+    expected_output = expected_output[expected_output <= 0.5]
     assert np.array_equal(recent_values(o), expected_output)
     return
 
@@ -589,7 +589,24 @@ def test_stream_arrays_2():
     assert y.recent[:y.stop] == [2.0]
     x.extend(np.array([[4., 5., 6.], [7., 8., 9.]]))
     scheduler.step()
-    print y.recent[:y.stop]
+    assert y.recent[:y.stop] == [2.0, 5.0, 8.0]
+
+def test_class():
+    class example(object):
+        def __init__(self, multiplicand):
+            self.multiplicand = multiplicand
+            self.running_sum = 0
+        def step(self, v):
+            result = v * self.multiplicand + self.running_sum
+            self.running_sum += v
+            return result
+    x = Stream()
+    y = Stream()
+    eg = example(multiplicand=2)
+    map_element(func=eg.step, in_stream=x, out_stream=y)
+    x.extend(range(5))
+    Stream.scheduler.step()
+    assert y.recent[:y.stop] == [0, 2, 5, 9, 14]
     
 
 def test_element():
@@ -605,6 +622,7 @@ def test_element():
     test_timed_window()
     test_map_list()
     test_stream_arrays_2()
+    test_class()
     print 'TEST OF OP (ELEMENT) IS SUCCESSFUL'
     
 if __name__ == '__main__':
