@@ -779,8 +779,8 @@ if __name__ == '__main__':
     ntp_server = '0.us.pool.ntp.org'
     # Set the test parameters
     time_interval=0.1
-    num_steps=100
-    window_size=3
+    num_steps=3
+    window_size=2
     step_size=1
     print 'The scheduler waits for the input queue to become empty.'
     print 'This may take some time.'
