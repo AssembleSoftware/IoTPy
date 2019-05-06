@@ -200,6 +200,13 @@ def zip_stream_f(in_streams):
     zip_stream(in_streams, out_stream)
     return out_stream
 
+def zip_streams(in_streams, out_stream):
+    """
+    Merely because zip_streams and zip_stream
+    (plural and singular) are convenient for use.
+
+    """
+    return zip_stream(in_streams, out_stream)
 
 
 ####################################################
