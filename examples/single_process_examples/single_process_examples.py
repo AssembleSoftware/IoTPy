@@ -19,22 +19,20 @@ sys.path.append(os.path.abspath("../timing"))
 # multicore is in multiprocessing
 from multicore import single_process_single_source
 from multicore import single_process_multiple_sources
+from multicore import shared_memory_process, Multiprocess
 # stream is in core
 from stream import Stream
 # op, merge, source, sink are in agent_types
-from op import map_element, map_window
+from op import map_element, map_window, filter_element
 from merge import zip_stream, blend
-from source import source_func_to_stream
-from sink import stream_to_file
+from source import source_func_to_stream, source_list_to_stream
+from sink import stream_to_file, sink_element
 # timing is in examples.
 from timing import offsets_from_ntp_server
 
-def identity(x): return x
 
 # ----------------------------------------------------------------
-# ----------------------------------------------------------------
 #   EXAMPLES: SINGLE PROCESS, SINGLE SOURCE
-# ----------------------------------------------------------------
 # ---------------------------------------------------------------- 
 
 def single_process_single_source_example_1():
@@ -47,18 +45,26 @@ def single_process_single_source_example_1():
     function is called then, test.dat will contain 10, 20, 30, 40
     on separate lines.
 
-    The steps for creating the process are:
-    (1) Define the source: source(out_stream), where out_stream is a
-        stream, and is stream into which source data is output.
-    (2) Define the computational network: compute(in_stream), where
-        in_stream is a stream, and is the only input stream of the
-        network. 
-    (3) Call single_process_single_source()
-
+    The steps to create the process are:
+    (1) Define the source: sequence_of_integers(out_stream), where
+        out_stream is a stream into which source data is output.
+    (2) Define the computational network:
+        compute_func(in_streams, out_streams), where
+        in_streams and out_streams are lists of streams.
+        In this example in_streams is list consisting of
+        a single input stream, and out_streams is empty.
+    (3) Call proc = shared_memory_process(...) to create a process
+        proc.
+    Next we make a multiprocess application consisting of the single
+    process proc. Since the application has a single process it has
+    no connections to other processes.
+    (4) Call mp = Multiprocess(processes=[proc], connections=[])
+        to make mp, a multiprocess application, and then call
+        mp.run() to run the application.
     """
 
     # STEP 1: DEFINE SOURCES
-    def source(out_stream):
+    def sequence_of_integers(out_stream):
         """
         A simple source which outputs 1, 2, 3,... on
         out_stream.
@@ -75,7 +81,7 @@ def single_process_single_source_example_1():
             time_interval=0.1, num_steps=4, state=0)
 
     # STEP 2: DEFINE THE COMPUTATIONAL NETWORK OF AGENTS
-    def compute(in_stream):
+    def compute_func(in_streams, out_streams):
         # A trivial example of a network of agents consisting
         # of two agents where the network has a single input
         # stream: in_stream.
@@ -88,28 +94,37 @@ def single_process_single_source_example_1():
         def f(x): return x*10
         t = Stream()
         map_element(
-            func=f, in_stream=in_stream, out_stream=t)
+            func=f, in_stream=in_streams[0], out_stream=t)
         stream_to_file(in_stream=t, filename='test.dat')
 
     # STEP 3: CREATE THE PROCESS
-    # Use single_process_multiple_sources() to create the process. 
     # Create a process with two threads: a source thread and
     # a compute thread. The source thread executes the function
-    # g, and the compute thread executes function h.
-    single_process_single_source(
-        source_func=source, compute_func=compute)
+    # sequence_of_integers, and the compute thread executes
+    # the function compute_func. The source is connected to
+    # the in_stream called 'in' of compute_func.
+    # The names of in_streams are arbitrary.
+    proc = shared_memory_process(
+        compute_func=compute_func,
+        in_stream_names=['in'],
+        out_stream_names=[],
+        connect_sources=[('in', sequence_of_integers)],
+        connect_actuators=[],
+        name='proc')
 
+    # STEP 4: CREATE AND RUN A MULTIPROCESS APPLICATION
+    mp = Multiprocess(processes=[proc], connections=[])
+    mp.run()
 
-# ----------------------------------------------------------------
 # ----------------------------------------------------------------
 #   EXAMPLES: SINGLE PROCESS, MULTIPLE SOURCES
-# ----------------------------------------------------------------
 # ---------------------------------------------------------------- 
 
 def single_process_multiple_sources_example_1():
     """
-    This example has two sources: source_0 generates 1, 2, 3, 4, ...
-    and source_1 generates random numbers. The computation zips the two
+    This example has two sources: sequence_of_integers and random_numbers.
+    sequence_of_integers generates 1, 2, 3, 4, ... and random_numbers
+    generates random numbers. The computation zips the two
     streams together and writes the result to a file called
     output.dat.
     
@@ -120,17 +135,26 @@ def single_process_multiple_sources_example_1():
  
     The steps for creating the process are:
     (1) Define the two sources:
-            source_0(out_stream), source_1(out_stream). 
-    (2) Define the computational network: compute(in_streams) where
-       in_streams is a list of streams. In this example, in_streams is
-       a list of two streams, one from each source.
-    (3) Call single_process_multiple_sources()
+            sequence_of_integers(out_stream), random_numbers(out_stream). 
+    (2) Define the computational network:
+        compute_func(in_streams, out_streams), where
+        in_streams and out_streams are lists of streams.
+        In this examples, in_streams is list consisting of
+        two input streams, and out_streams is empty.
+    (3) Call proc = shared_memory_process(...) to create a process
+        proc.
+    Next we make a multiprocess application consisting of the single
+    process proc. Since the application has a single process it has
+    no connections to other processes.
+    (4) Call mp = Multiprocess(processes=[proc], connections=[])
+        to make mp, a multiprocess application, and then call
+        mp.run() to run the application.
 
     """
     import random
 
     # STEP 1: DEFINE SOURCES
-    def source_0(out_stream):
+    def sequence_of_integers(out_stream):
         # A simple source which outputs 1, 2, 3, 4, .... on
         # out_stream.
         def generate_sequence(state):
@@ -145,7 +169,7 @@ def single_process_multiple_sources_example_1():
             func=generate_sequence, out_stream=out_stream,
             time_interval=0.1, num_steps=10, state=0)
 
-    def source_1(out_stream):
+    def random_numbers(out_stream):
         # A simple source which outputs random numbers on
         # out_stream.
 
@@ -157,8 +181,8 @@ def single_process_multiple_sources_example_1():
             time_interval=0.1, num_steps=10)
 
     # STEP 2: DEFINE THE COMPUTATIONAL NETWORK OF AGENTS
-    def compute(in_streams):
-        # in_streams is a list of streams.
+    def compute_func(in_streams, out_streams):
+        # in_streams and out_streams are lists of streams.
         # This is a simple example of a network of agents consisting
         # of two agents where the network has two input streams and no
         # output stream.
@@ -174,14 +198,200 @@ def single_process_multiple_sources_example_1():
         stream_to_file(in_stream=t, filename='output.dat')
 
     # STEP 3: CREATE THE PROCESS
-    # Use single_process_multiple_sources() to create the process. 
-    # Create a process with three threads: two source threads and
-    # a compute thread. The source threads execute the functions
-    # source_0 and source_1, and the compute thread executes function
-    # compute. 
-    single_process_multiple_sources(
-        list_source_func=[source_0, source_1], compute_func=compute)
+    # Create a process with three threads:
+    # two source threads and a compute thread.
+    # The two source threads execute the functions sequence_of_integers
+    # and random_numbers
+    # The compute thread executes function compute_func.
+    # The names of the inputs of compute_func are:
+    # 'sequence_of_integers' and 'data'.
+    # The source, sequence_of_integers, is connected to the
+    # in_stream called 'sequence_of_integers'. The source
+    # random_numbers' is connected to the in_stream called
+    # 'data'
+    proc = shared_memory_process(
+        compute_func=compute_func,
+        in_stream_names=['sequence_of_integers', 'data'],
+        out_stream_names=[],
+        connect_sources=[('sequence_of_integers', sequence_of_integers),
+                         ('data', random_numbers)],
+        connect_actuators=[],
+        name='proc')
+    # STEP 4: CREATE AND RUN A MULTIPROCESS APPLICATION
+    mp = Multiprocess(processes=[proc], connections=[])
+    mp.run()
+
+
+# ----------------------------------------------------------------
+#   EXAMPLE OF A SINK
+# ---------------------------------------------------------------- 
+def check_correctness_of_output(in_stream, check_list):
+    def check(v, index, check_list):
+        # v is in_list[index]
+        assert v == check_list[index]
+        next_index = index + 1
+        return next_index
+    sink_element(func=check, in_stream=in_stream, state=0,
+                 check_list=check_list)
+
+
+# ----------------------------------------------------------------
+#   EXAMPLE OF MAP_ELEMENT
+# ----------------------------------------------------------------
+def map_element_example_1():
+    # STEP 1: DEFINE SOURCES
+    source_list = range(10)
+    def data_stream(out_stream):
+        return source_list_to_stream(
+            in_list=source_list, out_stream=out_stream)
+
+    # STEP 2: DEFINE THE COMPUTATIONAL NETWORK OF AGENTS
+    def compute_func(in_streams, out_streams):
+        def f(x): return x*10
+        check_list = map(f, source_list)
+        t = Stream()
+        map_element(
+            func=f, in_stream=in_streams[0], out_stream=t)
+        check_correctness_of_output(
+            in_stream=t, check_list=check_list)
+        stream_to_file(
+            in_stream=t,
+            filename='map_element_example_1.dat')
+
+    # STEP 3: CREATE THE PROCESS
+    proc = shared_memory_process(
+        compute_func=compute_func,
+        in_stream_names=['test_input'],
+        out_stream_names=[],
+        connect_sources=[('test_input', data_stream)],
+        connect_actuators=[],
+        name='proc')
     
+    # STEP 4: CREATE AND RUN A MULTIPROCESS APPLICATION
+    mp = Multiprocess(processes=[proc], connections=[])
+    mp.run()
+
+
+# ----------------------------------------------------------------
+#   EXAMPLE OF MAP_ELEMENT
+# ----------------------------------------------------------------
+def map_element_example_2():
+    # STEP 1: DEFINE SOURCES
+    source_list = 'hello world'
+    def source(out_stream):
+        return source_list_to_stream(
+            in_list=source_list, out_stream=out_stream)
+
+    # STEP 2: DEFINE THE COMPUTATIONAL NETWORK OF AGENTS
+    def compute_func(in_streams, out_streams):
+        import string
+        f = string.upper
+        check_list = map(f, source_list)
+        t = Stream()
+        map_element(
+            func=f, in_stream=in_streams[0], out_stream=t)
+        check_correctness_of_output(
+            in_stream=t, check_list=check_list)
+        stream_to_file(
+            in_stream=t,
+            filename='map_element_example_2.dat')
+
+    # STEP 3: CREATE THE PROCESS
+    proc = shared_memory_process(
+        compute_func=compute_func,
+        in_stream_names=['in'],
+        out_stream_names=[],
+        connect_sources=[('in', source)],
+        connect_actuators=[],
+        name='proc')
+    
+    # STEP 4: CREATE AND RUN A MULTIPROCESS APPLICATION
+    mp = Multiprocess(processes=[proc], connections=[])
+    mp.run()
+
+# ----------------------------------------------------------------
+#   EXAMPLE OF MAP_ELEMENT
+# ----------------------------------------------------------------
+def map_element_example_3():
+    # STEP 1: DEFINE SOURCES
+    source_list = range(10)
+    def source(out_stream):
+        return source_list_to_stream(
+            in_list=source_list, out_stream=out_stream)
+
+    # Class used in map_element
+    class example_class(object):
+        def __init__(self, multiplicand):
+            self.multiplicand = multiplicand
+            self.running_sum = 0
+        def step(self, v):
+            result = v * self.multiplicand + self.running_sum
+            self.running_sum += v
+            return result
+
+    # STEP 2: DEFINE THE COMPUTATIONAL NETWORK OF AGENTS
+    def compute_func(in_streams, out_streams):
+        eg = example_class(multiplicand=2)
+        check_list = [0, 2, 5, 9, 14, 20, 27, 35, 44, 54]
+        t = Stream()
+        map_element(
+            func=eg.step, in_stream=in_streams[0], out_stream=t)
+        check_correctness_of_output(
+            in_stream=t, check_list=check_list)
+        stream_to_file(
+            in_stream=t,
+            filename='map_element_example_3.dat')
+
+    # STEP 3: CREATE THE PROCESS
+    proc = shared_memory_process(
+        compute_func=compute_func,
+        in_stream_names=['in'],
+        out_stream_names=[],
+        connect_sources=[('in', source)],
+        connect_actuators=[],
+        name='proc')
+    
+    # STEP 4: CREATE AND RUN A MULTIPROCESS APPLICATION
+    mp = Multiprocess(processes=[proc], connections=[])
+    mp.run()
+
+# ----------------------------------------------------------------
+#   EXAMPLE OF FILTER_ELEMENT
+# ----------------------------------------------------------------
+def filter_element_example_1():
+    # STEP 1: DEFINE SOURCES
+    source_list = source_list = [1, 1, 3, 3, 5, 5, 7, 7, 9, 9]
+    def source(out_stream):
+        return source_list_to_stream(
+            in_list=source_list, out_stream=out_stream)
+
+    # STEP 2: DEFINE THE COMPUTATIONAL NETWORK OF AGENTS
+    def compute_func(in_streams, out_streams):
+        def less_than_n(v, n):
+            return v <= n, n+1
+        check_list = [1, 3, 5, 7, 9]
+        t = Stream()
+        filter_element(
+            func=less_than_n, in_stream=in_streams[0], out_stream=t,
+            state=0)
+        check_correctness_of_output(
+            in_stream=t, check_list=check_list)
+        stream_to_file(
+            in_stream=t,
+            filename='filter_element_example_1.dat')
+
+    # STEP 3: CREATE THE PROCESS
+    proc = shared_memory_process(
+        compute_func=compute_func,
+        in_stream_names=['in'],
+        out_stream_names=[],
+        connect_sources=[('in', source)],
+        connect_actuators=[],
+        name='proc')
+    
+    # STEP 4: CREATE AND RUN A MULTIPROCESS APPLICATION
+    mp = Multiprocess(processes=[proc], connections=[])
+    mp.run()
 
 def clock_offset_estimation_single_process_multiple_sources():
     """
@@ -200,11 +410,21 @@ def clock_offset_estimation_single_process_multiple_sources():
 
     The steps for creating the process are:
     (1) Define the two sources:
-            source_0(out_stream), source_1(out_stream). 
-    (2) Define the computational network: compute(in_streams) where
-       in_streams is a list of streams. In this example, in_streams is
-       a list of two streams, one from each source.
-    (3) Call single_process_multiple_sources()
+            ntp_0(out_stream), ntp_1(out_stream). 
+    (2) Define the computational network:
+        compute_func(in_streams, out_streams), where
+        in_streams and out_streams are lists of streams.
+        In this examples, in_streams is list consisting of
+        two input streams, and out_streams is empty.
+    (3) Call proc = shared_memory_process(...) to create a process
+        proc.
+    Next we make a multiprocess application consisting of the single
+    process proc. Since the application has a single process it has
+    no connections to other processes.
+    (4) Call mp = Multiprocess(processes=[proc], connections=[])
+        to make mp, a multiprocess application, and then call
+        mp.run() to run the application.
+
 
     """
     ntp_server_0 = '0.us.pool.ntp.org'
@@ -222,11 +442,11 @@ def clock_offset_estimation_single_process_multiple_sources():
         return 0.0
 
     # STEP 1: DEFINE SOURCES
-    def source_0(out_stream):
+    def ntp_0(out_stream):
         return offsets_from_ntp_server(
             out_stream, ntp_server_0, time_interval, num_steps)
 
-    def source_1(out_stream):
+    def ntp_1(out_stream):
         return offsets_from_ntp_server(
             out_stream, ntp_server_1, time_interval, num_steps)
 
@@ -242,7 +462,7 @@ def clock_offset_estimation_single_process_multiple_sources():
     # is a sink which puts the stream into the file called
     # 'average.dat'. The file will contain floating point numbers that
     # are the averages of the specified sliding winow.
-    def compute(in_streams):
+    def compute_func(in_streams, out_streams):
         merged_stream = Stream('merge of two ntp server offsets')
         averaged_stream = Stream('sliding window average of offsets')
         blend(
@@ -256,9 +476,28 @@ def clock_offset_estimation_single_process_multiple_sources():
             in_stream=averaged_stream, filename='average.dat') 
 
     # STEP 3: CREATE THE PROCESS
-    # Use single_process_multiple_sources() to create the process.
-    single_process_multiple_sources(
-        list_source_func=[source_0, source_1], compute_func=compute)
+    # Create a process with three threads:
+    # two source threads and a compute thread.
+    # The two source threads execute the functions ntp_0
+    # and ntp_1
+    # The compute thread executes function compute_func.
+    # The names of the inputs of compute_func are:
+    # 'source_0' and 'source_1'.
+    # The source, ntp_0, is connected to the
+    # in_stream called 'source_0'. The source
+    # ntp_1 is connected to the in_stream called
+    # 'source_1'
+    proc = shared_memory_process(
+        compute_func=compute_func,
+        in_stream_names=['source_0', 'source_1'],
+        out_stream_names=[],
+        connect_sources=[('source_0', ntp_0),
+                         ('source_1', ntp_1)],
+        connect_actuators=[],
+        name='proc')
+    # STEP 4: CREATE AND RUN A MULTIPROCESS APPLICATION
+    mp = Multiprocess(processes=[proc], connections=[])
+    mp.run()
 
 
 
@@ -271,28 +510,48 @@ def clock_offset_estimation_single_process_multiple_sources():
 if __name__ == '__main__':
     print
     print '-----------------------------------------------------'
-    print 'You will see input queue empty a few times.'
-    print 'Each process waits till no more inputs arrive before'
-    print 'it terminates.'
+    print 'Each process terminates when no more inputs arrive'
     print
     print '-----------------------------------------------------'
     print 'Starting single_process_single_source_example_1()'
-    single_process_single_source_example_1()
+    #single_process_single_source_example_1()
     print 'Finished single_process_single_source_example_1()'
     print '10, 20, 30, 40 will be appended to file test.dat'
     print
     print '-----------------------------------------------------'
     print
     print 'Starting single_process_multiple_sources_example_1()'
-    single_process_multiple_sources_example_1()
+    #single_process_multiple_sources_example_1()
     print 'Finished single_process_multiple_sources_example_1()'
     print '(1, r1), (2, r2), ... will be appended to file output.dat'
     print 'where r1, r2, .. are random numbers.'
     print
+    print 'Starting map_element_example_1()'
+    #map_element_example_1()
+    print 'Finished map_element_example_1()'
+    print '[0, 10, 20, ... ,90] will be appended to map_element_example_1.dat'
+    print
+    print 'Starting map_element_example_2()'
+    #map_element_example_2()
+    print 'Finished map_element_example_1()'
+    print 'HELLO WORLD will be appended to map_element_example_2.dat'
+    print
+    print 'Starting map_element_example_3()'
+    map_element_example_3()
+    print 'Finished map_element_example_3()'
+    print '[0, 2, 5, 9, 14, 20, 27, 35, 44, 54] appended to map_element_example_3.dat'
+    print
+    print 'Starting filter_element_example_1()'
+    filter_element_example_1()
+    print 'Finished filter_element_example_1()'
+    print '[1, 3, 5, 7, 9] appended to filter_element_example_1.dat'
+    print
     print '-----------------------------------------------------'
     print
     print 'Starting'
-    print 'clock_offset_estimation_single_process_multiple_sources' 
+    print 'clock_offset_estimation_single_process_multiple_sources'
+    print 'This step takes time detecting that source threads have'
+    print 'terminated. These sources get data from ntp servers.'
     clock_offset_estimation_single_process_multiple_sources()
     print 'Finished'
     print 'clock_offset_estimation_single_process_multiple_sources'
