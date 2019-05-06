@@ -417,6 +417,51 @@ def source_list_to_stream(
         read_list_func, out_stream, time_interval, num_steps,
         window_size, state=0, name=name, in_list=in_list)
 
+class SourceList(object):
+    """
+    For an instance, obj, of SourceList: obj.source_func()
+    returns an agent that puts data from a list called
+    self.in_list into a stream.
+    An object, obj, of this class is always called as
+    obj.source_func() inside the list connect_sources within
+    make_process().
+    
+    Parameters
+    ----------
+    in_list: list
+      The list is copied to the output stream.
+    time_interval: int or float, optional
+      The time elapsed between successive lines from the file
+      placed on the output stream.
+    num_steps: int, optional
+      The number of elements from the file placed on the output
+      stream. If this is omitted or is None then the entire file
+      is placed on the output stream.
+    window_size: int, optional
+      The number of lines read from the file in a block
+      operation. Large window_sizes can improve performance
+      by reducing the number of times a file is read. Generally
+      window_size = 1 is adequate.
+    name: str, optional
+      Name of the thread in which this source runs.
+
+    """
+    def __init__(
+            self, in_list,
+            time_interval=0.0, num_steps=None,
+            window_size=1, state=None,
+            name='source_list.source.func'):  
+        self.in_list = in_list
+        self.time_interval = time_interval
+        self.num_steps=num_steps
+        self.window_size=window_size
+        self.state = state
+        self.name = name
+    def source_func(self, out_stream):
+        return source_list_to_stream(
+            self.in_list, out_stream, self.time_interval,
+            self.num_steps, self.window_size, self.name)
+    
 
 class source_file(object):
     """
@@ -443,7 +488,7 @@ class source_file(object):
       placed on the output stream.
     num_steps: int, optional
       The number of elements from the file placed on the output
-      stream. If this is omitted or is 0 then the entire file
+      stream. If this is omitted or is None then the entire file
       is placed on the output stream.
     window_size: int, optional
       The number of lines read from the file in a block
@@ -459,7 +504,7 @@ class source_file(object):
     """
     def __init__(
             self, filename, parse_line,
-            time_interval=0.0, num_steps=0,
+            time_interval=0.0, num_steps=None,
             window_size=1, state=None,
             name='source_file.source.func'):  
         self.filename = filename
@@ -484,7 +529,7 @@ class source_float_file(source_file):
     """
     def __init__(
             self, filename,
-            time_interval=0.0, num_steps=0):
+            time_interval=0.0, num_steps=None):
         self.filename = filename
         self.time_interval = time_interval
         self.num_steps=num_steps
@@ -502,7 +547,7 @@ class source_int_file(source_file):
     """
     def __init__(
             self, filename,
-            time_interval=0.0, num_steps=0):
+            time_interval=0.0, num_steps=None):
         self.filename = filename
         self.time_interval = time_interval
         self.num_steps=num_steps
@@ -510,8 +555,6 @@ class source_int_file(source_file):
         source_file.__init__(
             self, filename, lambda v: int(v),
             time_interval, num_steps)
-
-
 
 class source_list(object):
     """
@@ -546,7 +589,7 @@ class source_list(object):
 
     """
     def __init__(
-            self, in_list, time_interval=0.0, num_steps=0,
+            self, in_list, time_interval=0.0, num_steps=None,
             window_size=1, name='source_file.source.func'):  
         self.in_list = in_list
         self.time_interval = time_interval
@@ -593,7 +636,7 @@ class source_function(object):
 
     """
     def __init__(
-            self, func, time_interval=0.0, num_steps=0,
+            self, func, time_interval=0.0, num_steps=None,
             window_size=1, state=None,
             name='source_file.source.func'):  
         self.func = func
