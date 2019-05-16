@@ -138,5 +138,15 @@ def test_source():
     assert recent_values(q2s_1) == q_to_streams_test_list_1
     print 'SOURCE TEST IS SUCCESSFUL!'
 
+    def gen_sequence():
+        return range(10)
+    seq = Stream('seq')
+    scheduler.name_to_stream['seq'] = seq
+    source_func_to_stream(
+        func=gen_sequence, out_stream=seq, num_steps=5,
+        name='sequence')
+    
+    
+
 if __name__ == '__main__':
     test_source()
