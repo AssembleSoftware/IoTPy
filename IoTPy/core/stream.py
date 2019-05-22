@@ -589,6 +589,8 @@ class StreamArray(Stream):
         self.start = dict()
         self.num_elements_lost = dict()
         self.subscribers_set = set()
+        if initial_value:
+            self.extend(initial_value)
 
     def _create_recent(self, size):
         """Returns an array of np.zeros of the appropriate type
