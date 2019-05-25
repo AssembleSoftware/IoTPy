@@ -2,7 +2,7 @@
 This module tests source.py
 
 """
-
+import numpy as np
 import sys
 import os
 sys.path.append(os.path.abspath("../helper_functions"))
@@ -42,13 +42,23 @@ def test_source():
     u = Stream('u')
     sb = Stream('sb')
     sc = Stream('sc')
+    seq = Stream('seq')
+    s_array = StreamArray(dtype=int, name='s_array')
 
     filename = 'test.dat'
     with open(filename, 'w') as output_file:
         for i in range(10):
             output_file.write(str(i) + '\n')
 
-    scheduler.name_to_stream = {'s': s, 'r':r, 'a':a}
+    
+    test_sequence_list = []
+    def gen_repeatedly(output_list):
+        return_value = output_list
+        test_sequence_list.append(return_value)
+        return return_value
+
+    scheduler.name_to_stream = {
+        's': s, 'r':r, 'a':a, 'seq':seq, 's_array':s_array}
     vv = source_func_to_stream(
         func=random_integer, out_stream=s, num_steps=5,
         name='random', window_size=2,
@@ -57,10 +67,17 @@ def test_source():
     ww = source_list_to_stream(
         in_list=range(10), out_stream=r, num_steps=5,
         name='read list', window_size=2)
+
+    s_array_thread = source_list_to_stream(
+        in_list=np.arange(10), out_stream=s_array)
         
     xx = source_file_to_stream(
         func=lambda x: 2*int(x), out_stream=a, filename='test.dat',
         time_interval=0.5, num_steps=None)
+
+    sequence_thread = source_func_to_stream(
+        func=gen_repeatedly, out_stream=seq, num_steps=3,
+        output_list=[1,2])
     
 
     map_element(lambda x: 2*x, s, t)
@@ -103,12 +120,16 @@ def test_source():
     file_thread = xx
     q_thread = sqq
     q2s_thread = q2sss
+
+    scheduler.start()
     
     random_thread.start()
     list_thread.start()
     file_thread.start()
     q_thread.start()
     q2s_thread.start()
+    sequence_thread.start()
+    s_array_thread.start()
     sb.extend(range(5))
     
     random_thread.join()
@@ -116,9 +137,9 @@ def test_source():
     file_thread.join()
     q_thread.join()
     q2s_thread.join()
+    sequence_thread.join()
+    s_array_thread.join()
 
-    scheduler.start()
-    random_thread.join()
     scheduler.join()
 
     assert recent_values(s) == test_list
@@ -129,6 +150,8 @@ def test_source():
     assert recent_values(q) == [v*v for v in recent_values(r)]
     assert recent_values(p) == zip(*[recent_values(u), recent_values(q)])
     assert recent_values(sc) == [x*x for x in range(5)]
+    assert recent_values(seq) == test_sequence_list
+    assert recent_values(s_array) == np.arange(10)
 
     que_contents = []
     while not que.empty():
@@ -136,17 +159,10 @@ def test_source():
     assert test_list_source_to_queue == que_contents
     assert recent_values(q2s_0) == q_to_streams_test_list_0
     assert recent_values(q2s_1) == q_to_streams_test_list_1
-    print 'SOURCE TEST IS SUCCESSFUL!'
 
-    def gen_sequence():
-        return range(10)
-    seq = Stream('seq')
-    scheduler.name_to_stream['seq'] = seq
-    source_func_to_stream(
-        func=gen_sequence, out_stream=seq, num_steps=5,
-        name='sequence')
     
     
+    print 'SOURCE TEST IS SUCCESSFUL!'
 
 if __name__ == '__main__':
     test_source()
