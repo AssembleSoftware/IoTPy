@@ -30,7 +30,7 @@ from print_stream import print_stream
 from accelerometer_agents import subtract_mean, magnitude_of_vector
 from accelerometer_agents import simple_anomalies, aggregate_anomalies
 from detect_anomaly import anomaly_stream
-from local_anomaly_process import local_anomaly_process
+#from local_anomaly_process import local_anomaly_process
 from distributed import distributed_process
 from VM import VM
 
@@ -50,20 +50,20 @@ def global_aggregator():
 
         """
         aggregate_anomalies(
-            in_streams, out_stream=out_streams[0], timed_window_size=2)
+            in_streams, out_streams, timed_window_size=2)
 
     proc = distributed_process(
         compute_func=compute_func,
         in_stream_names=['in_1', 'in_2'],
-        out_stream_names=['out'],
+        out_stream_names=[],
         connect_sources=[],
         name='global aggregator')
     
     vm = VM(
         processes=[proc],
         connections=[],
-        subscribers=[(proc, 'in_1', 'sensor_1'),
-                     (proc, 'in_2', 'sensor_2')])
+        subscribers=[(proc, 'in_1', 'S1'),
+                     (proc, 'in_2', 'S2')])
     vm.start()
 
 
