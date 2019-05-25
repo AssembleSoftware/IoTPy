@@ -30,7 +30,7 @@ from sink import stream_to_file
 from accelerometer_agents import subtract_mean, magnitude_of_vector
 from accelerometer_agents import simple_anomalies, quench
 
-def detect_large_signal_from_sensor(sensor_name, filenames):
+def detect_large_magnitude(sensor_name, filenames):
     # ----------------------------------------------------------------
     # COMPUTE FUNCTION f
     # ----------------------------------------------------------------
@@ -116,22 +116,21 @@ def detect_large_signal_from_sensor(sensor_name, filenames):
         processes=[proc_0],
         connections=[],
         publishers=[(proc_0, 'out', sensor_name)])
-    vm_0.start() 
+    vm_0.start()
+
+
 if __name__ == '__main__':
     # filenames has data recorded from east, north,
     # and vertical directions from a sensor
     args = sys.argv
-    
-    detect_large_signal_from_sensor(
+
+    detect_large_magnitude(
         sys.argv[1], sys.argv[2:]
-        ## filenames = ['S2_short.e.txt',
-        ##              'S2_short.n.txt',
-        ##              'S2_short.z.txt']
-        ## filenames = ['S1_short.e.txt',
-        ##              'S1_short.n.txt',
-        ##              'S1_short.z.txt']
-        ## filenames = ['S3_short.e.txt',
-        ##              'S3_short.n.txt',
-        ##              'S3_short.z.txt']
         )
+    
+    # Example of a call to this function from the command line:
+    #   detect_large_magnitude.py S1 S1.e.txt S1.n.txt S1.z.txt
+    # Here S1 is the name of the publication and 
+    # S1.e.txt S1.n.txt S1.z.txt are the source files for the
+    # accelerometer readings in the three axes.
     
