@@ -178,14 +178,14 @@ def aggregate_anomalies(in_streams, out_stream, timed_window_size):
         out_stream=global_anomalies_stream,
         window_duration=timed_window_size,
         step_time=1)
-    def f(timed_element):
+    def get_time(timed_element):
         timestamp, value = timed_element
         time_of_high_magnitude, num_high_magnitude = value
         return time_of_high_magnitude
     stream_to_file(
         in_stream=global_anomalies_stream,
         filename='global_anomalies.txt',
-        element_function=f)
+        element_function=get_time)
 
 class aggregate_large_magnitudes(object):
     def __init__(self, num_streams, threshold):
