@@ -623,7 +623,7 @@ def test_element():
     test_map_list()
     test_stream_arrays_2()
     test_class()
-    print 'TEST OF OP (ELEMENT) IS SUCCESSFUL'
+    print ('TEST OF OP (ELEMENT) IS SUCCESSFUL')
     
 if __name__ == '__main__':
     test_element()
