@@ -8,8 +8,9 @@ sys.path.append(os.path.abspath("../../IoTPy/core"))
 sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
 sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
 from generate_waves import generate_sine_wave, plot_signal
+from BP_IIR import BP_IIR
 from stream import Stream, StreamArray
-from op import map_window_list
+from op import map_window_list, map_element
 from recent_values import recent_values
 from scipy.signal import butter, filtfilt
 
@@ -46,8 +47,8 @@ def butter_bandpass_filter_sos(
     return y
 
 #---------------------------------------------------------------
-# Streaming filters on arrays
-def bandpass_stream(
+# Streaming filters on windows (i.e. arrays)
+def bandpass_window_stream(
         filter, in_stream, out_stream, window_size,
         step_size, lowcut, highcut, fs, order=5):
     def f(data):
@@ -56,7 +57,15 @@ def bandpass_stream(
     map_window_list(
         f, in_stream, out_stream,
         window_size=window_size, step_size=window_size)
-        #lowcut=lowcut, highcut=highcut, fs=fs, order=order)
+
+# Filtering streams continuously (no windows).
+def bandpass_filter_stream(in_stream, out_stream,
+                         lowcut, highcut, fs, order=5):
+    b, a = butter_bandpass(lowcut, highcut, fs, order)
+    bp = BP_IIR(a, b)
+    bp.filter_stream(in_stream, out_stream)
+    
+    
 
 def test():
     """
@@ -77,7 +86,7 @@ def test():
     # ps: phase shift
     ps = 0.0
     # td: time duration
-    td = 0.2
+    td = 0.4
     # or: order
     order = 6
     wave_data_low_frequency = generate_sine_wave(
@@ -96,9 +105,28 @@ def test():
         
     x = StreamArray('x')
     y = StreamArray('y')
-    bandpass_stream(
+    bandpass_window_stream(
         filter=butter_bandpass_filter,
         in_stream=x, out_stream=y, window_size=1024, step_size=128,
+        lowcut=64, highcut=512, fs=sr, order=order)
+    x.extend(wave_data_combined_frequencies)
+    Stream.scheduler.step()
+
+    # Plot data
+    before_filtering_data = recent_values(x)
+    after_filtering_data = recent_values(y)
+    plt.figure(1)
+    plt.subplot(211)
+    plt.plot(before_filtering_data)
+    plt.subplot(212)
+    plt.plot(after_filtering_data)
+    plt.show()
+
+
+    x = StreamArray('x')
+    y = StreamArray('y')
+    bandpass_filter_stream(
+        in_stream=x, out_stream=y,
         lowcut=64, highcut=512, fs=sr, order=order)
     x.extend(wave_data_combined_frequencies)
     Stream.scheduler.step()
