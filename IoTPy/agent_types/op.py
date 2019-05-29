@@ -704,6 +704,7 @@ def timed_window_f(
     return out_stream
 
 
-
+def copy_stream(in_stream, out_stream):
+    map_element(func=lambda x: x, in_stream=in_stream, out_stream=out_stream)
 
 
