@@ -62,7 +62,7 @@ def bandpass_window_stream(
 def bandpass_filter_stream(in_stream, out_stream,
                          lowcut, highcut, fs, order=5):
     b, a = butter_bandpass(lowcut, highcut, fs, order)
-    bp = BP_IIR(a, b)
+    bp = BP_IIR(b, a)
     bp.filter_stream(in_stream, out_stream)
     
     
@@ -80,56 +80,47 @@ def test():
 
     """
     # sr: sample rate
-    sr = 10000
+    sr = 50
     # ma: maximum amplitude
     ma = 1
     # ps: phase shift
     ps = 0.0
     # td: time duration
-    td = 0.4
+    td = 10.0
     # or: order
-    order = 6
+    order = 2
+    # Generate streams of waves with different frequencies,
+    # amplitudes and phase shifts.
     wave_data_low_frequency = generate_sine_wave(
-        frequency=8, max_amplitude=ma, phase_shift=ps,
+        frequency=0.25, max_amplitude=ma, phase_shift=ps,
         sample_rate=sr, time_duration=td)
     wave_data_medium_frequency = generate_sine_wave(
-        frequency=256, max_amplitude=ma, phase_shift=ps,
+        frequency=2.5, max_amplitude=ma, phase_shift=ps,
         sample_rate=sr, time_duration=td)
     wave_data_high_frequency = generate_sine_wave(
-        frequency=2048, max_amplitude=ma, phase_shift=ps,
+        frequency=25.0, max_amplitude=ma, phase_shift=ps,
         sample_rate=sr, time_duration=td)
+    # Generate wave that is the sum of pure-frequency
+    # waves.
     wave_data_combined_frequencies = (
         wave_data_low_frequency +
         wave_data_medium_frequency +
         wave_data_high_frequency)
-        
-    x = StreamArray('x')
-    y = StreamArray('y')
-    bandpass_window_stream(
-        filter=butter_bandpass_filter,
-        in_stream=x, out_stream=y, window_size=1024, step_size=128,
-        lowcut=64, highcut=512, fs=sr, order=order)
-    x.extend(wave_data_combined_frequencies)
-    Stream.scheduler.step()
-
-    # Plot data
-    before_filtering_data = recent_values(x)
-    after_filtering_data = recent_values(y)
-    plt.figure(1)
-    plt.subplot(211)
-    plt.plot(before_filtering_data)
-    plt.subplot(212)
-    plt.plot(after_filtering_data)
-    plt.show()
 
 
     x = StreamArray('x')
     y = StreamArray('y')
+    # Create a bandpass filter that operates on an input
+    # stream x to produce the output stream y.
     bandpass_filter_stream(
         in_stream=x, out_stream=y,
-        lowcut=64, highcut=512, fs=sr, order=order)
+        lowcut=1.0, highcut=5.0, fs=sr, order=order)
+    # Feed the input to the filter with combined frequencies.
     x.extend(wave_data_combined_frequencies)
+    # Run a step and plot output.
     Stream.scheduler.step()
+    print recent_values(y)[:20]
+    print
 
     # Plot data
     before_filtering_data = recent_values(x)
