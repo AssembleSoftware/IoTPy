@@ -12,60 +12,85 @@ from BP_IIR import BP_IIR
 from stream import Stream, StreamArray
 from op import map_window_list, map_element
 from recent_values import recent_values
-from scipy.signal import butter, filtfilt
+from scipy.signal import butter
+import numpy as np
+
+
+class BP_IIR(object):
+    """
+    Bandpass IIR Filter
+
+    Parameters
+    ----------
+    a, b: list of float
+      Parameters that define an IIR filter
+
+    Attributes
+    ----------
+    x, y: array of float
+      Local variables of IIR calculations.
+
+    """
+    def __init__(self, a, b):
+        assert len(b) == len(a)
+        self.b = np.array(b)
+        self.a = np.array(a)
+        self.N = len(a)
+        self.x = np.zeros(self.N)
+        self.y = np.zeros(self.N)
+
+    def filter_sample(self, sample):
+        """
+        This is the standard IIR calculation.
+        Parameters
+        ----------
+        sample: float or int
+          The next element of the stream.
+        """
+        # Shift x and y to the right by 1
+        self.x[1:] = self.x[:- 1]
+        self.y[1:] = self.y[:-1]
+        # Update x[0] and y[0]
+        self.x[0] = sample
+        self.y[0] = self.a[0] * self.x[0]
+        self.y[0] += sum(self.a[1:]*self.x[1:] - self.b[1:]*self.y[1:])
+        return self.y[0]
+
+    def filter_stream(self, in_stream, out_stream):
+        """
+        Filters the input stream to get the output stream
+        using filter_sample().
+
+        """
+        map_element(self.filter_sample, in_stream, out_stream)
 
 #------------------------------------------------------------------
 # See scipy for bandpass filters.
-def butter_bandpass(lowcut, highcut, fs, order=5):
+# This code is taken from scipy.signal
+def butter_bandpass(lowcut, highcut, fs, order=2):
     nyq = 0.5 * fs
     low = lowcut / nyq
     high = highcut / nyq
     b, a = butter(order, [low, high], btype='band')
     return b, a
 
-def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
-    b, a = butter_bandpass(lowcut, highcut, fs, order=order)
-    y = filtfilt(b, a, data)
-    return y
+def bandpass_filter_stream(in_stream, out_stream, lowcut, highcut, fs, order):
+    """
+    Parameters
+    ----------
+    in_stream, out_stream: Stream
+       The input and output streams of the agent
+    low_cut, highcut: int or float
+       The lower and upper frequencies of the bandpass filter.
+    fs: int or float
+       The sample rate in numer per second.
+    order: int, positive
+        The order of the filter.
 
-#-------------------------------------------------------------------------
-# Filters using second order sections (sos). See scipy.
-# sos filters give better response.
-def butter_bandpass_sos(lowcut, highcut, fs, order=5):
-    nyq = 0.5 * fs
-    low = lowcut / nyq
-    high = highcut / nyq
-    sos = butter(order, [low, high], analog=False,
-                 btype='band', output='sos')
-    return sos
- 
-def butter_bandpass_filter_sos(
-        in_stream, lowcut, highcut, fs, order=5):
-    in_stream = np.array(in_stream)
-    sos = butter_bandpass(lowcut, highcut, fs, order=order)
-    y = sosfiltfilt(sos, in_stream)
-    return y
-
-#---------------------------------------------------------------
-# Streaming filters on windows (i.e. arrays)
-def bandpass_window_stream(
-        filter, in_stream, out_stream, window_size,
-        step_size, lowcut, highcut, fs, order=5):
-    def f(data):
-        y = filter(data, lowcut, highcut, fs, order)
-        return y[:step_size]
-    map_window_list(
-        f, in_stream, out_stream,
-        window_size=window_size, step_size=window_size)
-
-# Filtering streams continuously (no windows).
-def bandpass_filter_stream(in_stream, out_stream,
-                         lowcut, highcut, fs, order=5):
+    """
     b, a = butter_bandpass(lowcut, highcut, fs, order)
     bp = BP_IIR(b, a)
     bp.filter_stream(in_stream, out_stream)
-    
-    
 
 def test():
     """
@@ -79,6 +104,7 @@ def test():
     first subplot and the filter output in the second subplot.
 
     """
+    # SET PARAMETERS
     # sr: sample rate
     sr = 50
     # ma: maximum amplitude
@@ -89,8 +115,13 @@ def test():
     td = 10.0
     # or: order
     order = 2
+    lowcut = 1
+    highcut = 5
+
+    # GENERATE WAVES
     # Generate streams of waves with different frequencies,
-    # amplitudes and phase shifts.
+    # amplitudes and phase shifts. Each wave is a pure
+    # frequency.
     wave_data_low_frequency = generate_sine_wave(
         frequency=0.25, max_amplitude=ma, phase_shift=ps,
         sample_rate=sr, time_duration=td)
@@ -98,29 +129,28 @@ def test():
         frequency=2.5, max_amplitude=ma, phase_shift=ps,
         sample_rate=sr, time_duration=td)
     wave_data_high_frequency = generate_sine_wave(
-        frequency=25.0, max_amplitude=ma, phase_shift=ps,
+        frequency=15.0, max_amplitude=ma, phase_shift=ps,
         sample_rate=sr, time_duration=td)
-    # Generate wave that is the sum of pure-frequency
+    # Generate a wave that is the sum of pure-frequency
     # waves.
     wave_data_combined_frequencies = (
         wave_data_low_frequency +
         wave_data_medium_frequency +
         wave_data_high_frequency)
 
-
+    # BANDPASS FILTER
     x = StreamArray('x')
     y = StreamArray('y')
     # Create a bandpass filter that operates on an input
     # stream x to produce the output stream y.
-    bandpass_filter_stream(
-        in_stream=x, out_stream=y,
-        lowcut=1.0, highcut=5.0, fs=sr, order=order)
-    # Feed the input to the filter with combined frequencies.
+    bandpass_filter_stream(x, y, lowcut, highcut, sr, order)
+
+    # Put data into the input stream of the filter.
     x.extend(wave_data_combined_frequencies)
     # Run a step and plot output.
     Stream.scheduler.step()
-    print recent_values(y)[:20]
-    print
+    # We now have streams x and y.
+    # Next plot the recent values of streams x, y
 
     # Plot data
     before_filtering_data = recent_values(x)
@@ -131,7 +161,6 @@ def test():
     plt.subplot(212)
     plt.plot(after_filtering_data)
     plt.show()
-
 
 if __name__ == '__main__':
     test()
