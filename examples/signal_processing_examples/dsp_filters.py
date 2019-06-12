@@ -88,6 +88,7 @@ def bandpass_filter_stream(in_stream, out_stream, lowcut, highcut, fs, order):
         The order of the filter.
 
     """
+    # butter_bandpass is imported from scipy.sigal
     b, a = butter_bandpass(lowcut, highcut, fs, order)
     bp = BP_IIR(b, a)
     bp.filter_stream(in_stream, out_stream)
