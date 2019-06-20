@@ -7,7 +7,6 @@ sys.path.append(os.path.abspath("../../gunshots"))
 sys.path.append(os.path.abspath("../../IoTPy/core"))
 sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
 sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
-#from generate_waves import generate_sine_wave, plot_signal
 from stream import Stream, StreamArray
 from op import map_window
 from recent_values import recent_values
@@ -41,6 +40,9 @@ def window_dot_product(in_stream, out_stream, multiplicand_vector, step_size=1):
         f, in_stream, out_stream,
         window_size, multiplicand_vector=multiplicand_vector)
 
+#----------------------------------------------------------------
+# TESTS
+#----------------------------------------------------------------
 def test():
     x = Stream('x')
     y = Stream('y')
