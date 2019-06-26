@@ -95,7 +95,7 @@ def test_some_merge_agents():
     assert recent_values(t) == [5, 8, 10, 20]
     assert recent_values(v_stream) == [20, 26, 30, 50]
     assert recent_values(zip_map_xu) == recent_values(zip_map_xu_merge)
-    print recent_values(ssssss)
+    assert recent_values(ssssss) == [10.0, 15.033296378372908, 18.110770276274835, 37.12142238654117]
 
     #----------------------------------------------------
     u.extend([96, 95])
@@ -685,13 +685,26 @@ def simple_zip_map_test():
     scheduler.step()
     # Look at output data
     assert recent_values(z) == [20, 26, 32, 38, 200, 0, 0, 0]
-    
 
+def test_merge_multiple_windows():
+    x = Stream('x')
+    y = Stream('y')
+    z = Stream('z')
+    def f(windows):
+        return sum([sum(window) for window in windows])
+    merge_multiple_windows(
+        func=f, in_streams=[x,y], out_stream=z, window_sizes=[3, 1], step_sizes=[2, 1])
+    x.extend(range(12))
+    y.extend(range(10))
+    Stream.scheduler.step()
+    assert recent_values(z) == [3, 10, 17, 24, 31]
+    
 def test_merge_agents():
     simple_zip_map_test()
     test_some_merge_agents()
     test_timed_mix_agents()
     test_timed_zip_agents()
+    test_merge_multiple_windows()
     print 'TEST OF MERGE IS SUCCESSFUL'
     
 if __name__ == '__main__':
