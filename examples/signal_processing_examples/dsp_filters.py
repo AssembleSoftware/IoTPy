@@ -102,8 +102,13 @@ def bandpass_IIR(in_stream, out_stream, b, a):
        
     """
     def f(windows, b, a):
+        # This function operates on two windows, x_window
+        # which is a window into the input stream, and
+        # y_window which is a window into the output stream.
+        # np.dot is the dot product.
         x_window, y_window = windows
-        return sum(b*x_window) - sum(a*y_window[1:])
+        return np.dot(b, x_window) - np.dot(a, y_window[1:])
+
     reverse_b = reverse_array(b)
     reverse_a = reverse_array(a[1:])
     M = len(b)
