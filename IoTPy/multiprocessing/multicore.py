@@ -474,34 +474,49 @@ def run_multiprocess(processes, connections=[]):
 #--------------------------------------------------------------
 # Functions to simplify testing of single process applications.
 #--------------------------------------------------------------
-def single_process_single_source(
-        source_func, compute_func):
+def run_single_process_single_source(source_func, compute_func):
     assert callable(source_func)
     assert callable(compute_func)
-    def g(in_streams, out_streams):
-        return compute_func(in_streams[0])
     proc = shared_memory_process(
-        compute_func=g, in_stream_names=['in'], out_stream_names=[],
-        connect_sources=[['in', source_func]]
-        )
-    vm = Multiprocess(processes=[proc], connections=[])
-    vm.run()
+        compute_func=compute_func,
+        in_stream_names=['in'],
+        out_stream_names=[],
+        connect_sources=[('in', source_func)],
+        connect_actuators=[],
+        name='proc')
+    mp = Multiprocess(processes=[proc], connections=[])
+    mp.run()
 
-def single_process_multiple_sources(list_source_func, compute_func):
-    in_stream_names = [
-        'in_'+ str(i) for i in range(len(list_source_func))]
-    connect_sources = [['in_' + str(i), list_source_func[i]]
-                       for i in range(len(list_source_func))]
-    out_stream_names=[]
-    def f(in_streams, out_streams):
-        return compute_func(in_streams)
-
+def run_single_process_multiple_sources(list_source_func, compute_func):
+    assert isinstance(list_source_func, list)
+    for source_func in list_source_func:
+        assert callable(source_func)
+    assert callable(compute_func)
     proc = shared_memory_process(
-        f, in_stream_names, out_stream_names,
-        connect_sources)
-    vm = Multiprocess(processes=[proc], connections=[])
-    vm.run()
+        compute_func=compute_func,
+        in_stream_names = [
+            'in_'+ str(i) for i in range(len(list_source_func))],
+        out_stream_names=[],
+        connect_sources = [['in_' + str(i), list_source_func[i]]
+                           for i in range(len(list_source_func))],
+        connect_actuators=[],
+        name='proc')
+    mp = Multiprocess(processes=[proc], connections=[])
+    mp.run()
 
-    
+
+# FUNCTION TO MAKE AND RUN THE SHARED MEMORY PROCESS
+def make_and_run_process(source_func, compute_func):
+    assert callable(source_func)
+    assert callable(compute_func)
+    proc = shared_memory_process(
+        compute_func=compute_func,
+        in_stream_names=['in'],
+        out_stream_names=[],
+        connect_sources=[('in', source_func)],
+        connect_actuators=[],
+        name='proc')
+    mp = Multiprocess(processes=[proc], connections=[])
+    mp.run()
     
     
