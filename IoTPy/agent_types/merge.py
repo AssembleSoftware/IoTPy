@@ -484,6 +484,88 @@ def merge_window_f(func, in_streams, window_size, step_size, state=None, *args, 
                        state, *args, **kwargs)
     return out_stream
 
+def merge_multiple_windows(
+        func, in_streams, out_stream, window_sizes, step_sizes,
+        state=None, call_streams=None, name='merge_multiple_windows',
+        *args, **kwargs):
+    """
+    Parameters
+    ----------
+        func: function
+           function from a list of windows with one window per input stream
+           to a single element of the output stream. The windows in the list
+           of windows may be of different sizes.
+        in_streams: list of Stream
+           The list of input streams of the agent
+        out_stream: Stream
+           The single output streams of the agent
+        window_sizes: list of int
+           Positive integers. The sizes of the moving windows with one
+           window for each in_stream.
+        step_sizes: list of int
+           Positive integers. The step sizes of the moving windows with
+           one step size for each in_stream.
+        state: object
+           The state of the agent
+        name: Str
+           Name of the agent created by this function.
+    Returns
+    -------
+        Agent.
+         The agent created by this function.
+
+    """
+    num_in_streams = len(in_streams)
+    num_out_streams = 1
+
+    # The transition function for this agent.
+    def transition(in_lists, state):
+        check_in_lists_type(name, in_lists, num_in_streams)
+        # The merge agent has a single output stream. So, the transition
+        # outputs a single list.
+        output_list = []
+        num_steps_list = [0] * num_in_streams
+        for index in range(num_in_streams):
+            list_length = in_lists[index].stop - in_lists[index].start
+            if window_sizes[index] > list_length:
+                # No changes are made because not enough new data in
+                # in_stream
+                return ([output_list], state,
+                        [in_list.start for in_list in in_lists])
+            # There is enough new data in this in_stream for
+            # at least one step.
+            # num_steps_list[index] is the number of steps that can be
+            # taken based only on the stream: in_streams[index].
+            num_steps_list[index] = (1 +
+                                (list_length - window_sizes[index])/
+                                step_sizes[index])
+        # num_steps is a positive integer. It is the number of steps
+        # that can be taken based on all the input streams.
+        num_steps = min(num_steps_list)
+
+        # Compute the element of the output stream for each step
+        # for a total of num_steps.
+        output_list = [[]]*num_steps
+        for i in range(num_steps):
+            # windows is a list with a window for each input stream.
+            windows = [in_lists[index].list[
+                in_lists[index].start+i*step_sizes[index] :
+                in_lists[index].start+i*step_sizes[index] + window_sizes[index]]
+                for index in range(num_in_streams)]
+            if state is None:
+                output_list[i] = func(windows, *args, **kwargs)
+            else:
+                output_list[i], state = func(windows, state, *args, **kwargs)
+        # Finished iteration: for i in range(num_steps)
+
+        return ([output_list], state,
+                [in_lists[index].start+num_steps*step_sizes[index]
+                 for index in range(num_in_streams)])
+    # Finished transition
+
+    # Create agent
+    return Agent(in_streams, [out_stream], transition, state, call_streams, name)
+
 
 #-----------------------------------------------------------------------
 # MERGE_LIST: LIST OF INPUT STREAMS, SINGLE OUTPUT STREAM
