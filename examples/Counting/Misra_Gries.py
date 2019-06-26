@@ -23,7 +23,7 @@ from stream import Stream, StreamArray
 from op import map_element, map_window, filter_element, map_list, map_window_list
 from merge import zip_stream, blend, zip_map, merge_window
 from source import source_func_to_stream, source_function, source_list
-from source import SourceList, source_list_to_stream
+from source import SourceList, source_list_to_stream, source_int_file
 from sink import stream_to_file, sink_element
 # timing is in examples.
 from timing import offsets_from_ntp_server
@@ -172,17 +172,14 @@ def misra_gries(k, in_stream, out_stream, M):
 #            TESTS
 #-----------------------------------------------------------------------
 
-def test_Misra_Gries():
-    # SPECIFY PARAMETERS
-    k = 2
-    M = 3
-    # CREATE SOURCE THREADS.
-    # This thread generates the original stream from the stream list.
-    # Note that a finite stream should end with 'eof'
-    def source_func(out_stream):
-        return source_list_to_stream(
-            in_list=[1, 1, 1, 2, 2, 2, 1, 2, 3, 3, 3, 3, 3, 3],
-            out_stream=out_stream)
+def test_Misra_Gries(
+        in_filename, out_filename, num_heavy_hitters,
+        reporting_window_size):
+
+    # s is an object where s.source_func(out_stream)
+    # puts integer data from the source file into
+    # the stream, out_stream.
+    s = source_int_file(filename=in_filename)
 
     def compute_func(in_streams, out_streams):
         # Specify internal streams. This stream is output by
@@ -190,21 +187,25 @@ def test_Misra_Gries():
         misra_gries_output_stream = Stream('Misra Gries output')
         # Create the misra_gries agent.
         misra_gries(
-            k=k,
+            k=num_heavy_hitters,
             in_stream=in_streams[0], # input from source
             out_stream=misra_gries_output_stream, # Goes to printer
-            M=M)
+            M=reporting_window_size)
         # Create the stream_to_file agent.
         stream_to_file(
             in_stream=misra_gries_output_stream,
-            filename='misra_gries.txt')
+            filename=out_filename)
 
     # MAKE AND RUN THE SHARED MEMORY PROCESS
-    run_single_process_single_source(source_func, compute_func)
-    
+    run_single_process_single_source(
+        source_func=s.source_func, compute_func=compute_func)
 
 if __name__ == '__main__':
-    test_Misra_Gries()
+    test_Misra_Gries(
+        in_filename='misra_gries_input.txt',
+        out_filename='misra_gries_output.txt',
+        num_heavy_hitters=2,
+        reporting_window_size=1)
 
 
 
