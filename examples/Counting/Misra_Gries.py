@@ -1,36 +1,27 @@
+"""
+Implements the Misra_Gries Heavy Hitters algorithm in IoTPy.
+See https://www.assemblesoftware.com/counting-items-in-streams.
+authors: Atishay Jain, K. Mani Chandy
+date: 26 July, 2019 
+
+"""
 import sys
 import os
-import threading
-import random
-import numpy as np
-import pickle as p
-
 sys.path.append(os.path.abspath("../../IoTPy/multiprocessing"))
 sys.path.append(os.path.abspath("../../IoTPy/core"))
 sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
 sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
-sys.path.append(os.path.abspath("../timing"))
 
 # multicore is in ../../IoTPy/multiprocessing
-from multicore import SharedMemoryProcess
-from multicore import shared_memory_process, Multiprocess
-## from multicore import single_process_single_source
-## from multicore import single_process_multiple_sources
 from multicore import run_single_process_single_source
 # stream is in ../../IoTPy/core
-from stream import Stream, StreamArray
-# op, sink, source, merge are in ../../IoTPy/agent_types
-from op import map_element, map_window, filter_element, map_list, map_window_list
-from merge import zip_stream, blend, zip_map, merge_window
-from source import source_func_to_stream, source_function, source_list
-from source import SourceList, source_list_to_stream, source_int_file
-from sink import stream_to_file, sink_element
-# timing is in examples.
-from timing import offsets_from_ntp_server
-from print_stream import print_stream
-from helper_control import _stop_, _close, _no_value, _multivalue
-from recent_values import recent_values
-
+from stream import Stream
+# op, sink, source are in ../../IoTPy/agent_types
+from op import map_element 
+from source import source_int_file
+from sink import stream_to_file
+# helper_control is in ../../IoTPy/helper_functions
+from helper_control import _no_value
 
 #------------------------------------------------------------------
 #THE MISRA GRIES ALGORITHM
@@ -69,28 +60,17 @@ def misra_gries_process_element(
     -------
        output, next state
        output is the next output element which is the
-          current value of (keys, counts) or,
-          when the input stream is closed, this is
-          followed by _close to close the output
-          stream.
+          current value of (keys, counts).
        next_state is the next state.
 
     """
+    # A new element arrived on the input stream.
+    # Obtain keys, counts, index from the state.
     keys, counts, index = state
-
-    # If the input stream is closed then output the
-    # keys, counts and then close the output stream.
-    # _multivalue is used to ouput multiple values
-    # which are state and _close in this case.
-    if v is _close:
-        output = _multivalue(((keys, counts), _close))
-        return output, state
-
-    # A new element (other than _close command) arrived
-    # on the input stream.
     # Increment index because a new input element arrived.
     index += 1
-    # UPDATE keys and counts
+
+    # UPDATE KEYS AND COUNTS
     # If the input element is in keys then increment
     # its count.
     if v in keys:
@@ -111,8 +91,7 @@ def misra_gries_process_element(
             counts[i] -= 1
             if counts[i] == 0:
                 keys[i] = None
-    # FINISHED UPDATING keys and counts
-
+    # FINISHED UPDATING KEYS AND COUNTS.
     
     if index < M:
         # Not enough inputs for an output.
@@ -128,7 +107,7 @@ def misra_gries_process_element(
     return output, next_state
 
 
-def misra_gries(k, in_stream, out_stream, M):
+def misra_gries(k, in_stream, out_stream, M=1):
     """
     This function creates an agent  which
     executes the misra-gries heavy hitters algorithm
@@ -174,7 +153,23 @@ def misra_gries(k, in_stream, out_stream, M):
 
 def test_Misra_Gries(
         in_filename, out_filename, num_heavy_hitters,
-        reporting_window_size):
+        reporting_window_size=1):
+    """
+    Parameters
+    ----------
+    in_filename: str
+       The name of the input file which generates the input stream.
+    out_filename: str
+       The name of the output file which stores the results.
+    num_heavy_hitters: int
+       Must be greater than 1.
+       The number of heavy hitters that the algorithm searches for.
+    reporting_window_size: int, pos
+       A new element is appended to the output stream only after
+       reporting_window_size new elements appear in the input stream.
+       
+
+    """
 
     # s is an object where s.source_func(out_stream)
     # puts integer data from the source file into
