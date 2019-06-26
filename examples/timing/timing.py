@@ -50,7 +50,7 @@ from op import map_element, map_window
 from sink import sink_element
 from source import source_func_to_stream
 # multicore is in multiprocessing
-from multicore import single_process_single_source
+from multicore import run_single_process_single_source
 
 from threading import Lock
 # math is used for calculating statistics such as median
