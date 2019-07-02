@@ -7,7 +7,7 @@ a stream.
 The module contains the following functions:
  * random_points: returns random points in a space.
  * random_items_in_data: returns a sample, without
-   replacemnt, of the data.
+   replacement, of the data.
  * closest_sentinel: given a collection of points and
    another collection of points, called sentinels,
    then the function returns the closest sentinel to
@@ -18,13 +18,15 @@ The module contains the following functions:
  * kmeans: the k-means algorithm.
  * kmeans_sliding_windows: the k-means algorithm applied
    to sliding windows in a stream.
+ * normally_distributed_points: returns points in space
+   where the points are normally distributed with a
+   specified center and standard deviation.
+ * mean_squared_distance_to_sentinels: returns the
+   average of the square of the distance of each point
+   to its associated sentinel.
 
 """
 import numpy as np
-from bokeh.models import ColumnDataSource, LinearColorMapper
-from bokeh.plotting import curdoc, figure
-from bokeh.client import push_session
-from bokeh.palettes import Magma
 import random
 
 import sys
@@ -38,6 +40,8 @@ sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
 from stream import Stream, StreamArray
 # op is in ../../IoTPy/agent_types
 from op import map_window
+# recent_values is in ../../IoTPy/helper_functions
+from recent_values import recent_values
 
 
 def random_points(num_points, num_dimensions, low, high):
@@ -191,7 +195,7 @@ def compute_centroids(points, cluster_ids, num_clusters):
 
 
 def kmeans(
-        points, num_clusters, initial_centroids=None, output=False):
+        points, num_clusters, initial_centroids=None, output_flag=False):
     """
     Runs kmeans until clusters stop moving.
 
@@ -214,7 +218,7 @@ def kmeans(
     draw : boolean, optional
         Describes whether the data is to be plotted (data must have 2 or less
         dimensions). The default is False.
-    output : boolean, optional
+    output_flag : boolean, optional
         Describes whether debug info is to be printed (the default is False).
         Info includes current number of iterations and number of changed points
         over time.
@@ -262,7 +266,7 @@ def kmeans(
             break
 
         # Print number of points reassigned
-        if num_iters != 0 and output:
+        if num_iters != 0 and output_flag:
             print np.count_nonzero(cluster_ids - previous_cluster_ids),\
                 " data points changed centroids"
         previous_cluster_ids, previous_centroids = cluster_ids, centroids
@@ -272,37 +276,24 @@ def kmeans(
         # Compute location of the centroid of each cluster given the
         # clusters.
         centroids = compute_centroids(points, cluster_ids, num_clusters)
-        print 'centroids'
-        print centroids
-        print
-        print 'points'
-        print points
-        print
-        print 'cluster_ids'
-        print cluster_ids
-        print
-        print '------------------------'
         num_iters += 1
 
-    if output:
+    if output_flag:
         print "Num iters: ", num_iters
     return [centroids, cluster_ids]
 
 class KMeansForSlidingWindows(object):
     def __init__(
             self, num_clusters,
-            initial_centroids=None, output=False):
+            initial_centroids=None, output_flag=False):
         self.num_clusters = num_clusters
         self.centroids = initial_centroids
         self.cluster_ids = np.array([0]*num_clusters)
-        self.output = output
+        self.output_flag = output_flag
     def func(self, points):
-        print
-        print 'Calling func'
-        print
         self.centroids, self.cluster_ids = kmeans(
             points, self.num_clusters,
-            self.centroids, self.output)
+            self.centroids, self.output_flag)
         return self.cluster_ids
         
 def kmeans_sliding_windows(
@@ -315,29 +306,74 @@ def kmeans_sliding_windows(
         kmeans_object.func, in_stream, out_stream,
         window_size, step_size)
     
-def initializeDataCenter(centroid, scale, n):
+def normally_distributed_points(center, stdev, num_points):
     """
-    Initialize n points with a normal distribution and scale around a
-    centroid.
+    Return num_points points with a normal distribution and
+    the specified standard deviation, stdev, and center.
 
     Parameters
     ----------
-    centroid : numpy.ndarray
-        Numpy array with dimensions 1 * 2.
-    scale : int
-        Describes the scale for the distribution.
-    n : int
-        Describes the number of points to make.
+    center : numpy.ndarray
+        A one-dimensional array. Its shape is (num_dimensions,)
+        where num_dimensions is the number of dimensions of the
+        space. For example, a center could be [0.0, 0.0, 0.0]
+        in a 3-D space.
+    stdev : float
+        The standard deviation of the distribution.
+    num_points : int
+        The number of points to make.
 
     Returns
     -------
     X : numpy.ndarray
-        A numpy array with dimensions `n` * 2.
+        A numpy array with dimensions (num_points, num_dimensions).
+        Each row of the array represents a point with the j-th
+        coordinate being the j-th element of the row.
+        The points are selected randomly from a normal distribution
+        with the specified center and standard deviation.
 
     """
-    X = np.random.normal(centroid, scale=scale, size=(n, 2))
-    return X
+    # num_dimensions is the number of dimensions of this space
+    num_dimensions = center.shape[0]
+    return np.random.normal(center, stdev, (num_points, num_dimensions))
 
+def mean_squared_distance_to_sentinels(points, sentinels, indexes):
+    """Returns the average square of distance from each point in
+    points to its associated sentinel. The sentinel associated
+    with points[p] is sentinels[indexes[p]] for p in 0,..,num_points
+    where num_points is the number of rows of p. The length of
+    indexes is also num_points.
+
+    Parameters
+    ----------
+    points : numpy.ndarray
+        Each row of the array represents a point in d-space
+        where d is the number of columns of the array.
+    sentinels : numpy.ndarray
+        A numpy array with d columns.
+        Each row represents a sentinel.
+    index : numpy.ndarray
+        A numpy array with 1 column.
+
+    Returns
+    -------
+    float
+        Sum of squares of points to their corresponding
+        sentinels.
+
+    Notes
+    -----
+    The mean squared error is calculated as the average squared distance of
+    each point from the closest centroid.
+
+    """
+    sum_of_squares = 0.0
+    num_points = len(points)
+    for i in range(0, num_points):
+        sentinel = sentinels[indexes[i]]
+        point = points[i]
+        sum_of_squares += np.dot(point-sentinel, point-sentinel)
+    return sum_of_squares / num_points
 
 def initializeData(n, k, scale, low, high):
     """
@@ -449,36 +485,7 @@ def init_plot(figsize=(1000, 500)):
     return source, centroids, segments
 
 
-def evaluate_error(points, centroids, index):
-    """Returns the mean squared error.
 
-    Parameters
-    ----------
-    X : numpy.ndarray
-        A numpy array with 2 columns.
-    centroids : numpy.ndarray
-        A numpy array with 2 columns.
-    index : numpy.ndarray
-        A numpy array with 1 column.
-
-    Returns
-    -------
-    float
-        The mean squared error.
-
-    Notes
-    -----
-    The mean squared error is calculated as the average squared distance of
-    each point from the closest centroid.
-
-    """
-    s = 0
-    for i in range(0, len(X)):
-        centroid_index = index[i]
-        s += np.dot(X[i] - centroids[centroid_index], X[i] -
-                    centroids[centroid_index])
-
-    return float(s) / X.shape[0]
 
 #------------------------------------------------------------------------
 #     TESTS
@@ -501,19 +508,19 @@ def test_random_points():
 def test_random_items_in_data():
     data = np.array([
         [+1.0, +1.0],
-        [+1.2, +1.2],
-        [+1.1, +1.1],
-        [+0.9, +0.9],
-        [+0.8, +0.8],
+        [+1.02, +1.02],
+        [+1.01, +1.01],
+        [+0.99, +0.99],
+        [+0.98, +0.98],
         [+1.0, -1.0],
-        [+1.1, -0.9],
-        [+0.9, -1.1],
+        [+1.01, -0.99],
+        [+0.99, -1.01],
         [-1.0, +1.0],
-        [-1.1, +0.9],
-        [-0.9, +1.1],
+        [-1.01, +0.99],
+        [-0.99, +1.01],
         [-1.0, -1.0],
-        [-1.1, -1.1],
-        [-0.9, -0.9]
+        [-1.01, -1.01],
+        [-0.99, -0.99]
         ])
     num_items=5
     points = random_items_in_data(data, num_items)
@@ -529,19 +536,19 @@ def test_random_items_in_data():
 def test_compute_centroids():
     points = np.array([
         [+1.0, +1.0],
-        [+1.2, +1.2],
-        [+1.1, +1.1],
-        [+0.9, +0.9],
-        [+0.8, +0.8],
+        [+1.02, +1.02],
+        [+1.01, +1.01],
+        [+0.99, +0.99],
+        [+0.98, +0.98],
         [+1.0, -1.0],
-        [+1.1, -0.9],
-        [+0.9, -1.1],
+        [+1.01, -0.99],
+        [+0.99, -1.01],
         [-1.0, +1.0],
-        [-1.1, +0.9],
-        [-0.9, +1.1],
+        [-1.01, +0.99],
+        [-0.99, +1.01],
         [-1.0, -1.0],
-        [-1.1, -1.1],
-        [-0.9, -0.9]
+        [-1.01, -1.01],
+        [-0.99, -0.99]
         ])
     cluster_ids = np.array([0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3])
     num_clusters = 4
@@ -556,39 +563,42 @@ def test_compute_centroids():
     print 'centroids is '
     print centroids
     
-def test_centroids_simple():
+def test_kmeans():
     points = np.array([
         [+1.0, +1.0],
-        [+1.2, +1.2],
-        [+1.1, +1.1],
-        [+0.9, +0.9],
-        [+0.8, +0.8],
+        [+1.02, +1.02],
+        [+1.01, +1.01],
+        [+0.99, +0.99],
+        [+0.98, +0.98],
         [+1.0, -1.0],
-        [+1.1, -0.9],
-        [+0.9, -1.1],
+        [+1.01, -0.99],
+        [+0.99, -1.01],
         [-1.0, +1.0],
-        [-1.1, +0.9],
-        [-0.9, +1.1],
+        [-1.01, +0.99],
+        [-0.99, +1.01],
         [-1.0, -1.0],
-        [-1.1, -1.1],
-        [-0.9, -0.9]
+        [-1.01, -1.01],
+        [-0.99, -0.99]
         ])
     centroids, cluster_ids = kmeans(
         points, num_clusters=4)
     print '---------------------------------------'
     print
-    print 'testing centroids_simple'
+    print 'testing kmeans'
+    print 'input points is '
+    print points
+    print 'output:'
     print 'centroids: '
     print centroids
     print
     print 'cluster_ids: '
     print cluster_ids
     print
-    print 'num_iters: '
-    print num_iters
-    print
 
 def test_kmeans_sliding_windows():
+    print '-----------------------------------------'
+    print
+    print 'testing kmeans sliding windows'
     num_dimensions=2
     window_size = 12
     step_size = 2
@@ -597,7 +607,6 @@ def test_kmeans_sliding_windows():
         name='in', dimension=num_dimensions)
     out_stream = StreamArray(
         name='out', dimension=window_size, dtype=int)
-
     kmeans_sliding_windows(
         in_stream, out_stream, window_size, step_size,
         num_clusters)
@@ -627,14 +636,38 @@ def test_kmeans_sliding_windows():
         ])
     in_stream.extend(points)
     Stream.scheduler.step()
+    print
+    print 'num_dimensions = ', num_dimensions
+    print 'window_size = ', window_size
+    print 'step_size = ', step_size
+    print 'num_clusters = ', num_clusters
+    print 'points: '
+    print points
+    print 'output_stream: '
+    print recent_values(out_stream)
 
+def test_generate_normally_distributed_points():
+    center = np.array([0.0, 0.0, 0.0])
+    stdev = 1.0
+    num_points=5
+    print '-----------------------------------------'
+    print
+    print 'testing normally distributed points'
+    print 'center is ', center
+    print 'stdev is ', stdev
+    print 'num_points is ', num_points
+    points = normally_distributed_points(
+        center, stdev, num_points)
+    print 'points is'
+    print points
     
 
 if __name__ == '__main__':
-    ## test_random_points()
-    ## test_random_items_in_data()
-    ## test_compute_centroids()
-    ## test_centroids_simple()
+    test_random_points()
+    test_random_items_in_data()
+    test_compute_centroids()
+    test_kmeans()
     test_kmeans_sliding_windows()
+    test_generate_normally_distributed_points()
     
     
