@@ -435,14 +435,15 @@ class Multiprocess(object):
             assert receiver in self.processes
             assert sending_stream_name in sender.out_stream_names
             if receiving_stream_name not in receiver.in_stream_names:
-                print 'Error!'
-                print 'receiving_stream_name: ', receiving_stream_name, \
-                  'is not in'
-                print 'receiver.in_stream_names'
-                print 'The list of receiver.in_stream_names is: '
+                print ('Error!')
+                print ('receiving_stream_name:  {} is not in'.format(
+                    receiving_stream_name))
+                print ('receiver.in_stream_names')
+                print ()
+                print ('The list of receiver.in_stream_names is: ')
                 for name in receiver.in_stream_names:
-                    print '      receiver.in_stream_names[0] is ', name
-                print
+                    print ('     name is  {}'.format(name))
+                print()
             assert receiving_stream_name in receiver.in_stream_names
         
     def start(self):
