@@ -27,7 +27,7 @@ import os
 sys.path.append(os.path.abspath("../core"))
 sys.path.append(os.path.abspath("../helper_functions"))
 
-from stream import Stream, _multivalue
+from stream import Stream, StreamArray, _multivalue
 from agent import Agent
 from stream import Stream, _multivalue
 from check_agent_parameter_types import *
