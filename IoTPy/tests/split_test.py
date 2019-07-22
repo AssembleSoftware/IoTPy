@@ -316,6 +316,22 @@ def test_split_agents():
     assert recent_values(y) == [1, 3, 5]
     assert recent_values(z) == [0, 2, 4]
 
+    
+    def f(window):
+        return max(window), min(window)
+
+    x = Stream('x')
+    y = Stream('y')
+    z = Stream('z')
+    
+    split_window(
+        func=f, in_stream=x, out_streams=[y, z], window_size=3, step_size=3)
+
+    x.extend(range(12))
+    scheduler.step()
+    assert recent_values(y) == [2, 5, 8, 11]
+    assert recent_values(z) == [0, 3, 6, 9]
+
     # ------------------------------------------------------
     # TEST split_tuple
     # ------------------------------------------------------
@@ -326,8 +342,26 @@ def test_split_agents():
     x.append((0, 'A'))
     x.extend([(1, 'B'), (2, 'C')])
     scheduler.step()
+    assert recent_values(y) == [0, 1, 2]
+    assert recent_values(z) == ['A', 'B', 'C']
+    
 
-    print 'TEST OF SPLIT IS SUCCESSFUL'
+    def f(window):
+        return max(window), min(window)
+
+    x = Stream('x')
+    y = Stream('y')
+    z = Stream('z')
+    
+    split_window(
+        func=f, in_stream=x, out_streams=[y, z], window_size=3, step_size=3)
+
+    x.extend(range(12))
+    scheduler.step()
+    assert recent_values(y) == [2, 5, 8, 11]
+    assert recent_values(z) == [0, 3, 6, 9]
+
+    print ('TEST OF SPLIT IS SUCCESSFUL')
     
 
 if __name__ == '__main__':
