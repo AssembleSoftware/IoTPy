@@ -361,8 +361,27 @@ def test_sink():
         0, 1, 2, 3, 2, 3, 4, 5, 4,
         5, 6, 7, 6, 7, 8, 9]
 
-    print 'TEST OF SINK IS SUCCESSFUL'
-    return
+    s = Stream('s')
+    print_list = []
+    def f(lst):
+        print_list.extend(lst)
+    sink_list(func=f, in_stream=s)
+    s.extend(range(10))
+    Stream.scheduler.step()
+    assert print_list == range(10)
+
+
+    import numpy as np
+    t = StreamArray('t', dtype='int')
+    print_list = []
+    def f(lst):
+        print_list.extend(lst)
+    sink_list(func=f, in_stream=t)
+    t.extend(np.arange(10))
+    Stream.scheduler.step()
+    assert print_list == range(10)
+    print ('TEST OF SINK IS SUCCESSFUL')
+    
     
 if __name__ == '__main__':
     test_sink()
