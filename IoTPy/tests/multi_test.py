@@ -19,6 +19,7 @@ from op import *
 from split import split_list, split_list_f
 from merge import merge_list, merge_list_f
 from multi import multi_element, multi_list, multi_window
+from multi import multi_element_f
 
 def test_multi():
     scheduler = Stream.scheduler
@@ -37,10 +38,25 @@ def test_multi():
     u.extend(range(8, 18, 2))
     v.extend(range(10, 14, 1))
     scheduler.step()
-    assert recent_values(u) == [8, 10, 12, 14, 16]
-    assert recent_values(v) == [10, 11, 12, 13]
     assert recent_values(x) == [10, 11, 12, 14]
     assert recent_values(y) == [18, 21, 24, 27]
+
+    
+    u = Stream('u')
+    v = Stream('v')
+
+    def f(a_list):
+        return max(a_list), sum(a_list)
+
+    x, y = multi_element_f(f, [u,v], num_out_streams=2)
+
+    u.extend(range(8, 18, 2))
+    v.extend(range(10, 14, 1))
+    scheduler.step()
+    assert recent_values(x) == [10, 11, 12, 14]
+    assert recent_values(y) == [18, 21, 24, 27]
+
+    
 
     # test of single input and single output
     u = Stream('u')
@@ -104,6 +120,28 @@ def test_multi():
         recent_values(x), np.array([10, 11, 12, 13, 14]))
     assert np.array_equal(
         recent_values(y), np.array([10, 13, 16, 19, 22]))
+
+
+    def f_multi_window(pair_of_windows):
+        window_0, window_1 = pair_of_windows
+        output_0 = sum(window_0) + sum(window_1)
+        output_1 = max(window_0) + max(window_1)
+        return (output_0, output_1)
+    w = Stream('w')
+    x = Stream('x')
+    y = Stream('y')
+    z = Stream('z')
+    multi_window(
+        func=f_multi_window, in_streams=[w,x],
+        out_streams=[y,z], window_size=2, step_size=2,
+        state=None, name='multi_window_agent')
+    
+    w.extend(range(10))
+    x.extend(range(100, 120, 2))
+    
+    scheduler.step()
+    assert recent_values(y) == [203, 215, 227, 239, 251]
+    assert recent_values(z) == [103, 109, 115, 121, 127]
 
     print "TEST OF MULTI IS SUCCESSFUL"
 
