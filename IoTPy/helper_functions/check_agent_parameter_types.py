@@ -62,9 +62,9 @@ def check_num_args_in_func_no_state(name, func, func_args, func_kwargs):
         args = args_and_defaults.args
         defaults = args_and_defaults.defaults
         if defaults is None:
-            assert len(args) == 1+len(func_args)+len(func_kwargs), \
+            assert len(args) <= 1+len(func_args)+len(func_kwargs), \
                     ' Error in agent named {0}. \n '\
-                    ' State is None; so func = {1}, should have EXACTLY 1 argument, \n '\
+                    ' State is None; so func = {1}, should have at most 1 argument, \n '\
                     ' in addition to positional args and keyword args. \n '\
                     ' But args for func are {2}. \n '\
                     ' positional args are {3} \n '\
@@ -76,13 +76,14 @@ def check_num_args_in_func_with_state(name, func, func_args, func_kwargs):
     args_and_defaults = inspect.getargspec(func)
     args = args_and_defaults.args
     defaults = args_and_defaults.defaults
-    assert len(args) == 2+len(func_args)+len(func_kwargs), \
-      'Error in agent named {0}.'\
-      ' State is not None; so func, {1}, should have EXACTLY 2 arguments,'\
-      ' (1) an element and (2) the state, '\
-      ' in addition to positional args and keyword args,'\
-      ' but positional args for func are {2},'\
-      'and keyword args for func are {3}'.format(name, func.__name__, func_args, func_kwargs)
+    assert len(args) <= 2+len(func_args)+len(func_kwargs), \
+      'Error in agent named {0}. \n'\
+      ' State is not None; so func, {1}, should have exactly 2 arguments, \n'\
+      ' (1) an element and (2) the state,\n '\
+      ' in addition to positional args and keyword args, \n'\
+      ' But args for func are {2}. \n '\
+      ' and positional args for func are {3},'\
+       'and keyword args for func are {4}'.format(name, func.__name__, args, func_args, func_kwargs)
 
 def check_func_output_for_multiple_streams(
         func, name, num_out_streams, output_snapshots):
