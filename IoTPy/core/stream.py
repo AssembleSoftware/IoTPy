@@ -3,9 +3,11 @@ Stream and Agent classes are the building blocks
 of PythonStreams.
 (Version 1.5 May 21, 2017. Created by: K. Mani Chandy)
 """
+from __future__ import division
 import sys
 import os
 sys.path.append(os.path.abspath("../helper_functions"))
+sys.path.append(os.path.abspath("../agent_types"))
 
 
 from system_parameters import DEFAULT_NUM_IN_MEMORY
@@ -19,6 +21,7 @@ from compute_engine import ComputeEngine
 from helper_control import TimeAndValue, _multivalue
 from helper_control import _no_value
 from helper_control import remove_novalue_and_open_multivalue
+# from merge import zip_map
 # TimeAndValue is used for timed messages.
 # When using NumPy arrays, use an array whose first column
 # is a timestamp, and don't use TimeAndValue.
@@ -236,6 +239,9 @@ class Stream(object):
     # object instance attribute. All instances of Stream
     # use the same scheduler.
     scheduler = ComputeEngine()
+    @staticmethod
+    def run():
+        scheduler.step()
     
     def __init__(self, name="UnnamedStream", 
                  initial_value=[],
@@ -368,7 +374,8 @@ class Stream(object):
         self.name = name
 
     def print_recent(self):
-        print self.name, '=', self.recent[:self.stop]
+        print('{0}  = {1}'.format(self.name, self.recent[:self.stop]))
+        #print self.name, '=', self.recent[:self.stop]
 
     def set_start(self, reader, starting_value):
         """ The reader tells the stream that it is only accessing
@@ -471,9 +478,9 @@ class Stream(object):
             else:
                 return self.recent[start_index:self.stop]
         except:
-            print 'Error In Stream.py. In get_contents_after_column_value()'
-            print 'column_number =', column_number
-            print 'value =', value
+            print ('Error In Stream.py. In get_contents_after_column_value()')
+            print ('column_number = {})'.format(column_number))
+            print ('value =', {}).format(value)
             raise
 
     def get_index_for_column_value(self, column_number, value):
@@ -491,9 +498,9 @@ class Stream(object):
             else:
                 return start_index
         except:
-            print 'Error in get_index_for_column_value in Stream.py'
-            print 'column_number =', column_number
-            print 'value =', value
+            print ('Error in get_index_for_column_value in Stream.py')
+            print ('column_number = {}'.format(column_number))
+            print ('value =', {}).format(value)
             raise
 
     def _set_up_next_recent(self):
@@ -521,6 +528,63 @@ class Stream(object):
                 self.num_elements_lost[reader] -= self.start[reader]
                 self.start[reader] = 0
 
+                
+    # Operator overloading
+    def operator_overload(self, another_stream, func):
+        from merge import zip_map
+        output_stream = Stream('stream add')
+        zip_map(func=func,
+                in_streams=[self, another_stream],
+                out_stream=output_stream)
+        return output_stream
+        
+    def __add__(self, another_stream):
+        return self.operator_overload(another_stream, func=sum)
+
+    def __sub__(self, another_stream):
+        def subtract(pair): return pair[0] - pair[1]
+        return self.operator_overload(another_stream, func=subtract)
+
+    def __mul__(self, another_stream):
+        def multiply(pair): return pair[0] * pair[1]
+        return self.operator_overload(another_stream, func=multiply)
+
+    def __mod__(self, another_stream):
+        def modulus(pair): return pair[0] % pair[1]
+        return self.operator_overload(another_stream, func=modulus)
+
+    def __div__(self, another_stream):
+        def division(pair): return pair[0] / pair[1]
+        return self.operator_overload(another_stream, func=division)
+
+    def __floordiv__(self, another_stream):
+        def floor_division(pair): return pair[0] // pair[1]
+        return self.operator_overload(another_stream,
+                                      func=floor_division)
+
+    def __lt__(self, another_stream):
+        def less_than(pair): return pair[0] < pair[1]
+        return self.operator_overload(another_stream, func=less_than)
+
+    def __le__(self, another_stream):
+        def less_than_or_equal(pair): return pair[0] <= pair[1]
+        return self.operator_overload(another_stream, func=less_than_or_equal)
+
+    def __eq__(self, another_stream):
+        def equality(pair): return pair[0] == pair[1]
+        return self.operator_overload(another_stream, func=equality)
+
+    def __ne__(self, another_stream):
+        def inequality(pair): return pair[0] != pair[1]
+        return self.operator_overload(another_stream, func=inequality)
+
+    def __gt__(self, another_stream):
+        def greater_than(pair): return pair[0] > pair[1]
+        return self.operator_overload(another_stream, func=greater_than)
+
+    def __le__(self, another_stream):
+        def greater_than_or_equal(pair): return pair[0] >= pair[1]
+        return self.operator_overload(another_stream, func=greater_than_or_equal)
 
     
 ##########################################################
@@ -736,8 +800,9 @@ class StreamArray(Stream):
             else:
                 return self.recent[start_index:self.stop]
         except:
-            print 'start_time =', start_time
-            print 'self.dtype =', self.dtype
+            print ('start_time ='.format(start_time))
+            print ('self.dtype ='.format(self.dtype))
             raise
-
         return
+
+        
