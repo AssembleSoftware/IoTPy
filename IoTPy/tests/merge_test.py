@@ -20,6 +20,7 @@ from merge import *
 from multi import *
 from op import timed_window, timed_window_f
 
+def run(): Stream.scheduler.step()
 #--------------------------------------------------------
 #--------------------------------------------------------
 def test_some_merge_agents():
@@ -667,7 +668,9 @@ def simple_zip_map_test():
     x.extend(range(4))
     y.extend(range(10, 20, 2))
     # Execute a step
-    scheduler.step()
+    ## from stream import run
+    run()
+    #scheduler.step()
     # Look at output data
     assert recent_values(z) == [20, 26, 32, 38]
     
@@ -698,6 +701,39 @@ def test_merge_multiple_windows():
     y.extend(range(10))
     Stream.scheduler.step()
     assert recent_values(z) == [3, 10, 17, 24, 31]
+
+def test_operator_overloading():
+    x = Stream('x')
+    y = Stream('y')
+    u = Stream('u')
+    v = Stream('v')
+    z = x + y
+    a = x - y
+    b = x * y
+    c = x % u
+    d = x // u
+    e = x / u
+    f = u < v
+    x.extend(range(100, 120, 2))
+    y.extend(range(10))
+    u.extend(range(1, 11, 1))
+    v.extend(range(0, 20, 2))
+    Stream.scheduler.step()
+    assert (recent_values(z) ==
+            [100, 103, 106, 109, 112, 115,
+             118, 121, 124, 127])
+    assert (recent_values(a) ==
+            [100, 101, 102, 103, 104, 105,
+             106, 107, 108, 109])
+    assert (recent_values(b) ==
+            [0, 102, 208, 318, 432, 550,
+             672, 798, 928, 1062])
+    assert (recent_values(c) ==
+            [0, 0, 2, 2, 3, 2, 0, 2, 8, 8])
+    assert (recent_values(d) ==
+            [100, 51, 34, 26, 21, 18, 16, 14, 12, 11])
+    assert (recent_values(f) ==
+            [False, False, True, True, True, True, True, True, True, True])
     
 def test_merge_agents():
     simple_zip_map_test()
@@ -705,7 +741,8 @@ def test_merge_agents():
     test_timed_mix_agents()
     test_timed_zip_agents()
     test_merge_multiple_windows()
-    print 'TEST OF MERGE IS SUCCESSFUL'
+    test_operator_overloading()
+    print ('TEST OF MERGE IS SUCCESSFUL')
     
 if __name__ == '__main__':
     test_merge_agents()
