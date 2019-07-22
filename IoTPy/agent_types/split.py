@@ -500,13 +500,14 @@ def split_window(
     # Create agent
     return Agent([in_stream], out_streams, transition, state, call_streams, name)
 
-def split_window_f(func, in_stream, window_size, step_size, state=None, *args, **kwargs):
+def split_window_f(func, in_stream, num_out_streams,
+                   window_size, step_size, state=None, *args, **kwargs):
     out_streams = []
     for i in range(num_out_streams):
         out_streams.append(Stream(func.__name__+in_stream.name+str(i)))
     split_window(func, in_stream, out_streams, window_size, step_size,
-                       None, None, state, *args, **kwargs)
-    return out_stream
+                 state=state, *args, **kwargs)
+    return out_streams
 
 def split_tuple(in_stream, out_streams):
     split_element(lambda x: x, in_stream, out_streams)
