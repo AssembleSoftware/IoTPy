@@ -69,23 +69,15 @@ def multi_element(func, in_streams, out_streams, state=None,
         if not input_snapshots:
             return ([[]]*num_out_streams, state, [v.start for v in in_lists])
 
-        # output_snapshots is a list of snapshots of the collection of output
-        # streams.
-        # Each snapshot in output_snapshots is a list with one value for each
-        # output stream.
-        # The j-th snapshot in output_snapshots is the snapshot at the j-th
-        # time slice in this list of the output streams.
-        # output_snapshots[j] will be set to the output value
-        # corresponding to the j-th value in each of the input
-        # streams
-        output_snapshots = [ [] for lst in input_snapshots]
-
+        # output_snapshots is a list of snapshots of the output streams.
+        # The j-th value of output_snapshots is the output for
+        # input_snapshots[j].
         if state is None:
             output_snapshots = \
               [func(input_snapshot, *args, **kwargs)
                for input_snapshot in input_snapshots]
         else:
-            output_snapshots = [[]]*len(input_list)
+            output_snapshots = [[]]*len(input_snapshots)
             for i in range(len(input_snapshots)):
                 output_snapshots[i], state = \
                   func(input_snapshots[i], state, *args, **kwargs)
