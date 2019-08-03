@@ -110,13 +110,14 @@ class Stream(object):
           in the documentation about the implementation.
     stop : int
           index into the list recent.
-                     0 <= self.stop < len(self.recent)
+            0 <= stop < len(self.recent) = 2*num_in_memory
           recent[:stop] contains the stop most recent
           values of this stream.
           recent[stop:] contains arbitrary (garbage) values.
           The length of a stream is the number of elements in it.
           If the length of stream s is more than num_in_memory
-          then:   s.stop >= s.num_in_memory
+          then:
+               2*num_in_memory >= s.stop >= s.num_in_memory
           else s.stop is the length of the stream.
     offset: int (nonnegative)
           recent is a list or array of a given length whereas
@@ -139,7 +140,8 @@ class Stream(object):
             r will have read s.offset + s.start[r] elements.
             If r reads s at a rate that is so slow that the size of the
             buffer, recent, is too small, then r may miss reading some
-            elements.
+            elements in which case r will have read fewer than
+            s.recent[s.start[r]] elements.
     num_elements_lost : dict
             key = reader
             value = int
