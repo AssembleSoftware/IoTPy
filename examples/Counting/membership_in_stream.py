@@ -67,8 +67,7 @@ def membership_in_stream(in_stream, out_stream, membership_object):
             membership_object.remove(value)
             return _no_value
         elif function_name == 'check':
-            value_is_in_input_stream = membership_object.check(value)
-            return (value, value_is_in_input_stream)
+            return (value, membership_object.check(value))
         else:
             raise ValueError
         
