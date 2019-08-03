@@ -6,24 +6,24 @@ sys.path.append(os.path.abspath("../../IoTPy/multiprocessing"))
 sys.path.append(os.path.abspath("../../IoTPy/core"))
 sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
 sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
-sys.path.append(os.path.abspath("../signal_processing_examples"))
+sys.path.append(os.path.abspath("../op"))
 
 # multicore is in ../../IoTPy/multiprocessing
 from multicore import shared_memory_process, Multiprocess
-# op, sink, source, merge are in ../../IoTPy/agent_types
+from multicore import run_single_process_single_source
+# op, sink, source, are in ../../IoTPy/agent_types
 from op import map_element
 from sink import stream_to_file
 from source import source_list_to_stream
-from merge import zip_map
 # stream is in ../../IoTPy/core
 from stream import Stream, StreamArray
-# window_dot_product is in ../signal_processing_examples
+# window_dot_product is in ../op
 from window_dot_product import window_dot_product
 
 def exponential_smooth_and_add(in_stream, out_stream, smoothing_factor):
     """
     With input stream x and output stream y:
-    y[n] = x[n] + a*x[n-1] + .. + a^m * x[n-m]
+    y[n] = x[n] + a*x[n-1] + .. + a^m * x[n-m] + ....
     where a is smoothing_factor
 
     """
@@ -40,7 +40,7 @@ def exponential_smoothing(in_stream, out_stream, smoothing_factor):
     """
     With input stream x and output stream y:
     y[0] = x[0]
-    y[n] = a*x[n] + (1-a)*y[n-1]
+    y[n] = a*x[n] + (1-a)*y[n-1] for n > 0.
     where a is smoothing_factor
 
     """
