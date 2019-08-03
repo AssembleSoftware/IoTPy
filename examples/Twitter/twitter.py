@@ -14,7 +14,6 @@ sys.path.append(os.path.abspath("../../IoTPy/multiprocessing"))
 import time
 from sink import sink_element
 from stream import Stream
-from multicore import single_process_single_source
 from multicore import shared_memory_process, Multiprocess
 # nltk: Natural Language Toolkit.
 # open source, free toolkit
