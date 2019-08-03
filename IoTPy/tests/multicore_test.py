@@ -16,20 +16,21 @@ sys.path.append(os.path.abspath("../agent_types"))
 sys.path.append(os.path.abspath("../helper_functions"))
 sys.path.append(os.path.abspath("../../examples/timing"))
 
-from multicore import SharedMemoryProcess
+from multicore import SharedMemoryProcess, multithread
 from multicore import shared_memory_process, Multiprocess
-from multicore import single_process_single_source
-from multicore import single_process_multiple_sources
+from multicore import run_single_process_single_source
+from multicore import run_single_process_multiple_sources
 from stream import Stream
 from op import map_element, map_window
 from merge import zip_stream, blend, zip_map
 from source import source_func_to_stream, source_function, source_list
-from source import SourceList
+from source import SourceList, source_file_to_stream
 from sink import stream_to_file
 from timing import offsets_from_ntp_server
 from print_stream import print_stream
 from helper_control import _stop_, _close
 from recent_values import recent_values
+from split import split_element
 
 def identity(x): return x
 
@@ -301,6 +302,36 @@ def simple_actuator_example():
     # connections between processes.
     vm = Multiprocess(processes=[proc], connections=[])
     vm.run()
+
+def multithread_example():
+    # STEP 1: DEFINE SOURCES.
+    # Each function has a single parameter which is a stream.
+    def source_file(out_stream):
+        return source_file_to_stream(
+            lambda x: int(x), out_stream, filename='test.dat',
+            time_interval=0.005, num_steps=10)
+
+    # STEP 2: DEFINE ACTUATORS
+    # Each function has a single parameter which is a queue.
+    def print_from_queue(q):
+        stopped = False
+        while True:
+            try:
+                v = q.get(timeout=0.05)
+            except:
+                return
+            print 'next value in queue is ', v
+
+    # STEP 3: DEFINE COMPUTATION
+    # A function with parameters in_streams and out_streams which
+    # are lists of streams.
+    def f(in_streams, out_streams):
+        map_element(lambda v: v, in_streams[0], out_streams[0])
+
+    # STEP 4: CALL multithread(sources, actuators, computation)
+    # sources and actuators are lists of functions. Their lengths
+    # are equal to the lengths of in_streams and out_streams.
+    multithread([source_file], [print_from_queue], f)
 
 def g(v):
     return v*2 + 1
@@ -778,10 +809,11 @@ def source_from_list_example_test():
     print '-----------------------------------------------------'
 
 def test():
-    single_process_single_source_example_1_test()
+    multithread_example()
+    ## single_process_single_source_example_1_test()
     ## actuator_example_2()
-    single_process_multiple_sources_example_1_test()
-    simple_actuator_example_test()
+    ## single_process_multiple_sources_example_1_test()
+    ## simple_actuator_example_test()
     ## clock_offset_estimation_single_process_multiple_sources_test()
     ## multiprocess_example_1_test()
     ## clock_offset_estimation_multiprocess_test()
