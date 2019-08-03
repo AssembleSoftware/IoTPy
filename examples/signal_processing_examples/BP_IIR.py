@@ -3,8 +3,11 @@ import sys
 import os
 import matplotlib.pyplot as plt
 sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
+sys.path.append(os.path.abspath("../../IoTPy/core"))
+sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
 from generate_waves import generate_sine_wave, plot_signal
 from op import map_element
+from stream import Stream
 
 '''
 Mani Chandy modified Julian Bunn's code to use numpy.
@@ -45,10 +48,12 @@ class BP_IIR(object):
         self.y = np.zeros(self.N)
 
     def filter_sample(self, sample):
+        # Shift x and y to the right by 1
         self.x[1:] = self.x[:- 1]
         self.y[1:] = self.y[:-1]
+        # Update x[0] and y[0]
         self.x[0] = sample
-        self.y[0] = self.a[0] + self.x[0]
+        self.y[0] = self.a[0] * self.x[0]
         self.y[0] += sum(self.a[1:]*self.x[1:] - self.b[1:]*self.y[1:])
         return self.y[0]
 
@@ -58,12 +63,27 @@ class BP_IIR(object):
 def test():
     from Julian_BP_IIR import JULIAN_BP_IIR
     input_signal = range(10)
-    b = [1.0, 2.0]
-    a = [3.0, 4.0]
-    bp_filter = BP_IIR(b, a)
-    Julian_bp_filter = JULIAN_BP_IIR()
-    for sample in input_signal:
-        assert bp_filter.filter_sample(sample) == Julian_bp_filter.filter(sample)
+    ACoef = [
+        0.05421678111120047800,
+        0.00000000000000000000,
+        -0.10843356222240096000,
+        0.00000000000000000000,
+        0.05421678111120047800
+    ]
+
+    BCoef = [
+        1.00000000000000000000,
+        -3.17477731945540590000,
+        3.88658158501960840000,
+        -2.19912328951123470000,
+        0.49181223722250506000
+    ]
+    bp_filter = BP_IIR(b=BCoef, a=ACoef)
+    x = Stream('x')
+    y = Stream('y')
+    bp_filter.filter_stream(in_stream=x, out_stream=y)
+    x.extend()
+    Stream.scheduler.step()
     
 if __name__ == '__main__':
     test()
