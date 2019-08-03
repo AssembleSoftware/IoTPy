@@ -504,6 +504,31 @@ def run_single_process_multiple_sources(list_source_func, compute_func):
         name='proc')
     mp = Multiprocess(processes=[proc], connections=[])
     mp.run()
+    
+def multithread(sources, actuators, compute_func):
+    assert isinstance(sources, list), (
+        'sources must be a LIST.')
+    assert isinstance(actuators, list), (
+        'actuators must be a LIST.')
+    for f in sources: assert callable(f), (
+            'Each element of sources must be a function.')
+    for f in actuators: assert callable(f), (
+            'Each element of actuators must be a function.')
+    assert callable(compute_func), (
+            'compute_func must be a function.')
+    proc = shared_memory_process(
+        compute_func=compute_func,
+        in_stream_names = [
+            'in_'+ str(i) for i in range(len(sources))],
+        connect_sources = [['in_' + str(i), sources[i]]
+                           for i in range(len(sources))],
+        out_stream_names = [
+            'out_'+ str(i) for i in range(len(actuators))],
+        connect_actuators = [['out_' + str(i), actuators[i]]
+                           for i in range(len(actuators))],
+        name='proc')
+    mp = Multiprocess(processes=[proc], connections=[])
+    mp.run()
 
 
 # FUNCTION TO MAKE AND RUN THE SHARED MEMORY PROCESS
