@@ -7,13 +7,29 @@ execute
    python VM_publisher_test.py
 in another shell.
 
-The publisher publishes p*1, p*2, p*3, ... , p*num_steps on a stream
-with global name 'sequence'. Currently num_steps is set to 10 and p is
-set to 7.
+This application consists of a single publisher and a single
+subscriber. The subscriber VM has two processes called proc_2 and
+proc_3, see
+vm_1 = VM(processes=[proc_2, proc_3],....)
 
-The subscriber subscribes to 'sequence' and prints the stream.
+proc_2 and proc_3 have no source threads and no actuator threads.
+Both processes have a single input stream called 'in'. proc_2 has
+a single output stream called 'out' and proc_3 has no output
+streams.
 
-Start the subscriber an instant before starting the publisher. 
+The compute thread of proc_2 multiplies elements of its input stream
+by 100 and puts the result on its output stream.
+The compute thread of proc_3 puts elements of its input stream on a
+file called 'result.dat'.
+
+The ouput stream 'out' of proc_2 is connected to the input stream 'in'
+of proc_3; see:
+         connections=[(proc_2, 'out', proc_3, 'in')]
+The input stream 'in' of proc_2 is fed elements of the published stream
+called 'publication', see:
+           subscribers=[(proc_2, 'in', 'publication')])
+If publication consists of [10, 11, ..., 19] then when this VM
+terminates, result.dat wil contain [1000, 1100, ..., 1900].
 
 """
 import sys
