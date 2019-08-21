@@ -21,13 +21,15 @@ sys.path.append(os.path.abspath("../../IoTPy/core"))
 sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
 sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
 from generate_waves import generate_sine_wave, plot_signal
-# stream is in core
+# stream is in ../../IoTPy/core
 from stream import Stream, StreamArray
-# op is in agent_types
+# op, merge are in ../../IoTPy/agent_types
 from op import map_window_list, map_element
 from merge import merge_window
-# recent_values is in helper_functions
+# recent_values is in ../../IoTPy/helper_functions
 from recent_values import recent_values
+from basics import merge_w
+# window_dot_product is in .
 from window_dot_product import window_dot_product
 
 
@@ -72,9 +74,7 @@ def bandpass_FIR(in_stream, out_stream, b):
 
     """
     reverse_b = reverse_array(b)
-    window_dot_product(
-        in_stream, out_stream,
-        multiplicand_vector=reverse_b)
+    window_dot_product(in_stream, out_stream, multiplicand_vector=reverse_b)
 
 def bandpass_IIR(in_stream, out_stream, b, a):
     """
@@ -101,6 +101,15 @@ def bandpass_IIR(in_stream, out_stream, b, a):
        equations.
        
     """
+    reverse_b = reverse_array(b)
+    reverse_a = reverse_array(a[1:])
+    M = len(b)
+    # Initialize the streams so that windows of size M
+    # can be merged.
+    out_stream.extend(np.zeros(M))
+    in_stream.extend(np.zeros(M))
+
+    @merge_w
     def f(windows, b, a):
         # This function operates on two windows, x_window
         # which is a window into the input stream, and
@@ -109,20 +118,11 @@ def bandpass_IIR(in_stream, out_stream, b, a):
         x_window, y_window = windows
         return np.dot(b, x_window) - np.dot(a, y_window[1:])
 
-    reverse_b = reverse_array(b)
-    reverse_a = reverse_array(a[1:])
-    M = len(b)
-    # Initialize the streams so that windows of size M
-    # can be merged.
-    out_stream.extend(np.zeros(M))
-    in_stream.extend(np.zeros(M))
     # Create the agent.
-    # Note that the output stream of the
-    # agent gets fed back as an input stream.
-    merge_window(
-        func=f, in_streams=[in_stream, out_stream],
-        out_stream=out_stream,
-        window_size=M, step_size=1, b=reverse_b, a=reverse_a)
+    # Note that the output stream of the agent gets fed back as an
+    # input stream.
+    f(in_streams=[in_stream, out_stream], out_stream=out_stream,
+      window_size=M, step_size=1, b=reverse_b, a=reverse_a)
 
 #---------------------------------------------------------------
 #---------------------------------------------------------------
@@ -261,35 +261,6 @@ class BP_FIR(Filter):
         self.x[0] = element
         return np.sum(self.b * self.x)
 
-def reverse_array(b):
-    b = np.array(b)
-    M = len(b)
-    reverse_b = np.zeros(M)
-    for i in range(M):
-        reverse_b[i] = b[M - 1 - i]
-    return reverse_b
-
-def bandpass_FIR(in_stream, out_stream, b):
-    reverse_b = reverse_array(b)
-    window_dot_product(
-        in_stream, out_stream,
-        multiplicand_vector=reverse_b)
-
-def bandpass_IIR(in_stream, out_stream, b, a):
-    def f(windows, b, a):
-        x_window, y_window = windows
-        return sum(b*x_window) - sum(a*y_window[1:])
-    reverse_b = reverse_array(b)
-    reverse_a = reverse_array(a[1:])
-    M = len(b)
-    out_stream.extend(np.zeros(M))
-    in_stream.extend(np.zeros(M))
-    merge_window(
-        func=f, in_streams=[in_stream, out_stream],
-        out_stream=out_stream,
-        window_size=M, step_size=1, b=reverse_b, a=reverse_a)
-
-        
 #---------------------------------------------------------------
 #  GET FILTER PARAMETERS
 #---------------------------------------------------------------
@@ -436,17 +407,29 @@ def test_bandpass_IIR_filter_simple():
 #  TESTS
 #------------------------------------------------------------------
 if __name__ == '__main__':
-    print 'TESTING BANDPASS IIR FILTER'
+    print ('TESTING BANDPASS IIR FILTER')
+    print ('You will see a plot of the filter output.')
+    print ('Please close the plot.')
     test_bandpass_IIR_filter()
+    print ('TEST OF BANDPASS IIR FILTER IS SUCCESSFUL')
     print
-    print 'TESTING BANDPASS FIR FILTER'
+    print ('TESTING BANDPASS FIR FILTER')
+    print ('You will see a plot of the filter output.')
+    print ('Please close the plot.')
     test_bandpass_FIR_filter()
+    print ('TEST OF BANDPASS FIR FILTER IS SUCCESSFUL')
     print
-    print 'TESTING BANDPASS FIR FILTER SIMPLE'
+    print ('TESTING BANDPASS FIR FILTER SIMPLE')
+    print ('You will see a plot of the filter output.')
+    print ('Please close the plot.')
     test_bandpass_FIR_filter_simple()
+    print ('TEST OF BANDPASS FIR FILTER SIMPLE IS SUCCESSFUL')
     print
-    print 'TESTING BANDPASS IIR FILTER SIMPLE'
+    print ('TESTING BANDPASS IIR FILTER SIMPLE')
+    print ('You will see a plot of the filter output.')
+    print ('Please close the plot.')
     test_bandpass_IIR_filter_simple()
+    print ('TEST OF BANDPASS IIR FILTER SIMPLE IS SUCCESSFUL')
     
     
     
