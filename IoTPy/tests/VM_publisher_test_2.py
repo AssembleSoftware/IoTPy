@@ -6,14 +6,33 @@ in one shell and
 execute
        python VM_subcriber_test.py
 in another shell.
+Start the subscriber an instant before starting the publisher.
 
-The publisher publishes p*1, p*2, p*3, ... , p*num_steps on a stream
-with global name 'sequence'. Currently num_steps is set to 10 and p is
-set to 7.
+This application consists of a single publisher and a single
+subscriber. The publisher VM has two processes called proc_0 and
+proc_1, see
+vm_0 = VM(processes=[proc_0, proc_1],....)
 
-The subscriber subscribes to 'sequence' and prints the stream.
+proc_0 has a single source which copies source_list to its
+single input stream 'in'. The compute thread of proc_0 merely
+copies its single input stream 'in' to its single output stream
+'out'. proc_0 has no actuators.
 
-Start the subscriber an instant before starting the publisher. 
+proc_1 has no sources or actuators. It has a single input and a
+single output stream called 'in' and 'out'. Its compute thread
+adds 10 to elements of its input stream and puts the results on
+its output stream.
+
+The VM connects the output stream 'out' of proc_o to the input
+stream 'in' of proc_1. See:
+      connections=[(proc_0, 'out', proc_1, 'in')],
+The output stream 'out' of proc_0 is published as a publication
+stream called 'publication', see:
+      publishers=[(proc_1, 'out', 'publication')]
+
+For example, if source_list is [0, 1,.., 9] then the publication
+stream will be [10, 11, ..., 19].
+
 
 """
 
