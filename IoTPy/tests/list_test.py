@@ -10,12 +10,16 @@ sys.path.append(os.path.abspath("../agent_types"))
 sys.path.append(os.path.abspath("../helper_functions"))
 
 import numpy as np
-
+# agent, stream are in ../core
 from agent import Agent
 from stream import Stream, StreamArray
 from stream import _no_value, _multivalue
+# check_agent_parameter_types is in ../helper_functions
 from check_agent_parameter_types import *
+# recent_values, run are in ../helper_functions
 from recent_values import recent_values
+from run import run
+# sink, multi, op, split, merge are in ../agent_types
 from sink import sink_list, sink_list_f
 from multi import *
 from op import *
@@ -147,7 +151,7 @@ def test_list():
     #-------------------------------------------------------------------
     #-------------------------------------------------------------------
     x.extend(range(5))
-    scheduler.step()
+    run()
     assert recent_values(x) == range(5)
     assert recent_values(y) == [0, 2, 4, 6, 8]
     assert recent_values(z) == [0, 3, 6, 9, 12]
@@ -178,7 +182,7 @@ def test_list():
     
     #-------------------------------------------------------------------
     w.append(0)
-    scheduler.step()
+    run()
 
     assert recent_values(x) == range(5)
     assert recent_values(y) == [0, 2, 4, 6, 8]
@@ -206,19 +210,19 @@ def test_list():
     
     #-------------------------------------------------------------------
     u.extend([10, 15, 18])
-    scheduler.step()
+    run()
     assert recent_values(s) == [10, 16, 20]
     assert recent_values(n) == [10, 15, 18]
     assert recent_values(o) == [0, 1, 2]
 
     u.append(37)
-    scheduler.step()
+    run()
     assert recent_values(s) == [10, 16, 20, 40]
     assert recent_values(n) == [10, 15, 18, 37]
     assert recent_values(o) == [0, 1, 2, 3]
 
     u.extend([96, 95])
-    scheduler.step()
+    run()
     assert recent_values(x) == range(5)
     assert recent_values(y) == [0, 2, 4, 6, 8]
     assert recent_values(z) == [0, 3, 6, 9, 12]
@@ -257,18 +261,18 @@ def test_list():
                                 name='a_np_agent')
     bb_stream_array = map_array_f(f_np, a_stream_array)
 
-    scheduler.step()
+    run()
     assert np.array_equal(recent_values(b_stream_array), np.array([], dtype=np.float64))
     assert np.array_equal(recent_values(b_stream_array),recent_values(bb_stream_array))
 
     a_stream_array.extend(np.arange(5.0))
-    scheduler.step()
+    run()
     assert np.array_equal(recent_values(b_stream_array), np.arange(5.0)+1)
     assert np.array_equal(recent_values(b_stream_array),recent_values(bb_stream_array))
 
     
     a_stream_array.extend(np.arange(5.0, 10.0, 1.0))
-    scheduler.step()
+    run()
     assert np.array_equal(recent_values(b_stream_array), np.arange(10.0)+1)
     assert np.array_equal(recent_values(b_stream_array),recent_values(bb_stream_array))
 
@@ -281,18 +285,18 @@ def test_list():
                                 out_stream=d_stream_array, state = 0.0,
                                 name='b_np_agent')
     dd_stream_array = map_array_f(f_np_state, c_stream_array, state=0.0)
-    scheduler.step()
+    run()
     assert np.array_equal(recent_values(d_stream_array), np.array([], dtype=np.float64))
     assert np.array_equal(recent_values(d_stream_array),recent_values(dd_stream_array))
 
     c_stream_array.extend(np.arange(5.0))
-    scheduler.step()
+    run()
     assert np.array_equal(
         d_stream_array.recent[:d_stream_array.stop], np.cumsum(np.arange(5.0)))
     assert np.array_equal(recent_values(d_stream_array),recent_values(dd_stream_array))
 
     c_stream_array.extend(np.arange(5.0, 10.0, 1.0))
-    scheduler.step()
+    run()
     assert np.array_equal(
         d_stream_array.recent[:d_stream_array.stop], np.cumsum(np.arange(10.0)))
     assert np.array_equal(recent_values(d_stream_array),recent_values(dd_stream_array))
@@ -309,11 +313,11 @@ def test_list():
     c_np_agent = map_list(func=f_np_dimension, in_stream=e_stream_array,
                                 out_stream=f_stream_array, name='c_np_agent')
     e_stream_array.extend(np.array([[1.0, 2.0, 3.0]]))
-    scheduler.step()
+    run()
     assert np.array_equal(f_stream_array.recent[:f_stream_array.stop], np.array([[3.0, 3.0]]))
 
     e_stream_array.extend(np.array([[4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]))
-    scheduler.step()
+    run()
     assert np.array_equal(f_stream_array.recent[:f_stream_array.stop],
                           np.array([[3.0, 3.0], [9.0, 6.0], [15.0, 9.0]]))
 
@@ -328,13 +332,13 @@ def test_list():
     a_array = np.array([[[1.0, 2.0],[3.0, 4.0]],
                                     [[5.0, 6.0],[7.0, 8.0]]])
     g_stream_array.extend(a_array)
-    scheduler.step()
+    run()
     assert np.array_equal(h_stream_array.recent[:h_stream_array.stop],
                           a_array*2)
 
     b_array = np.array([[[9.0, 10.0], [11.0, 12.0]]])
     g_stream_array.extend(b_array)
-    scheduler.step()
+    run()
     assert np.array_equal(h_stream_array.recent[:h_stream_array.stop],
                           np.vstack((a_array, b_array))*2)
 
@@ -355,13 +359,13 @@ def test_list():
     assert j_stream_array.stop == 0
 
     i_stream_array.extend(c_array)
-    scheduler.step()
+    run()
     assert np.array_equal(j_stream_array.recent[:j_stream_array.stop],
                           f_datatype(c_array))
 
     d_array = np.array([(10, [6.0, 7.0, 8.0]), (20, [10.0, 11.0, 12.0])], dtype=dt_0)
     i_stream_array.extend(d_array)
-    scheduler.step()
+    run()
     assert np.array_equal(j_stream_array.recent[:j_stream_array.stop],
                           f_datatype(np.hstack((c_array, d_array))))
 
@@ -383,7 +387,7 @@ def test_list():
     assert l_stream_array.stop == 0
 
     k_stream_array.extend(e_array)
-    scheduler.step()
+    run()
     assert np.array_equal(l_stream_array.recent[:l_stream_array.stop],
                           f_datatype_int_dimension(e_array))
 
@@ -391,7 +395,7 @@ def test_list():
                         [(5, [-1.0, 0.0, 1.0]), (6, [-2.0, 2.0, -2.0])]],
                        dtype=dt_0)
     k_stream_array.extend(f_array)
-    scheduler.step()
+    run()
     assert np.array_equal(l_stream_array.recent[:l_stream_array.stop],
                           f_datatype_int_dimension(np.vstack((e_array, f_array))))
 
@@ -412,7 +416,7 @@ def test_list():
          [(7, [18.0, 19.0, 20.0]), (8, [21.0, 22.0, 23.0])]]
          ], dtype=dt_0)
     m_stream_array.extend(g_array)
-    scheduler.step()
+    run()
     assert np.array_equal(n_stream_array.recent[:n_stream_array.stop],
                           f_datatype_int_dimension(g_array))
 
@@ -421,7 +425,7 @@ def test_list():
          [(11, [80.0, -71.0, -9.0]), (15, [0.0, 0.0, 0.0])]]
          ], dtype=dt_0)
     m_stream_array.extend(h_array)
-    scheduler.step()
+    run()
     assert np.array_equal(n_stream_array.recent[:n_stream_array.stop],
                           f_datatype_int_dimension(np.vstack((g_array, h_array))))
 
@@ -439,20 +443,20 @@ def test_list():
 
     #a_in_0.extend(np.array([1.0, 2.0, 3.0]))
     a_in_0.extend(np.array([1.0, 2.0, 3.0]))
-    scheduler.step()
+    run()
     assert a_out.stop == 0
 
     a_in_0.extend(np.array([4.0, 5.0, 6.0]))
-    scheduler.step()
+    run()
     assert a_out.stop == 0
 
     a_in_1.extend(np.array([10.0, 20.0]))
-    scheduler.step()
+    run()
     assert np.array_equal(a_out.recent[:a_out.stop],
                           np.array([11.0, 22.0]))
 
     a_in_1.extend(np.array([30.0, 40.0]))
-    scheduler.step()
+    run()
     assert np.array_equal(a_out.recent[:a_out.stop],
                           np.array([11.0, 22.0, 33.0, 44.0]))
 
@@ -471,24 +475,24 @@ def test_list():
     a_s_dt_agent = merge_list(func=a_merge_dtype, in_streams=[a_in_dt_0, a_in_dt_1],
                                 out_stream=a_out_dt, name='a_s_dt_agent')
     a_in_dt_0.extend(np.array([(1, [1.0, 2.0, 3.0])], dtype=dt_0))
-    scheduler.step()
+    run()
     assert a_out_dt.stop == 0
 
     a_in_dt_1.extend(np.array([(2, [10.0, 20.0, 30.0])], dtype=dt_0))
-    scheduler.step()
+    run()
     assert np.array_equal(a_out_dt.recent[:a_out_dt.stop],
                           np.array([(2, [11.0, 22.0, 33.0])], dtype=dt_0))
 
     a_in_dt_0.extend(np.array([(5, [21.0, 23.0, 32.0]),
                                (9, [27.0, 29.0, 31.0])], dtype=dt_0))
-    scheduler.step()
+    run()
     assert np.array_equal(a_out_dt.recent[:a_out_dt.stop],
                           np.array([(2, [11.0, 22.0, 33.0])], dtype=dt_0))
 
     a_in_dt_1.extend(np.array([(6, [19.0, 17.0, 8.0]),
                                (8, [13.0, 11.0, 9.0]),
                                (10, [3.0, 1.0, 5.0])], dtype=dt_0))
-    scheduler.step()
+    run()
     assert np.array_equal(a_out_dt.recent[:a_out_dt.stop],
                           np.array([(2, [11.0, 22.0, 33.0]),
                                     (6, [40.0, 40.0, 40.0]),
@@ -514,7 +518,7 @@ def test_list():
     
     b_array_0 = np.array([[1.0, 9.0]])
     b_in.extend(b_array_0)
-    scheduler.step()
+    run()
     assert np.array_equal(b_out_0.recent[:b_out_0.stop],
                           np.array([[9.0, 1.0]]))
     assert np.array_equal(b_out_1.recent[:b_out_1.stop],
@@ -522,7 +526,7 @@ def test_list():
 
     b_array_1 = np.array([[98.0, 2.0]])
     b_in.extend(b_array_1)
-    scheduler.step()
+    run()
     assert np.array_equal(b_out_0.recent[:b_out_0.stop],
                           np.array([[9.0, 1.0], [98.0, 2.0]]))
     assert np.array_equal(b_out_1.recent[:b_out_1.stop],
@@ -530,7 +534,7 @@ def test_list():
 
     b_array_3 = np.array([[10.0, 20.0], [3.0, 37.0], [55.0, 5.0]])
     b_in.extend(b_array_3)
-    scheduler.step()
+    run()
     assert np.array_equal(b_out_0.recent[:b_out_0.stop],
                           np.array([[9.0, 1.0], [98.0, 2.0],
                                     [20.0, 10.0], [37.0, 3.0],
@@ -559,9 +563,9 @@ def test_list():
     c_array_0_0 = np.arange(3.0)*3
     c_array_1_0 = np.arange(3.0)
     c_in_0.extend(c_array_0_0)
-    scheduler.step()
+    run()
     c_in_1.extend(c_array_1_0)
-    scheduler.step()
+    run()
     assert np.array_equal(c_out_0.recent[:c_out_0.stop],
                    np.array([0.0, 4.0, 8.0]))
     assert np.array_equal(c_out_1.recent[:c_out_1.stop],
@@ -571,7 +575,7 @@ def test_list():
     c_array_1_1 = np.array([4.0, 5.0, 6.0])
     c_in_0.extend(c_array_0_1)
     c_in_1.extend(c_array_1_1)
-    scheduler.step()
+    run()
     assert np.array_equal(c_out_0.recent[:c_out_0.stop],
                    np.array([0.0, 4.0, 8.0, 104.0]))
     assert np.array_equal(c_out_1.recent[:c_out_1.stop],
@@ -614,9 +618,9 @@ def test_list():
     d_array_0_0 = np.array([[1.0, 2.0]])
     d_array_1_0 = np.array([[0.0, 10.0]])
     d_in_0.extend(d_array_0_0)
-    scheduler.step()
+    run()
     d_in_1.extend(d_array_1_0)
-    scheduler.step()
+    run()
     assert np.array_equal(d_out_0.recent[:d_out_0.stop],
                    np.array([[1.0, 12.0]]))
     assert np.array_equal(d_out_1.recent[:d_out_1.stop],
@@ -627,7 +631,7 @@ def test_list():
     d_array_1_1 = np.array([[2.0, 4.0]])
     d_in_0.extend(d_array_0_1)
     d_in_1.extend(d_array_1_1)
-    scheduler.step()
+    run()
     assert np.array_equal(d_out_0.recent[:d_out_0.stop],
                    np.array([[1.0, 12.0], [6.0, 12.0]]))
     assert np.array_equal(d_out_1.recent[:d_out_1.stop],
@@ -637,7 +641,7 @@ def test_list():
     d_array_1_2 = np.array([[-10.0, -20.0]])
     d_in_0.extend(d_array_0_2)
     d_in_1.extend(d_array_1_2)
-    scheduler.step()
+    run()
     assert np.array_equal(d_out_0.recent[:d_out_0.stop],
                    np.array([[1.0, 12.0], [6.0, 12.0], [10.0, 10.0]]))
     assert np.array_equal(d_out_1.recent[:d_out_1.stop],
@@ -668,7 +672,7 @@ def test_list():
     e_in_0.extend(e_array_0_0)
     e_array_1_0 = np.array([[[1.0, 2.0], [3.0, 4.0]]])
     e_in_1.extend(e_array_1_0)
-    scheduler.step()
+    run()
     assert np.array_equal(e_out_0.recent[:e_out_0.stop],
                    np.array([[[11.0, 22.0], [33.0, 44.0]]]))
     assert np.array_equal(e_out_1.recent[:e_out_1.stop],
@@ -678,7 +682,7 @@ def test_list():
     e_array_0_1 = np.array([[[11.0, 13.0], [17.0, 19.0]],
                            [[2.0, 4.0], [6.0, 8.0]]])
     e_in_0.extend(e_array_0_1)
-    scheduler.step()
+    run()
     assert np.array_equal(e_out_0.recent[:e_out_0.stop],
                    np.array([[[11.0, 22.0], [33.0, 44.0]]]))
     assert np.array_equal(e_out_1.recent[:e_out_1.stop],
@@ -688,7 +692,7 @@ def test_list():
     e_array_1_1 = np.array([[[1.0, 2.0], [3.0, 4.0]],
                             [[5.0, 6.0], [7.0, 8.0]]])
     e_in_1.extend(e_array_1_1)
-    scheduler.step()
+    run()
     assert np.array_equal(e_out_0.recent[:e_out_0.stop],
                    np.array([[[11.0, 22.0], [33.0, 44.0]],
                              [[12.0, 15.0], [20.0, 23.0]],
@@ -700,11 +704,11 @@ def test_list():
     e_array_1_2 = np.array([[[11.0, 12.0], [13.0, 14.0]],
                             [[15.0, 16.0], [17.0, 18.0]]])
     e_in_1.extend(e_array_1_2)
-    scheduler.step()
+    run()
     e_array_0_2 = np.array([[[-10.0, -11.0], [12.0, 16.0]],
                             [[-14.0, -15.0], [-16.0, -17.0]]])
     e_in_0.extend(e_array_0_2)
-    scheduler.step()
+    run()
     assert np.array_equal(e_out_0.recent[:e_out_0.stop],
                    np.array([[[11.0, 22.0], [33.0, 44.0]],
                              [[12.0, 15.0], [20.0, 23.0]],
@@ -740,21 +744,21 @@ def test_list():
                                     out_stream=out_stream_map_kwargs_stream,
                                     name='map_args_agent',
                                     multiplicand=2)
-    scheduler.step()
+    run()
     assert out_stream_map_args_stream.recent[:out_stream_map_args_stream.stop] == \
       []
     assert out_stream_map_kwargs_stream.recent[:out_stream_map_kwargs_stream.stop] == \
       []
 
     in_stream_map_args_stream.extend(range(5))
-    scheduler.step()
+    run()
     assert out_stream_map_args_stream.recent[:out_stream_map_args_stream.stop] == \
       [0, 2, 4, 6, 8]
     assert out_stream_map_kwargs_stream.recent[:out_stream_map_kwargs_stream.stop] == \
       [0, 2, 4, 6, 8]
 
     in_stream_map_args_stream.append(5)
-    scheduler.step()
+    run()
     assert out_stream_map_args_stream.recent[:out_stream_map_args_stream.stop] == \
       [0, 2, 4, 6, 8, 10]
     assert out_stream_map_kwargs_stream.recent[:out_stream_map_kwargs_stream.stop] == \
@@ -781,7 +785,7 @@ def test_list():
         f_np_args_kwargs, a_stream_array_args, c_stream_array_args_kwargs,
         None, None, 'a_np_agent_args_kwargs',
         2, addend=10)
-    scheduler.step()
+    run()
     assert np.array_equal(
         b_stream_array_args.recent[:b_stream_array_args.stop],
         np.array([]))
@@ -790,14 +794,14 @@ def test_list():
         np.array([]))
         
     a_stream_array_args.extend(np.arange(5.0))
-    scheduler.step()
+    run()
     assert np.array_equal(b_stream_array_args.recent[:b_stream_array_args.stop],
                           np.arange(5.0)+1)
     assert np.array_equal(c_stream_array_args_kwargs.recent[:c_stream_array_args_kwargs.stop],
                           np.arange(5.0)*2 + 10)
 
     a_stream_array_args.extend(np.arange(5.0, 10.0, 1.0))
-    scheduler.step()
+    run()
     assert np.array_equal(b_stream_array_args.recent[:b_stream_array_args.stop],
                           np.arange(10.0)+1)
     assert np.array_equal(c_stream_array_args_kwargs.recent[:c_stream_array_args_kwargs.stop],
