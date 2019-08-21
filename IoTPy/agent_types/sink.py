@@ -257,6 +257,7 @@ def stream_to_queue(
         queue.put(element)
     def function_stateless_append(
             element, queue, element_function, **kw):
+        print 'in stream_to_queue. element is ', element_function(element, **kw)
         queue.put(element_function(element, **kw))
 
     def function_stateful_append(
@@ -434,5 +435,25 @@ def sink_list_f(func, in_stream, state=None, *args, **kwargs):
     sink_list(func, in_stream, state, None, None,
                    *args, **kwargs)
     return out_stream
+
+def print_from_queue(q):
+    while True:
+        try:
+            v = q.get(timeout=0.5)
+        except:
+            return
+        print(v)
+
+def queue_to_file(q, filename, timeout):
+    with open(filename, 'a') as the_file:
+        while True:
+            try:
+                v = q.get(timeout=1.0)
+            except:
+                return
+            the_file.write(str(v) + '\n')
+            
+        
+
 
 
