@@ -1,37 +1,39 @@
 import sys
 import os
-import threading
-import random
 sys.path.append(os.path.abspath("../../IoTPy/multiprocessing"))
 sys.path.append(os.path.abspath("../../IoTPy/core"))
 sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
 sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
-sys.path.append(os.path.abspath("../timing"))
 
-from multicore import SharedMemoryProcess
-from multicore import shared_memory_process, Multiprocess
-from multicore import single_process_single_source
-from multicore import single_process_multiple_sources
+# stream is in ../../IoTPy/core
 from stream import Stream
-from op import map_element, map_window
-from merge import zip_stream, blend, zip_map
-from source import source_func_to_stream, source_function, source_list
-from source import SourceList, source_list_to_stream
-from sink import stream_to_file
-from timing import offsets_from_ntp_server
-from print_stream import print_stream
-from helper_control import _stop_, _close
+# source, sink, op, merge are in ../../IoTPy/agent_types
+from source import SourceList, source_list_to_stream, source_func_to_stream
+from sink import stream_to_file, print_from_queue, queue_to_file
+from op import map_element
+from merge import zip_stream
+# recent_values, basics are in ../../IoTPy/helper_functions
 from recent_values import recent_values
+from basics import multiply, map_e, merge_e, multi_e
+# multicore is in ../../IoTPy/multiprocessing
+from multicore import shared_memory_process, Multiprocess
 
+@map_e
+def identity(v): return v
+
+@map_e
+def multiply(v, operand): return v * operand
+
+#------------------------------------------------------------
+# Example with two processes.
+# Neither process has actuators.
 def example_1():
     source_list = range(10)
     def source(out_stream):
         return source_list_to_stream(source_list, out_stream)
     
     def compute_0(in_streams, out_streams):
-        map_element(
-            func=lambda x: x,
-            in_stream=in_streams[0], out_stream=out_streams[0])
+        identity(in_streams[0], out_stream=out_streams[0])
 
     proc_0 = shared_memory_process(
         compute_func=compute_0,
@@ -56,17 +58,15 @@ def example_1():
         connections=[(proc_0, 'out', proc_1, 'in')])
     mp.run()
 
-
+#------------------------------------------------------------
+# Example with three processes.
+# No process has actuators.
 def example_2():
-    # Specify the process, proc_0
-    source_list = range(10)
     def source(out_stream):
-        return source_list_to_stream(source_list, out_stream)
+        return source_list_to_stream(range(10), out_stream)
     
     def compute_0(in_streams, out_streams):
-        map_element(
-            func=lambda x: x,
-            in_stream=in_streams[0], out_stream=out_streams[0])
+        identity(in_streams[0], out_stream=out_streams[0])
 
     proc_0 = shared_memory_process(
         compute_func=compute_0,
@@ -77,10 +77,7 @@ def example_2():
 
     # Specify the process, proc_1
     def compute_1(in_streams, out_streams):
-        map_element(
-            func=lambda x: 10*x,
-            in_stream=in_streams[0],
-            out_stream=out_streams[0])
+        multiply(in_streams[0], out_streams[0], operand=10)
 
     proc_1 = shared_memory_process(
         compute_func=compute_1,
@@ -92,10 +89,7 @@ def example_2():
 
     # Specify the process, proc_2
     def compute_2(in_streams, out_streams):
-        map_element(
-            func=lambda x: 1000*x,
-            in_stream=in_streams[0],
-            out_stream=out_streams[0])
+        multiply(in_streams[0], out_streams[0], operand=1000)
 
     proc_2 = shared_memory_process(
         compute_func=compute_2,
