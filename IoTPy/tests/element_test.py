@@ -13,8 +13,9 @@ sys.path.append(os.path.abspath("../agent_types"))
 # agent and stream are in ../core
 from agent import Agent
 from stream import Stream, StreamArray, _no_value, _multivalue
-# recent_values is in ../helper_functions
+# recent_values and run are in ../helper_functions
 from recent_values import recent_values
+from run import run
 # op is in ../agent_types
 from op import map_element, map_element_f
 from op import filter_element, filter_element_f
@@ -44,7 +45,7 @@ def test_example_1():
     # Put test values in the input streams.
     x.extend(range(3))
     # Execute a step
-    scheduler.step()
+    run()
     # Look at recent values of output streams.
     assert recent_values(y) == [0, 2, 4]
 
@@ -52,7 +53,7 @@ def test_example_1():
     # Put test values in the input streams.
     x.extend([10, 20, 30])
     # Execute a step
-    scheduler.step()
+    run()
     # Look at recent values of output streams.
     assert recent_values(y) == [0, 2, 4, 20, 40, 60]
 
@@ -60,7 +61,7 @@ def test_example_1():
     # Put test values in the input streams.
     x.extend([0, -10])
     # Execute a step
-    scheduler.step()
+    run()
     # Look at recent values of output streams.
     assert recent_values(y) == [0, 2, 4, 20, 40, 60, 0, -20]
 
@@ -79,7 +80,7 @@ def test_example_2():
     # Put test values in the input streams.
     x.extend(range(5))
     # Execute a step
-    scheduler.step()
+    run()
     # Look at recent values of output streams.
     assert recent_values(y) == [0, 1, 2]
 
@@ -110,7 +111,7 @@ def test_example_3():
     # Put test values in the input streams.
     y.append(0)
     # Execute a step
-    scheduler.step()
+    run()
     # Look at recent values of output streams.
     assert recent_values(x) == [1, 1, 2, 3, 5, 8]
 
@@ -118,7 +119,7 @@ def test_example_3():
     # Put test values in the input streams.
     y.append(0)
     # Execute a step
-    scheduler.step()
+    run()
     # Look at recent values of output streams.
     assert recent_values(x) == \
       [1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144]
@@ -161,7 +162,7 @@ def test_example_4():
     # Put test values in the input streams.
     y.append(0)
     # Execute a step
-    scheduler.step()
+    run()
     # Look at recent values of output streams.
     assert recent_values(x) == [1, 1, 2, 3, 5, 8]
 
@@ -170,7 +171,7 @@ def test_example_4():
     # Put test values in the input streams.
     y.append(0)
     # Execute a step
-    scheduler.step()
+    run()
     # Look at recent values of output streams.
     assert recent_values(x) == \
       [1, 1, 2, 3, 5, 8, 13, 21, 34]
@@ -187,7 +188,7 @@ def test_1():
     map_element(func=f, in_stream=x, out_stream=y)
 
     x.extend(range(5))
-    Stream.scheduler.step()
+    run()
     assert recent_values(y) == [0, 2, 4, 6, 8]
       
 def test_2():
@@ -204,7 +205,7 @@ def test_2():
     map_element(func=multiply_and_add, in_stream=x, out_stream=y,
                 multiplicand=2, addend=10)
     x.extend(range(5))
-    Stream.scheduler.step()
+    run()
     assert recent_values(y) == [10, 12, 14, 16, 18]
 
 def test_3():
@@ -223,7 +224,7 @@ def test_3():
         return out_stream_element
     map_element(func=f, in_stream=x, out_stream=y, threshold=5)
     x.extend(range(20))
-    Stream.scheduler.step()
+    run()
     assert recent_values(y) == [0, 1, 2, 3, 4]
     # If x is [0, 1, 2, 3, 4,....20] then y is [0, 1, 2, 3, 4]
 
@@ -245,7 +246,7 @@ def test_4():
             return out_stream_element
     map_element(func=f, in_stream=x, out_stream=y)
     x.extend( [(10, 10), (2, 20), (30, 3), (4, 4), (1, 3), (60, 70)] )
-    Stream.scheduler.step()
+    run()
     assert recent_values(y) == [10, 10, 20, 30, 60, 70]
     
 #------------------------------------------------------------------------------------------------
@@ -469,7 +470,7 @@ def test_element_simple():
         
     #----------------------------------------------------------------    
     x.extend(range(3, 5, 1))
-    scheduler.step()
+    run()
     assert recent_values(x) == [0, 1, 2, 3, 4]
     assert recent_values(y) == [0, 2, 4, 6, 8]
     assert recent_values(ymap) == recent_values(y)
@@ -491,7 +492,7 @@ def test_element_simple():
 
     #----------------------------------------------------------------            
     w.append(0)
-    scheduler.step()
+    run()
     assert recent_values(x) == [0, 1, 2, 3, 4]
     assert recent_values(y) == [0, 2, 4, 6, 8]
     assert recent_values(ymap) == recent_values(y)
@@ -526,7 +527,7 @@ def test_element_simple():
     filter_element(func=lambda v: v <= 0.5, in_stream=n, out_stream=o)
     input_array = np.linspace(0.0, 2*np.pi, 20)
     m.extend(input_array)
-    scheduler.step()
+    run()
     expected_output = np.sin(input_array)
     assert np.array_equal(recent_values(n), expected_output)
     expected_output = expected_output[expected_output <= 0.5]
@@ -546,7 +547,7 @@ def test_timed_window():
         window_duration=10, step_time=10)
 
     x.extend([(1, 'a'), (8, 'b'), (12, 'c'), (14, 'd'), (32, 'e'), (50, 'f')])
-    scheduler.step()
+    run()
     assert recent_values(y) == [
         (10, [(1, 'a'), (8, 'b')]), (20, [(12, 'c'),
         (14, 'd')]), (40, [(32, 'e')])]
@@ -570,7 +571,7 @@ def test_map_list():
     x_values = range(10)
     x.extend(x_values)
 
-    scheduler.step()
+    run()
     assert recent_values(y) == recent_values(x)
     assert recent_values(z) == f(x_values)
     assert recent_values(w) == g(x_values)
@@ -585,10 +586,10 @@ def test_stream_arrays_2():
     y = Stream()
     map_element(func=np.median, in_stream=x, out_stream=y)
     x.append(np.array([1., 2., 3.]))
-    scheduler.step()
+    run()
     assert y.recent[:y.stop] == [2.0]
     x.extend(np.array([[4., 5., 6.], [7., 8., 9.]]))
-    scheduler.step()
+    run()
     assert y.recent[:y.stop] == [2.0, 5.0, 8.0]
 
 def test_class():
@@ -605,7 +606,7 @@ def test_class():
     eg = example(multiplicand=2)
     map_element(func=eg.step, in_stream=x, out_stream=y)
     x.extend(range(5))
-    Stream.scheduler.step()
+    run()
     assert y.recent[:y.stop] == [0, 2, 5, 9, 14]
     
 
