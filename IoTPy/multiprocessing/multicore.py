@@ -25,9 +25,12 @@ sys.path.append(os.path.abspath("../core"))
 # sink is in the agent_types folder
 # compute_engine, stream are in the core folder
 from sink import stream_to_queue
+from op import map_element
 from compute_engine import ComputeEngine
 from stream import Stream
 #from distributed import make_distributed_process
+
+def add_receiver_name(v, receiver_name): return (receiver_name, v)
 
 #--------------------------------------------------------------
 #           PART 0. SharedMemoryProcess
@@ -173,6 +176,11 @@ class SharedMemoryProcess(object):
             for receiver_stream_name, receiver_proc in stream_procs:
                 # Get the sending stream from its name.
                 sending_stream = name_to_stream[sending_stream_name]
+                sending_stream_with_name = Stream(sending_stream_name+ '_' +
+                                                  receiver_stream_name)
+                map_element(add_receiver_name, sending_stream, sending_stream_with_name,
+                            receiver_name=receiver_stream_name)
+                
                 # stream_to_queue(....) is an agent that puts tuples on the 
                 # input queue of the receiving process where each tuple is:
                 # (receiver stream name, element of the sending stream)
@@ -180,11 +188,7 @@ class SharedMemoryProcess(object):
                 # which is:
                 # stream_to_queue plus sending and receiving stream names.
                 stream_to_queue(
-                    sending_stream, receiver_proc.in_queue,
-                    lambda x: [receiver_stream_name, x],
-                    name=('stream_to_queue_'+ sending_stream_name +
-                          receiver_stream_name)
-                          )
+                    sending_stream_with_name, receiver_proc.in_queue)
 
     def create_process(self):
         """
@@ -311,7 +315,9 @@ def shared_memory_process(
         for connect_source in connect_sources:
             assert (isinstance(connect_source, tuple) or
                     isinstance(connect_source, list))
-            assert connect_source[0] in in_stream_names
+            assert connect_source[0] in in_stream_names, \
+              'in_stream_names is {0}, and connect_source[0] is {1}'.format(
+                  in_stream_names, connect_source[0])
             assert callable(connect_source[1])
         for connect_actuator in connect_actuators:
             assert (isinstance(connect_actuator, tuple) or
@@ -322,8 +328,12 @@ def shared_memory_process(
     def shared_memory_process_f():
         # Step 1
         # Create in_streams and out_streams given their names.
-        in_streams = [Stream(in_stream_name)
-                      for in_stream_name in in_stream_names]
+        in_streams = []
+        for in_stream_name in in_stream_names:
+            s = Stream(name=in_stream_name)
+            in_streams.append(s)
+        ## in_streams = [Stream(in_stream_name)
+        ##               for in_stream_name in in_stream_names]
         out_streams = [Stream(out_stream_name)
                       for out_stream_name in out_stream_names]
         # Step 2
@@ -444,7 +454,11 @@ class Multiprocess(object):
                 for name in receiver.in_stream_names:
                     print ('     name is  {}'.format(name))
                 print()
-            assert receiving_stream_name in receiver.in_stream_names
+            assert receiving_stream_name in receiver.in_stream_names, \
+              'receiving_stream_name is: {0} \n' \
+              'and receiver_in_stream_names is: {1} \n'. \
+              format(receiving_stream_name, receiver.in_stream_names)
+              
         
     def start(self):
         for process in self.processes:
