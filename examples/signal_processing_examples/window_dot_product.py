@@ -10,6 +10,7 @@ sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
 from stream import Stream, StreamArray
 from op import map_window
 from recent_values import recent_values
+from basics import map_e, map_w
 
 def window_dot_product(in_stream, out_stream, multiplicand_vector, step_size=1):
     """
@@ -31,14 +32,14 @@ def window_dot_product(in_stream, out_stream, multiplicand_vector, step_size=1):
     ---------
     Creates an agent which carries out the dot product of the
     multiplicand_vector and each sliding window.
+    The window size is len(multiplicand_vector).
 
     """
-    def f(window, multiplicand_vector):
-        return np.dot(window, multiplicand_vector)
-    window_size = len(multiplicand_vector)
-    map_window(
-        f, in_stream, out_stream,
-        window_size, multiplicand_vector=multiplicand_vector)
+    @map_w
+    def f(window, multiplicand_vector): return np.dot(window, multiplicand_vector)
+    f(in_stream, out_stream, len(multiplicand_vector), step_size,
+      multiplicand_vector=multiplicand_vector)
+    
 
 #----------------------------------------------------------------
 # TESTS
@@ -46,6 +47,7 @@ def window_dot_product(in_stream, out_stream, multiplicand_vector, step_size=1):
 def test():
     x = Stream('x')
     y = Stream('y')
+    ## f(x, y, window_size=2, step_size=1, multiplicand_vector=[2, 100])
     window_dot_product(x, y, multiplicand_vector=[2, 100])
     x.extend(np.arange(8))
     Stream.scheduler.step()
