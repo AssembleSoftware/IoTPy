@@ -19,7 +19,11 @@ import threading
 
 import sys
 import os
-import Queue
+is_py2 = sys.version[0] == '2'
+if is_py2:
+    import Queue as queue
+else:
+    import queue as queue
 sys.path.append(os.path.abspath("../agent_types"))
 sys.path.append(os.path.abspath("../core"))
 # sink is in the agent_types folder
@@ -28,6 +32,7 @@ from sink import stream_to_queue
 from op import map_element
 from compute_engine import ComputeEngine
 from stream import Stream
+from Buffer import Buffer
 #from distributed import make_distributed_process
 
 def add_receiver_name(v, receiver_name): return (receiver_name, v)
@@ -381,7 +386,7 @@ def shared_memory_process(
               Stream.scheduler.name_to_stream[stream_name]
             # q is the queue into which this actuator stream's
             # elements are placed.
-            q = Queue.Queue()
+            q = queue.Queue()
             # Create an agent that puts the stream in the queue.
             stream_to_queue(actuator_stream, q)
             actuator_thread =  threading.Thread(

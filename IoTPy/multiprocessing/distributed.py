@@ -8,15 +8,20 @@ For distributed computing with multiple computers with different IP
 addresses, see the module DistributedComputing.py.
 
 """
+import sys
+import os
+is_py2 = sys.version[0] == '2'
+if is_py2:
+    import Queue as queue
+else:
+    import queue as queue
+
 import multiprocessing
 from collections import defaultdict
 import threading
 import pika
 import json
-import Queue
 
-import sys
-import os
 sys.path.append(os.path.abspath("../agent_types"))
 sys.path.append(os.path.abspath("../core"))
 sys.path.append(os.path.abspath("../helper_functions"))
@@ -425,7 +430,7 @@ def distributed_process(
               Stream.scheduler.name_to_stream[stream_name]
             # q is the queue into which this actuator stream's
             # elements are placed.
-            q = Queue.Queue()
+            q = queue.Queue()
             # Create an agent that puts the stream in the queue.
             stream_to_queue(actuator_stream, q)
             actuator_thread =  threading.Thread(
