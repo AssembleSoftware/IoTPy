@@ -16,5 +16,5 @@ def print_stream(in_stream):
 
     """
     def print_output(v):
-        print v
+        print (v)
     sink_element(func=print_output, in_stream=in_stream)
