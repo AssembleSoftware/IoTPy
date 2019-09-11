@@ -72,7 +72,9 @@ def check_num_args_in_func_no_state(name, func, func_args, func_kwargs):
                         name, func.__name__, args, func_args, func_kwargs)
 
 def check_num_args_in_func_with_state(name, func, func_args, func_kwargs):
-    assert isinstance(func, types.FunctionType)
+    assert (isinstance(func, types.FunctionType) or
+            isinstance(func, types.MethodType)), \
+      ' func is {0}, but it must be a function or method'.format(func)
     args_and_defaults = inspect.getargspec(func)
     args = args_and_defaults.args
     defaults = args_and_defaults.defaults
