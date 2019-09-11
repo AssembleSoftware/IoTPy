@@ -90,6 +90,10 @@ def remove_novalue_and_open_multivalue(l):
                 return_list.append(v)
     return return_list
 
-
+def remove_None(lst):
+    if not isinstance(lst, list):
+        return lst
+    return [v for v in lst if v is not None]
+    
 
 TimeAndValue = namedtuple('TimeAndValue', ['time', 'value'])
