@@ -3,6 +3,9 @@ and Stream classes are the building blocks of
 PythonStreams.
 
 """
+import sys
+import os
+sys.path.append(os.path.abspath("../helper_functions"))
 
 #from stream import Stream, StreamArray
 from collections import namedtuple
@@ -11,6 +14,7 @@ import numpy as np
 # EPSILON is a small number used to prevent division by 0
 # and other numerical problems
 from system_parameters import EPSILON
+from run import run
 
 """
 Named_Tuple
@@ -166,6 +170,27 @@ class Agent(object):
         # Initially each element of _out_lists is the empty list.
         self._out_lists = [[] for s in self.out_streams]
 
+    def halt(self):
+        """
+        The agent stops operating because it is no longer woken
+        up when streams are modified.
+
+        """
+        for s in self.call_streams: s.delete_subscriber(self)
+
+    def restart(self):
+        """
+        This function can be used only after the agent has been
+        halted by calling halt(). The restart is nondeterministic.
+        The restarted agent may read parts of streams that it had
+        read before it was halted. Also, it may skip parts of
+        streams that it hasn't read. This function is rarely used
+        in most applications.
+
+        """
+        for s in self.call_streams: s.register_subscriber(self)
+        self._in_lists = [InList([], 0, 0) for s in self.in_streams]
+        self._in_lists_start_values = [0 for s in self.in_streams]
 
     def next(self, stream_name=None):
         """Execute the next state transition.
@@ -268,9 +293,13 @@ class Agent(object):
             self.out_streams[j].extend(self._out_lists[j])
 
 
+#------------------------------------------------------------------------------------------
+# TESTS
+#------------------------------------------------------------------------------------------
+
 def test():
     from stream import Stream, StreamArray
-    #from compute_engine import compute_engine
+
     def copy(list_of_in_lists, state):
         return ([in_list.list[in_list.start:in_list.stop] for in_list in list_of_in_lists],
                 state, [in_list.stop for in_list in list_of_in_lists])
@@ -284,20 +313,20 @@ def test():
               transition=copy,
               name='A')
     
-    input_stream_0.extend(range(10))
-    compute_engine.execute_single_step()
+    input_stream_0.extend(list(range(10)))
+    run()
     assert(output_stream_0.stop == 10)
     assert(output_stream_1.stop == 0)
-    assert(output_stream_0.recent[:10] == range(10))
+    assert(output_stream_0.recent[:10] == list(range(10)))
     assert(input_stream_0.start == {A:10})
     assert(input_stream_1.start == {A:0})
 
-    input_stream_1.extend(range(10, 25, 1))
-    compute_engine.execute_single_step()
+    input_stream_1.extend(list(range(10, 25, 1)))
+    run()
     assert(output_stream_0.stop == 10)
     assert(output_stream_1.stop == 15)
-    assert(output_stream_0.recent[:10] == range(10))
-    assert(output_stream_1.recent[:15] == range(10, 25, 1))
+    assert(output_stream_0.recent[:10] == list(range(10)))
+    assert(output_stream_1.recent[:15] == list(range(10, 25, 1)))
     assert(input_stream_0.start == {A:10})
     assert(input_stream_1.start == {A:15})
 

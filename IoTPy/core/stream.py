@@ -13,7 +13,12 @@ sys.path.append(os.path.abspath("../agent_types"))
 from system_parameters import DEFAULT_NUM_IN_MEMORY
 import numpy as np
 from collections import namedtuple
-import Queue
+is_py2 = sys.version[0] == '2'
+if is_py2:
+    import Queue as queue
+else:
+    import queue as queue
+#import Queue
 import logging.handlers
 import threading
 from compute_engine import ComputeEngine
@@ -21,6 +26,7 @@ from compute_engine import ComputeEngine
 from helper_control import TimeAndValue, _multivalue
 from helper_control import _no_value
 from helper_control import remove_novalue_and_open_multivalue
+from helper_control import remove_None
 # from merge import zip_map
 # TimeAndValue is used for timed messages.
 # When using NumPy arrays, use an array whose first column
@@ -95,6 +101,11 @@ class Stream(object):
           stream. If the stream length exceeds num_in_memory
           then readers of the stream can read the latest
           num_in_memory elements of the stream.
+    discard_None: Boolean (optional)
+          default is True
+          If discard_None is True then None values are discarded from
+          the stream. If discard_None is False then the stream may
+          contain elements that are None.
 
     Attributes
     ----------
@@ -214,7 +225,7 @@ class Stream(object):
     Reader r informs stream s that it will only
     read values with indexes greater than or
     equal to j in the list, recent,  by executing
-                  s.set_start(r, j)
+                  s.set_start(rt, j)
     which causes s.start[r] to be set to j.
 
 
@@ -237,17 +248,16 @@ class Stream(object):
 
 
     """
+    # SCHEDULER
     # The scheduler is a Class attribute. It is not an
     # object instance attribute. All instances of Stream
     # use the same scheduler.
     scheduler = ComputeEngine()
-    @staticmethod
-    def run():
-        scheduler.step()
     
     def __init__(self, name="UnnamedStream", 
                  initial_value=[],
-                 num_in_memory=DEFAULT_NUM_IN_MEMORY):
+                 num_in_memory=DEFAULT_NUM_IN_MEMORY,
+                 discard_None=True):
         self.lock = threading.RLock()
         self.name = name
         self.num_in_memory = num_in_memory
@@ -261,6 +271,7 @@ class Stream(object):
         # The length of recent is twice num_in_memory because of the
         # way data in recent is compacted. See _set_up_next_recent()
         self.recent = [0] * (2*self.num_in_memory)
+        self.discard_None = discard_None
         self.extend(initial_value)
         
 
@@ -349,6 +360,8 @@ class Stream(object):
         # Remove _no_value from value_list, and
         # open up each _multivalue element into a list.
         value_list = remove_novalue_and_open_multivalue(value_list)
+        if self.discard_None:
+            value_list = remove_None(value_list)
 
         # Make a new version of self.recent if the space in
         # self.recent is insufficient.

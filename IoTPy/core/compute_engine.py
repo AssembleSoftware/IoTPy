@@ -1,7 +1,13 @@
 import threading
 import time
 import multiprocessing
-import Queue
+import sys
+is_py2 = sys.version[0] == '2'
+if is_py2:
+    import Queue as queue
+else:
+    import queue as queue
+#import Queue
 import sys
 import os
 sys.path.append(os.path.abspath("../helper_functions"))
@@ -55,7 +61,7 @@ class ComputeEngine(object):
         self.name = name
         self.input_queue = multiprocessing.Queue()
         self.name_to_stream = {}
-        self.q_agents = Queue.Queue()
+        self.q_agents = queue.Queue()
         self.scheduled_agents = set()
         self.compute_thread = None
         self.lock = threading.Lock()
@@ -112,7 +118,7 @@ class ComputeEngine(object):
                     v = self.input_queue.get(
                         timeout=max_wait_time)
                 except:
-                    print 'Stopped: No more input.'
+                    print ('Stopped: No more input.')
                     self.stopped = True
 
                 if not self.stopped:
