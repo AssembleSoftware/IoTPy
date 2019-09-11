@@ -53,7 +53,6 @@ def membership_in_stream(in_stream, out_stream, membership_object):
        membership_object: Membership
           An instance of a Membership class such as BloomFilter
           or CountMinSketch from PyProbables.
-          
 
     """
     def func(element):
@@ -73,8 +72,10 @@ def membership_in_stream(in_stream, out_stream, membership_object):
         
     map_element(func, in_stream, out_stream)
 
-
-
+    
+#----------------------------------------------------------------------
+#         TESTS
+#----------------------------------------------------------------------
 def test_membership(
         in_filename, bloom_filter_filename, count_min_sketch_filename):
     """
@@ -145,7 +146,6 @@ def test_membership(
 
 
 def test_count_min_sketch(in_filename, out_filename):
-    
     membership_object = CountMinSketch(width=100000, depth=5)
     def compute_func(in_streams, out_streams):
         y = Stream('Bloom output stream')
@@ -161,16 +161,23 @@ def test_count_min_sketch(in_filename, out_filename):
     run_single_process_single_source(source_func, compute_func)
 
 
+    
+#----------------------------------------------------------------------
+#         RUN TESTS
+#----------------------------------------------------------------------
 if __name__ == '__main__':
-    ## test_bloom_filter(in_filename='input_bloom.txt',
-    ##                   out_filename='output_bloom.txt')
-    ## test_count_min_sketch(
-    ##     in_filename='input_bloom.txt',
-    ##     out_filename='output_count_min_sketch.txt')
+    print ('Test count_min_sketch')
+    test_count_min_sketch(
+        in_filename='input_membership_test.txt',
+        out_filename='output_count_min_sketch.txt')
+    print ('Output is in file output_count_min_sketch.txt')
+    print
+    print ('Test membership with Bloom Filter')
     test_membership(
         in_filename='input_membership_test.txt',
         bloom_filter_filename='output_bloom_filter_filename.txt',
         count_min_sketch_filename='output_count_min_sketch_filename.txt')
+    print ('Output is in file output_count_min_sketch_filename.txt')
     
 
     

@@ -145,8 +145,6 @@ def misra_gries(k, in_stream, out_stream, M=1):
                 state=initial_state,
                 M=M)
 
-    
-
 #-----------------------------------------------------------------------
 #            TESTS
 #-----------------------------------------------------------------------
@@ -194,6 +192,11 @@ def test_Misra_Gries(
     # MAKE AND RUN THE SHARED MEMORY PROCESS
     run_single_process_single_source(
         source_func=s.source_func, compute_func=compute_func)
+
+
+#-----------------------------------------------------------------------
+#            RUN TESTS
+#-----------------------------------------------------------------------
 
 if __name__ == '__main__':
     test_Misra_Gries(
