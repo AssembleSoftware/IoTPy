@@ -12,7 +12,7 @@ sys.path.append(os.path.abspath("../agent_types"))
 
 # agent and stream are in ../core
 from agent import Agent
-from stream import Stream, StreamArray, _no_value, _multivalue
+from stream import Stream, StreamArray, _multivalue
 # recent_values is in ../helper_functions
 from recent_values import recent_values
 # op is in ../agent_types
@@ -28,14 +28,14 @@ from merge import merge_window
 from split import split_element_f, split_window_f, split_element
 from split import split_element, split_window
 from multi import multi_element_f, multi_window_f, multi_element, multi_window
-from sink import sink_element
+from sink import sink_element, sink_window
 from helper_control import _no_value
 from run import run
-
 
 #------------------------------------------------------------
 #       WRAPPERS FOR DECORATORS
 #------------------------------------------------------------
+
 def fmap_e(func):
     def wrapper(**kwargs):
         def g(s, **kwargs):
@@ -227,6 +227,28 @@ def sink_e(func):
         return g
     return wrapper()
 
+def sink_w(func):
+    def wrapper(**kwargs):
+        def g(in_stream, window_size, step_size, **kwargs):
+            sink_window(func, in_stream,  window_size, step_size, **kwargs)
+        return g
+    return wrapper()
+
+def iot_e(func):
+    def wrapper(**kwargs):
+        def g(in_stream, **kwargs):
+            sink_element(func, in_stream, **kwargs)
+        return g
+    return wrapper()
+
+def iot_w(func):
+    def wrapper(**kwargs):
+        def g(in_stream, window_size, step_size, **kwargs):
+            sink_window(func, in_stream,  window_size, step_size, **kwargs)
+        return g
+    return wrapper()
+
+
 
 
 #------------------------------------------------------------
@@ -301,29 +323,23 @@ def clip(in_stream, arg):
         else: return x
     return f(in_stream, arg=arg)
 
-
 def sieve(in_stream, primes):
     out_stream = Stream()
     @map_e
     def f(v, state, primes):
-        if state == 0:
+        my_prime, last = state
+        output = _no_value
+        if my_prime == 0:
             my_prime = v
-            last = True
-            state = my_prime, last
-            primes.append(my_prime)
-            return _no_value, state
+            primes.append(v)
         else:
-            my_prime, last = state
-            if v % my_prime == 0:
-                 return _no_value, state
-            elif last:
-                 last = False
-                 state = my_prime, last
-                 sieve(out_stream, primes)
-                 return v, state
-            else:
-                 return v, state
-    f(in_stream, out_stream, state=0, primes=primes)
+            if v % my_prime != 0:
+                output = v
+                if last:
+                    last = False
+                    sieve(out_stream, primes)
+        return output, (my_prime, last)
+    f(in_stream, out_stream, state=(0, True), primes=primes)
 
 def make_echo(spoken, D, A):
     echo = Stream(name='echo', initial_value=[0]*D)
@@ -338,29 +354,33 @@ def print_stream(v, stream_name=None):
     else:
         print(v)
 
+
+        
+#------------------------------------------------------------
 #------------------------------------------------------------
 #       TESTS
+#------------------------------------------------------------
 #------------------------------------------------------------
 
 def test_f_mul():
     x = Stream()
     y = f_mul(x, 2)
-    x.extend(range(5))
+    x.extend(list(range(5)))
     run()
     assert recent_values(y) == [0, 2, 4, 6, 8]
     
 def test_r_mul():
     x = Stream()
     y = Stream()
-    r_mul(x, y, 2)
-    x.extend(range(5))
+    a = r_mul(x, y, 2)
+    x.extend(list(range(5)))
     run()
     assert recent_values(y) == [0, 2, 4, 6, 8]
 
 def test_f_add():
     x = Stream()
     y = f_add(x, 2)
-    x.extend(range(5))
+    x.extend(list(range(5)))
     run()
     assert recent_values(y) == [2, 3, 4, 5, 6]
 
@@ -368,14 +388,14 @@ def test_r_add():
     x = Stream()
     y = Stream()
     r_add(x, y, 2)
-    x.extend(range(5))
+    x.extend(list(range(5)))
     run()
     assert recent_values(y) == [2, 3, 4, 5, 6]
 
 def test_f_sub():
     x = Stream()
     y = f_sub(x, 2)
-    x.extend(range(5))
+    x.extend(list(range(5)))
     run()
     assert recent_values(y) == [-2, -1, 0, 1, 2]
 
@@ -383,7 +403,7 @@ def test_r_sub():
     x = Stream()
     y = Stream()
     r_sub(x, y, 2)
-    x.extend(range(5))
+    x.extend(list(range(5)))
     run()
     assert recent_values(y) == [-2, -1, 0, 1, 2]
 
@@ -391,14 +411,14 @@ def test_r_sub():
 def test_minimum():
     x = Stream()
     y = minimum(x, 2)
-    x.extend(range(5))
+    x.extend(list(range(5)))
     run()
     assert recent_values(y) == [0, 1, 2, 2, 2]
 
 def test_maximum():
     x = Stream()
     y = maximum(x, 2)
-    x.extend(range(5))
+    x.extend(list(range(5)))
     run()
     assert recent_values(y) == [2, 2, 2, 3, 4]
 
@@ -422,8 +442,8 @@ def test_operator():
     x = Stream()
     y = Stream()
     z = x + y
-    x.extend(range(10))
-    y.extend(range(100,110))
+    x.extend(list(range(10)))
+    y.extend(list(range(100,110)))
     run()
     assert recent_values(z) == [
         100, 102, 104, 106, 108,
@@ -433,9 +453,9 @@ def test_prepend():
     from run import run
     x = Stream()
     y = Stream()
-    prepend(range(10), x, y)
-    z = fprepend(range(10), x)
-    x.extend(range(100, 105))
+    prepend(list(range(10)), x, y)
+    z = fprepend(list(range(10)), x)
+    x.extend(list(range(100, 105)))
     run()
     assert recent_values(x) == [
         100, 101, 102, 103, 104]
@@ -460,7 +480,7 @@ def test_sieve():
     x = Stream()
     primes = []
     sieve(x, primes)
-    x.extend(range(2, 30))
+    x.extend(list(range(2, 30)))
     Stream.scheduler.step()
     assert primes == [
         2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
@@ -477,7 +497,7 @@ def test_print_stream():
     # Test print_stream which is a sink object (i.e. no output).
     s = Stream()
     print_stream(s)
-    s.extend(range(2))
+    s.extend(list(range(2)))
     run()
 
 def test_sink():
@@ -491,7 +511,7 @@ def test_sink():
     s = Stream()
     output_list = []
     f(s, state=0, addend=10, output_list=output_list)
-    s.extend(range(5))
+    s.extend(list(range(5)))
     run()
     assert output_list == [0, 11, 22, 33, 44]
 
@@ -503,9 +523,91 @@ def test_source_file(filename):
             s.append(int(line))
             run()
     assert recent_values(s) == [1, 2, 3]
+
+def test_delay():
+    y = Stream(initial_value=[0]*5)
+    x = Stream()
+    @map_e
+    def f(v): return 2*v
+    f(x, y)
+    x.extend(list(range(10)))
+    run()
+    assert recent_values(y) == [
+        0, 0, 0, 0, 0, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
+
+def test_map_with_state():
+    x = Stream()
+    y = Stream()
+    @map_e
+    def f(v, state): return v+ state, state+1
+    f(x, y, state=0)
+    x.extend(list(range(5)))
+    run()
+    assert recent_values(y) == [0, 2, 4, 6, 8]
+
+def test_map_window_with_state():
+    x = Stream()
+    y = Stream()
+    @map_w
+    def f(window, state): return sum(window)+state, state+1
+    f(x, y, window_size=2, step_size=2, state=0)
+    x.extend(list(range(10)))
+    run()
+    assert recent_values(y) ==  [1, 6, 11, 16, 21]
+
+def test_map_with_keyword_arg():
+    x = Stream()
+    y = Stream()
+    @map_e
+    def f(v, k): return v+ k
+    f(x, y, k=10)
+    x.extend(list(range(5)))
+    run()
+    assert recent_values(y) == [10, 11, 12, 13, 14]
+
+def test_map_with_state_and_keyword_arg():
+    x = Stream()
+    y = Stream()
+    @map_e
+    def f(v, state, k): return v+k+state, state+1
+    @fmap_e
+    def g(v, state, k): return v+k+state, state+1
         
+    f(x, y, state=0, k=10)
+    z = g(x, state=0, k=10)
+    x.extend(list(range(5)))
+    run()
+    assert recent_values(y) == [10, 12, 14, 16, 18]
+    assert recent_values(z) == [10, 12, 14, 16, 18]
+
+def test_iot_1():
+    x = Stream()
+    y = Stream()
+    @iot_w
+    def f(v, out_stream):
+        out_stream.append(sum(v)+10)
+    f(x, window_size=2, step_size=1, out_stream=y)
+    x.extend(list(range(5)))
+    run()
+    
+def test_iot_2():
+    x = Stream()
+    y = Stream()
+    @iot_e
+    def f(v, out_stream):
+        out_stream.append(v+100)
+    f(x, out_stream=y)
+    x.extend(list(range(5)))
+    run()
+
+#------------------------------------------------------------
+#       RUN TESTS
+#------------------------------------------------------------
     
 if __name__ == '__main__':
+    test_map_with_keyword_arg()
+    test_iot_1()
+    test_iot_2()
     test_f_mul()
     test_r_mul()
     test_f_add()
@@ -523,6 +625,10 @@ if __name__ == '__main__':
     test_echo()
     test_sink()
     test_source_file('test_source_file_name.txt')
+    test_delay()
+    test_map_with_state()
+    test_map_window_with_state()
+    test_map_with_state_and_keyword_arg()
     
 
     
