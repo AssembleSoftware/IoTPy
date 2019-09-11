@@ -137,7 +137,7 @@ def primes_example_1(N):
     sieve(numbers, prime_stream)
 
     # 3. Put values into input stream.
-    numbers.extend(range(2, N))
+    numbers.extend(list(range(2, N)))
 
     return prime_stream
     
@@ -311,9 +311,9 @@ def test_2():
     x = Stream()
     primes = []
     sieve_2(x, primes)
-    x.extend(range(2, 20))
+    x.extend(list(range(2, 20)))
     Stream.scheduler.step()
-    print primes
+    print (primes)
 
 def test():
     scheduler = Stream.scheduler
@@ -329,7 +329,7 @@ def test():
     scheduler.step()
 
     # 5. Look at the output streams.
-    print recent_values(prime_stream_1)
+    print (recent_values(prime_stream_1))
 
     first_N, prime_stream_2 = primes_example_2(15)
 
@@ -337,8 +337,8 @@ def test():
     scheduler.step()
 
     # 5. Look at the output streams.
-    print first_N
-    print recent_values(prime_stream_2)
+    print (first_N)
+    print (recent_values(prime_stream_2))
     return
 
 
@@ -363,8 +363,8 @@ def sieve_step(v, state, prime_stream, out_stream):
     if state == 0:
         prime_stream.append(v)
         state = v
-        print 'In step: state ', state
-        print 'In step: out_stream ', out_stream
+        print ('In step: state ', state)
+        print ('In step: out_stream ', out_stream)
         sieve(out_stream, prime_stream)
         return _no_value, state
     else:
@@ -372,9 +372,9 @@ def sieve_step(v, state, prime_stream, out_stream):
             return v, state
 
 def sieve(in_stream, prime_stream):
-    print 'in sieve. in_stream is ', in_stream
+    print ('in sieve. in_stream is ', in_stream)
     out_stream = Stream('y')
-    print 'in sieve. out_stream is ', out_stream
+    print ('in sieve. out_stream is ', out_stream)
     map_element(sieve_step, in_stream, out_stream, state=0,
          prime_stream=prime_stream)
 
@@ -388,9 +388,9 @@ def test_sieve():
     x = Stream()
     prime_stream = Stream()
     sieve(x, prime_stream)
-    x.extend(range(2, 30))
+    x.extend(list(range(2, 30)))
     Stream.scheduler.step()
-    print recent_values(prime_stream)
+    print (recent_values(prime_stream))
 
 if __name__ == '__main__':
     test_2()

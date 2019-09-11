@@ -136,7 +136,7 @@ def primes_example_1(N):
     sieve(numbers, prime_stream)
 
     # 3. Put values into input stream.
-    numbers.extend(range(2, N))
+    numbers.extend(list(range(2, N)))
 
     return prime_stream
     
@@ -303,7 +303,7 @@ def test():
     scheduler.step()
 
     # 5. Look at the output streams.
-    print recent_values(prime_stream_1)
+    print (recent_values(prime_stream_1))
 
     first_N, prime_stream_2 = primes_example_2(15)
 
@@ -311,8 +311,8 @@ def test():
     scheduler.step()
 
     # 5. Look at the output streams.
-    print first_N
-    print recent_values(prime_stream_2)
+    print (first_N)
+    print (recent_values(prime_stream_2))
 
 if __name__ == '__main__':
     test()
