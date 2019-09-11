@@ -55,7 +55,7 @@ from stream import Stream, StreamArray
 from helper_control import _no_value, _multivalue
 from check_agent_parameter_types import *
 from recent_values import recent_values
-from Buffer import Buffer
+#from Buffer import Buffer
 
 # json is used in stream_to_json
 import json
@@ -257,7 +257,6 @@ def stream_to_queue(
         queue.put(element)
     def function_stateless_append(
             element, queue, element_function, **kw):
-        print 'in stream_to_queue. element is ', element_function(element, **kw)
         queue.put(element_function(element, **kw))
 
     def function_stateful_append(

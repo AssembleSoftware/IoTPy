@@ -7,9 +7,10 @@ import os
 sys.path.append(os.path.abspath("../core"))
 sys.path.append(os.path.abspath("../helper_functions"))
 
-from agent import Agent, InList
+from agent import Agent
 from stream import Stream, StreamArray
 from helper_control import _multivalue, _no_value
+from run import run
 from check_agent_parameter_types import *
 
 
@@ -207,7 +208,7 @@ def timed_window(
                 num_steps = 0
             else:
                 num_steps = \
-                  1 + int(timestamp_list[window_start_index] - window_end_time)/ int(step_time)
+                  1 + int(timestamp_list[window_start_index] - window_end_time) // int(step_time)
             # Slide the start and end times forward by the number of steps.
             window_start_time += num_steps * step_time
             window_end_time = window_start_time + window_duration
@@ -273,8 +274,6 @@ sys.path.append(os.path.abspath("../core"))
 from recent_values import recent_values
 
 def test_timed_zip_agents():
-    scheduler = Stream.scheduler
-
     x = Stream('x')
     y = Stream('y')
     z = Stream('z')
@@ -293,7 +292,7 @@ def test_timed_zip_agents():
 
     x.extend([[1, 'a'], [3, 'b'], [10, 'd'], [15, 'e'], [17, 'f']])
     y.extend([[2, 'A'], [3, 'B'], [9, 'D'], [20, 'E']])
-    scheduler.step()
+    run()
     assert z.recent[:z.stop] == \
       [[1, ['a', None]], [2, [None, 'A']], [3, ['b', 'B']], [9, [None, 'D']],
        [10, ['d', None]], [15, ['e', None]], [17, ['f', None]]]
@@ -302,7 +301,7 @@ def test_timed_zip_agents():
     
     x.extend([[21, 'g'], [23, 'h'], [40, 'i'], [55, 'j'], [97, 'k']])
     y.extend([[21, 'F'], [23, 'G'], [29, 'H'], [55, 'I']])
-    scheduler.step()
+    run()
     assert z.recent[:z.stop] == \
       [[1, ['a', None]], [2, [None, 'A']], [3, ['b', 'B']], [9, [None, 'D']],
        [10, ['d', None]], [15, ['e', None]], [17, ['f', None]],
@@ -315,7 +314,7 @@ def test_timed_zip_agents():
 
     x.extend([[100, 'l'], [105, 'm']])
     y.extend([[100, 'J'], [104, 'K'], [105, 'L'], [107, 'M']])
-    scheduler.step()
+    run()
     assert z.recent[:z.stop] == \
       [[1, ['a', None]], [2, [None, 'A']], [3, ['b', 'B']], [9, [None, 'D']],
        [10, ['d', None]], [15, ['e', None]], [17, ['f', None]],
@@ -330,7 +329,7 @@ def test_timed_zip_agents():
                                  ]
 
     x.extend([[106, 'n'], [110, 'o']])
-    scheduler.step()
+    run()
     assert z.recent[:z.stop] == \
       [[1, ['a', None]], [2, [None, 'A']], [3, ['b', 'B']], [9, [None, 'D']],
        [10, ['d', None]], [15, ['e', None]], [17, ['f', None]],
@@ -348,8 +347,6 @@ def test_timed_zip_agents():
     return
 
 def test_timed_window():
-    scheduler = Stream.scheduler
-
     x = Stream('x')
     y = Stream('y')
 
@@ -360,10 +357,10 @@ def test_timed_window():
         window_duration=10, step_time=10)
 
     x.extend([(1, 'a'), (8, 'b'), (12, 'c'), (14, 'd'), (32, 'e'), (50, 'f')])
-    scheduler.step()
-    print recent_values(y)
-                 
-    
+    run()
+    assert (recent_values(y) == [
+        (10, [(1, 'a'), (8, 'b')]), (20, [(12, 'c'),
+        (14, 'd')]), (40, [(32, 'e')])])
 
 
 if __name__ == '__main__':

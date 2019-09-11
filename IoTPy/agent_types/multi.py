@@ -62,7 +62,7 @@ def multi_element(func, in_streams, out_streams, state=None,
         # input stream.
         # The j-th snapshot in input_snapshots is the snapshot at the j-th
         # time slice in this list of the input streams.
-        input_snapshots = zip(*[v.list[v.start:v.stop] for v in in_lists])
+        input_snapshots = list(zip(*[v.list[v.start:v.stop] for v in in_lists]))
         # If the new input data is empty then return empty lists for
         # each output stream, and leave the state and the starting point
         # for each input stream unchanged.
@@ -89,7 +89,7 @@ def multi_element(func, in_streams, out_streams, state=None,
         # streams: each snapshot is a list with one element for each output stream.
         # zip them up to get  add_to_output_streamss where add_to_output_streams[j] is
         # a list containing the sequence of values to be added to output stream j.
-        add_to_output_streams = [list(snapshot) for snapshot in zip(*output_snapshots)]
+        add_to_output_streams = [list(snapshot) for snapshot in list(zip(*output_snapshots))]
 
         return (add_to_output_streams, state,
                 [v.start+len(input_snapshots) for v in in_lists])
@@ -244,7 +244,7 @@ def multi_window(
             # No changes
             return (output_lists, state, [in_list.start for in_list in in_lists])
     
-        num_steps = 1+(smallest_list_length - window_size)/step_size
+        num_steps = 1+(smallest_list_length - window_size)//step_size
         output_snapshots = [[]]*num_steps
     
         for i in range(num_steps):
@@ -266,7 +266,7 @@ def multi_window(
         # list of num_outwith one output for each output stream.
         # output_list is a list of num_out_streams lists. Each member of output_list
         # is a list
-        output_lists = [(output_snapshot) for output_snapshot in zip(*output_snapshots)]
+        output_lists = [(output_snapshot) for output_snapshot in list(zip(*output_snapshots))]
         return (output_lists, state, in_lists_start_values)
     # Finished transition
 

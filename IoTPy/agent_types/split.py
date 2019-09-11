@@ -477,7 +477,7 @@ def split_window(
         # num_steps is the number of window operations that can be
         # carried out with the given numbers of unprocessed elements
         # in the input streams.
-        num_steps = 1+(list_length - window_size)/step_size
+        num_steps = 1+(list_length - window_size)//step_size
         output_snapshots = [[]]*num_steps
         for i in range(num_steps):
             window = in_list.list[

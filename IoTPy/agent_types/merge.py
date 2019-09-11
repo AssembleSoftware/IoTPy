@@ -120,7 +120,7 @@ def zip_map(
         # input_snapshots is a list of snapshots.
         # Each snapshot is a list containing one element for each
         # input stream.
-        input_snapshots = zip(*[v.list[v.start:v.stop] for v in in_lists])
+        input_snapshots = list(zip(*[v.list[v.start:v.stop] for v in in_lists]))
         # If the new input data is empty then return empty lists for
         # each output stream, and leave the state and the starting point
         # for each input stream unchanged.
@@ -457,7 +457,7 @@ def merge_window(
                     [in_list.start for in_list in in_lists])
 
         # There is enough input for at least one step.
-        num_steps = 1+(smallest_list_length - window_size)/step_size
+        num_steps = 1+(smallest_list_length - window_size)//step_size
         output_list = [[]]*num_steps
 
         for i in range(num_steps):
@@ -537,7 +537,7 @@ def merge_multiple_windows(
             # num_steps_list[index] is the number of steps that can be
             # taken based only on the stream: in_streams[index].
             num_steps_list[index] = (1 +
-                                (list_length - window_sizes[index])/
+                                (list_length - window_sizes[index])//
                                 step_sizes[index])
         # num_steps is a positive integer. It is the number of steps
         # that can be taken based on all the input streams.

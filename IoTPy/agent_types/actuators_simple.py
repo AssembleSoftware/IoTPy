@@ -10,7 +10,7 @@ def print_from_queue(q):
             # exit loop
             return
         else:
-            print str(v)
+            print (str(v))
 
 class queue_to_file(object):
     """

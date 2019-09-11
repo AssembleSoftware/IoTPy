@@ -483,7 +483,7 @@ def map_window(
             return ([output_list], state, [in_list.start])
 
         # There is enough input data for at least one step.
-        num_steps = int(1+(list_length - window_size)/step_size)
+        num_steps = int(1+(list_length - window_size)//step_size)
         output_list = [[]]*num_steps
         for i in range(num_steps):
             window = in_list.list[
@@ -541,7 +541,7 @@ def map_window_list(
             return ([output_list], state, [in_list.start])
 
         # There is enough input data for at least one step.
-        num_steps = int(1+(list_length - window_size)/step_size)
+        num_steps = int(1+(list_length - window_size)//step_size)
         output_list = [[]]*num_steps
         for i in range(num_steps):
             window = in_list.list[
@@ -646,7 +646,7 @@ def timed_window(
                 num_steps = 0
             else:
                 num_steps = \
-                  1 + int(timestamp_list[window_start_index] - window_end_time)/ int(step_time)
+                  1 + int(timestamp_list[window_start_index] - window_end_time)// int(step_time)
             # Slide the start and end times forward by the number of steps.
             window_start_time += num_steps * step_time
             window_end_time = window_start_time + window_duration
