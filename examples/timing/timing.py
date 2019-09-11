@@ -10,7 +10,7 @@ offset from the local computer clock.
 (2) Wrap these functions using the source_func_to_stream wrapper to get an
 source agent that generates a stream of offsets or corrected times.
 (3) Make processes using these sources by using the wrapper
-                    single_process_single_source
+                    run_single_process_single_source
 which makes a process consisting of:
 (a) the single source agent executing in its own thread and
 (b) a computational network of agents executing in its own thread. In
@@ -29,7 +29,7 @@ agents are created in two steps:
   services in different ways, e.g., use the max or the median value.
   (b) Wrap these terminating functions using the source_func_to_stream
   wrapper to create agents that execute in their own threads.
-(3) Make processes using the wrapper single_process_single_source;
+(3) Make processes using the wrapper run_single_process_single_source;
 test the processes.
 (4) Tests of the processes.
 
@@ -51,6 +51,7 @@ from sink import sink_element
 from source import source_func_to_stream
 # multicore is in multiprocessing
 from multicore import run_single_process_single_source
+from basics import map_w
 
 from threading import Lock
 # math is used for calculating statistics such as median
@@ -257,8 +258,8 @@ def set_wiener_process_parameters_and_get_time(
     wiener_process_time.set_anchor_times(
         local_anchor_time=local_t[-1],
         anchor_offset=offset[-1])
-    print 'Wiener Process average rate, mu is ', mu
-    print 'Wiener Process standard deviation rate, sigma is ', sigma
+    print ('Wiener Process average rate, mu is ', mu)
+    print ('Wiener Process standard deviation rate, sigma is ', sigma)
     return wiener_process_time.get_corrected_time()
 
 
@@ -612,7 +613,7 @@ num_steps=10
 # The three steps for creating the process are:
 #     (1) Define the source: source()
 #     (2) Define the computational network: compute()
-#     (3) Call single_process_single_source()
+#     (3) Call run_single_process_single_source()
 #
 # In many of the examples, the computational network consists of a
 # single sink, print_stream(), which prints a stream. 
@@ -627,10 +628,13 @@ def process_offsets_from_ntp_server(
         return offsets_from_ntp_server(
             out_stream, ntp_server, time_interval, num_steps)
 
+    def compute_func(in_streams, out_streams):
+        print_stream(in_streams[0])
+
     # Wrapper that creates a network of two agents: source and
     # print_stream. 
-    single_process_single_source(
-        source_func=source, compute_func=print_stream)
+    run_single_process_single_source(
+        source_func=source, compute_func=compute_func)
 
 #------------------------------------------------------------
 # PROCESS CLOCK OFFSET FROM THE FIRST FUNCTIONING NTP SERVER
@@ -642,10 +646,13 @@ def process_offsets_from_first_ntp_server(
         return offsets_from_first_ntp_server(
             out_stream, list_of_ntp_servers, time_interval, num_steps)
 
+    def compute_func(in_streams, out_streams):
+        print_stream(in_streams[0])
+
     # Wrapper that creates a network of two agents: source and
     # print_stream. 
-    single_process_single_source(
-        source_func=source, compute_func=print_stream)
+    run_single_process_single_source(
+        source_func=source, compute_func=compute_func)
 
 #------------------------------------------------------------
 # PROCESS TIME AND OFFSET FROM FIRST FUNCTIONING NTP SERVER
@@ -657,10 +664,13 @@ def process_time_and_offset(
         return times_and_offsets_from_first_ntp_server(
             out_stream, list_of_ntp_servers, time_interval, num_steps)
 
+    def compute_func(in_streams, out_streams):
+        print_stream(in_streams[0])
+
     # Wrapper that creates a network of two agents: source and
     # print_stream. 
-    single_process_single_source(
-        source_func=source, compute_func=print_stream)
+    run_single_process_single_source(
+        source_func=source, compute_func=compute_func)
 
 #------------------------------------------------------------
 # PROCESS OFFSET FROM AVERAGE OF NTP SERVERS
@@ -672,10 +682,13 @@ def process_offsets_from_average_of_ntp_servers(
         return offsets_from_average_of_ntp_servers(
             out_stream, list_of_ntp_servers, time_interval, num_steps)
 
+    def compute_func(in_streams, out_streams):
+        print_stream(in_streams[0])
+
     # Wrapper that creates a network of two agents: source and
     # print_stream. 
-    single_process_single_source(
-        source_func=source, compute_func=print_stream)
+    run_single_process_single_source(
+        source_func=source, compute_func=compute_func)
 
 #------------------------------------------------------------
 # PROCESS OFFSETS FROM MEDIAN OF NTP SERVERS
@@ -687,10 +700,13 @@ def process_offsets_from_median_of_ntp_servers(
         return offsets_from_median_of_ntp_servers(
             out_stream, list_of_ntp_servers, time_interval, num_steps)
 
+    def compute_func(in_streams, out_streams):
+        print_stream(in_streams[0])
+
     # Wrapper that creates a network of two agents: source and
     # print_stream. 
-    single_process_single_source(
-        source_func=source, compute_func=print_stream)
+    run_single_process_single_source(
+        source_func=source, compute_func=compute_func)
 
 #------------------------------------------------------------
 # PROCESS OFFSETS FROM NTP SERVER, AVERAGED OVER WINDOW
@@ -699,6 +715,7 @@ window_size = 3
 step_size = 1
 def process_offsets_average_over_window(
         ntp_server, time_interval, num_steps, window_size, step_size):
+    @map_w
     def average_of_list(a_list):
         if a_list:
             # Remove None elements from the list
@@ -711,18 +728,20 @@ def process_offsets_average_over_window(
         return offsets_from_ntp_server(
             out_stream, ntp_server, time_interval, num_steps)
 
-    def compute(in_stream):
+    def compute_func(in_streams, out_streams):
         offset_average_stream = Stream('Offsets averaged over window')
-        map_window(
-            func=average_of_list, in_stream=in_stream,
-            out_stream=offset_average_stream, 
-            window_size=window_size, step_size=step_size)
+        average_of_list(in_stream=in_streams[0], out_stream=offset_average_stream,
+                        window_size=window_size, step_size=step_size)
+        ## map_window(
+        ##     func=average_of_list, in_stream=in_streams[0],
+        ##     out_stream=offset_average_stream, 
+        ##     window_size=window_size, step_size=step_size)
         print_stream(offset_average_stream)
 
     # Wrapper that creates a network of two agents: source and
     # compute. 
-    single_process_single_source(
-        source_func=source, compute_func=compute)
+    run_single_process_single_source(
+        source_func=source, compute_func=compute_func)
 
 
 #------------------------------------------------------------
@@ -739,15 +758,15 @@ def process_corrected_times(ntp_server, time_interval, num_steps):
         return offsets_from_ntp_server(
             out_stream, ntp_server, time_interval, num_steps)
 
-    def compute(in_stream):
+    def compute_func(in_streams, out_streams):
         corrected_times = Stream('Corrected times')
-        map_element(func=f, in_stream=in_stream, out_stream=corrected_times)
+        map_element(func=f, in_stream=in_streams[0], out_stream=corrected_times)
         print_stream(in_stream=corrected_times)
 
     # Wrapper that creates a network of two agents: source and
     # compute. 
-    single_process_single_source(
-        source_func=source, compute_func=compute)
+    run_single_process_single_source(
+        source_func=source, compute_func=compute_func)
 
     ## # ----------------------------------------------------------------
     ## #
@@ -782,44 +801,44 @@ if __name__ == '__main__':
     num_steps=3
     window_size=2
     step_size=1
-    print 'The scheduler waits for the input queue to become empty.'
-    print 'This may take some time.'
-    print 'Expect to see "input queue empty" a few times.'
+    print ('The scheduler waits for the input queue to become empty.')
+    print ('This may take some time.')
+    print ('Expect to see "input queue empty" a few times.')
     print
-    print '-----------------------------------------------------'
+    print ('-----------------------------------------------------')
     print
-    print 'RUNNING TESTS'
+    print ('RUNNING TESTS')
     print
-    print 'PROCESS OFFSETS FROM SINGLE NTP SERVER'
+    print ('PROCESS OFFSETS FROM SINGLE NTP SERVER')
     process_offsets_from_ntp_server(
         ntp_server, time_interval, num_steps)
-    ## print '-----------------------------------------------------'
-    ## print
-    ## print 'PROCESS OFFSETS FROM FIRST NTP SERVER'
-    ## process_offsets_from_first_ntp_server(
-    ##     list_of_ntp_servers, time_interval, num_steps)
-    ## print '-----------------------------------------------------'
-    ## print
-    ## print 'PROCESS TIME AND OFFSET OFFSET STREAM'
-    ## print 'OUTPUT IS (time, offset)'
-    ## process_time_and_offset(
-    ##     list_of_ntp_servers, time_interval, num_steps)
-    ## print '-----------------------------------------------------' 
-    ## print
-    ## print 'PROCESS OFFSETS FROM AVERAGE OF NTP SERVERS'
-    ## process_offsets_from_average_of_ntp_servers(
-    ##     list_of_ntp_servers, time_interval, num_steps)
-    ## print '-----------------------------------------------------'
-    ## print
-    ## print 'PROCESS OFFSETS FROM MEDIAN OF NTP SERVERS'
-    ## process_offsets_from_median_of_ntp_servers(
-    ##     list_of_ntp_servers, time_interval, num_steps)
-    ## print '-----------------------------------------------------'
-    ## ## print
-    ## print 'PROCESS OFFSETS AVERAGE OVER WINDOW'
-    ## process_offsets_average_over_window(
-    ##     ntp_server, time_interval, num_steps, window_size, step_size)
-    ## print '-----------------------------------------------------'
-    ## print
-    ## print "PROCESS CORRECTED TIMES"
-    ## process_corrected_times(ntp_server, time_interval, num_steps)
+    print ('-----------------------------------------------------')
+    print
+    print ('PROCESS OFFSETS FROM FIRST NTP SERVER')
+    process_offsets_from_first_ntp_server(
+        list_of_ntp_servers, time_interval, num_steps)
+    print ('-----------------------------------------------------')
+    print
+    print ('PROCESS TIME AND OFFSET OFFSET STREAM')
+    print ('OUTPUT IS (time, offset)')
+    process_time_and_offset(
+        list_of_ntp_servers, time_interval, num_steps)
+    print ('-----------------------------------------------------')
+    print
+    print ('PROCESS OFFSETS FROM AVERAGE OF NTP SERVERS')
+    process_offsets_from_average_of_ntp_servers(
+        list_of_ntp_servers, time_interval, num_steps)
+    print ('-----------------------------------------------------')
+    print
+    print ('PROCESS OFFSETS FROM MEDIAN OF NTP SERVERS')
+    process_offsets_from_median_of_ntp_servers(
+        list_of_ntp_servers, time_interval, num_steps)
+    print ('-----------------------------------------------------')
+    print
+    print ('PROCESS OFFSETS AVERAGE OVER WINDOW')
+    process_offsets_average_over_window(
+        ntp_server, time_interval, num_steps, window_size, step_size)
+    print ('-----------------------------------------------------')
+    print
+    print ('PROCESS CORRECTED TIMES')
+    process_corrected_times(ntp_server, time_interval, num_steps)

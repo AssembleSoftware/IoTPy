@@ -5,7 +5,7 @@ sys.path.append(os.path.abspath("../../IoTPy/core"))
 sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
 sys.path.append(os.path.abspath("../../IoTPy/multiprocessing"))
 from source import source_func_to_stream
-from multicore import single_process_single_source
+from multicore import run_single_process_single_source
 from sink import sink_element
 
 import time
@@ -125,9 +125,9 @@ list_of_ntp_servers =  [
 # sink agent. Create the sink agent by using the encapsulator
 # sink_element to encapsulate terminating function
 # print_output.
-def h(in_stream):
-    def print_output(v): print v
-    sink_element(func=print_output, in_stream=in_stream)
+def h(in_streams, out_streams):
+    def print_output(v): print (v)
+    sink_element(func=print_output, in_stream=in_streams[0])
 
 
 def test_0():
@@ -138,7 +138,7 @@ def test_0():
             time_interval=0.1, num_steps=3,
             ntp_server=ntp_server
             )
-    single_process_single_source(source_func=g, compute_func=h)
+    run_single_process_single_source(source_func=g, compute_func=h)
 
 def test_1():
     def g(out_stream):
@@ -148,7 +148,7 @@ def test_1():
             time_interval=0.1, num_steps=3,
             list_of_ntp_servers=list_of_ntp_servers
             )
-    single_process_single_source(source_func=g, compute_func=h)
+    run_single_process_single_source(source_func=g, compute_func=h)
 
 
 def test_2():
@@ -159,15 +159,15 @@ def test_2():
             time_interval=0.1, num_steps=3,
             list_of_ntp_servers=list_of_ntp_servers
             )
-    single_process_single_source(source_func=g, compute_func=h)
+    run_single_process_single_source(source_func=g, compute_func=h)
 
 if __name__ == '__main__':
-    print 'starting test_0'
+    print ('starting test_0')
     test_0()
     print
-    print 'starting test_1'
+    print ('starting test_1')
     test_1()
     print
-    print 'starting test_2'
+    print ('starting test_2')
     test_2()
     print
