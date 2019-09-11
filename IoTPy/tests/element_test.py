@@ -21,6 +21,7 @@ from op import map_element, map_element_f
 from op import filter_element, filter_element_f
 from op import map_list, map_list_f
 from op import timed_window
+from basics import fmap_e, map_e
 
 #------------------------------------------------------------------------------------------------
 #                                     A SIMPLE EXAMPLE TEST
@@ -43,7 +44,7 @@ def test_example_1():
 
     # Execute a step
     # Put test values in the input streams.
-    x.extend(range(3))
+    x.extend(list(range(3)))
     # Execute a step
     run()
     # Look at recent values of output streams.
@@ -78,7 +79,7 @@ def test_example_2():
 
     # Execute a step
     # Put test values in the input streams.
-    x.extend(range(5))
+    x.extend(list(range(5)))
     # Execute a step
     run()
     # Look at recent values of output streams.
@@ -187,7 +188,7 @@ def test_1():
         return out_stream_element
     map_element(func=f, in_stream=x, out_stream=y)
 
-    x.extend(range(5))
+    x.extend(list(range(5)))
     run()
     assert recent_values(y) == [0, 2, 4, 6, 8]
       
@@ -204,7 +205,7 @@ def test_2():
 
     map_element(func=multiply_and_add, in_stream=x, out_stream=y,
                 multiplicand=2, addend=10)
-    x.extend(range(5))
+    x.extend(list(range(5)))
     run()
     assert recent_values(y) == [10, 12, 14, 16, 18]
 
@@ -223,7 +224,7 @@ def test_3():
                 out_stream_element = _no_value
         return out_stream_element
     map_element(func=f, in_stream=x, out_stream=y, threshold=5)
-    x.extend(range(20))
+    x.extend(list(range(20)))
     run()
     assert recent_values(y) == [0, 1, 2, 3, 4]
     # If x is [0, 1, 2, 3, 4,....20] then y is [0, 1, 2, 3, 4]
@@ -433,7 +434,7 @@ def test_element_simple():
     # PUT TEST VALUES INTO INPUT STREAMS
     #----------------------------------------------------------------
     #   Put test values into streams x, x0 and n.        
-    x.extend(range(3))
+    x.extend(list(range(3)))
     x0.extend([0, 1, 3, 3, 6, 8])
     n.append(0)
     
@@ -469,7 +470,7 @@ def test_element_simple():
 
         
     #----------------------------------------------------------------    
-    x.extend(range(3, 5, 1))
+    x.extend(list(range(3, 5, 1)))
     run()
     assert recent_values(x) == [0, 1, 2, 3, 4]
     assert recent_values(y) == [0, 2, 4, 6, 8]
@@ -535,8 +536,6 @@ def test_element_simple():
     return
 
 def test_timed_window():
-    scheduler = Stream.scheduler
-
     x = Stream('x')
     y = Stream('y')
 
@@ -545,12 +544,21 @@ def test_timed_window():
     timed_window(
         func=f, in_stream=x, out_stream=y,
         window_duration=10, step_time=10)
-
-    x.extend([(1, 'a'), (8, 'b'), (12, 'c'), (14, 'd'), (32, 'e'), (50, 'f')])
+    x.extend([(1, 'a'), (8, 'b'), (12, 'c')])
     run()
-    assert recent_values(y) == [
-        (10, [(1, 'a'), (8, 'b')]), (20, [(12, 'c'),
-        (14, 'd')]), (40, [(32, 'e')])]
+    assert(recent_values(y) == [(10, [(1, 'a'), (8, 'b')])])
+
+    x.extend([(14, 'd'), (36, 'e'), (43, 'g'), (75, 'h')])
+    run()
+    assert(recent_values(y) == [(10, [(1, 'a'), (8, 'b')]),
+                                 (20, [(12, 'c'), (14, 'd')]),
+                                 (40, [(36, 'e')]), (50, [(43, 'g')])])
+
+    x.extend([(79, 'i'), (101, 'j')])
+    run()
+    assert(recent_values(y) == [
+        (10, [(1, 'a'), (8, 'b')]), (20, [(12, 'c'), (14, 'd')]),
+        (40, [(36, 'e')]), (50, [(43, 'g')]), (80, [(75, 'h'), (79, 'i')])])
 
     return
 
@@ -562,15 +570,14 @@ def test_map_list():
     w = Stream('w')
     map_list(func = lambda v: v, in_stream=x, out_stream=y)
     def f(lst):
-        return filter(lambda v: v%2, lst)
+        return list(filter(lambda v: v%2, lst))
     def g(lst):
         return [v*2 if v%2 else v/2 for v in lst]
     map_list(f, x, z)
     map_list(g, x, w)
 
-    x_values = range(10)
+    x_values = list(range(10))
     x.extend(x_values)
-
     run()
     assert recent_values(y) == recent_values(x)
     assert recent_values(z) == f(x_values)
@@ -605,25 +612,151 @@ def test_class():
     y = Stream()
     eg = example(multiplicand=2)
     map_element(func=eg.step, in_stream=x, out_stream=y)
-    x.extend(range(5))
+    x.extend(list(range(5)))
     run()
     assert y.recent[:y.stop] == [0, 2, 5, 9, 14]
+
+def test_halt_agent():
+    def double(v): return v*2
+    x = Stream('x')
+    y = Stream('y')
+    a = map_element(func=double, in_stream=x, out_stream=y)
+    x.extend(list(range(5)))
+    run()
+    assert recent_values(y) == [0, 2, 4, 6, 8]
+    a.halt()
+    run()
+    assert recent_values(y) == [0, 2, 4, 6, 8]
+    x.extend(list(range(10,15)))
+    run()
+    assert recent_values(y) == [0, 2, 4, 6, 8]
+    assert recent_values(x) == list(range(5)) + list(range(10,15))
+    ##
+    ## # What follows is nondeterministic and so may fail
+    ## # the test.
+    ## a.restart()
+    ## run()
+    ## assert recent_values(y) == [0, 2, 4, 6, 8]
+    ## run()
+    ## assert recent_values(y) == [0, 2, 4, 6, 8]
+    ## x.extend(list(range(100,101)))
+    ## run()
+    ## assert recent_values(y) == [
+    ##     0, 2, 4, 6, 8, 20, 22, 24, 26, 28, 200]
+
+def test_initial_value():
+    def double(v): return v*2
+    x = Stream('x')
+    y = Stream(name='y', initial_value=[0]*5)
+    a = map_element(func=double, in_stream=x, out_stream=y)
+    x.extend(list(range(5)))
+    run()
+    assert recent_values(y) == [0]*5 + [0, 2, 4, 6, 8]
+
+def test_multiple_relations():
+    def double(v): return v*2
+    def add10(v): return v+10
+    x = Stream('x')
+    y = Stream('y')
+    z = Stream('z')
+    a = map_element(func=add10, in_stream=z, out_stream=y)
+    b = map_element(func=double, in_stream=x, out_stream=y)
+    c = map_element(func=double, in_stream=x, out_stream=y)
+    x.extend(list(range(5)))
+    z.extend(list(range(100, 106)))
+    run()
+    ## # Nondeterministic.
+    ## assert recent_values(y) == [
+    ##     0, 2, 4, 6, 8, 0, 2, 4, 6, 8,
+    ##     110, 111, 112, 113, 114, 115]
+
+def test_multiple_relations_2():
+    @map_e
+    def double(v): return v*2
+    x = Stream('x', [10, 11])
+    y = Stream('y')
+    double(x, y)
+    double(x, y)
+    x.extend(list(range(5)))
+    run()
+
+    ## # Nondeterministic.
+    ## assert recent_values(y) == [
+    ##     0, 2, 4, 6, 8, 0, 2, 4, 6, 8,
+    ##     110, 111, 112, 113, 114, 115]
+
+def test_multiple_functions():
+    @fmap_e
+    def double(v): return v*2
+    @fmap_e
+    def add10(v): return v+10
+    x = Stream('x')
+    y = double(x)
+    y = add10(x)
+    x.extend(list(range(5)))
+    run()
+    assert recent_values(y) == [10, 11, 12, 13, 14]
     
 
+def test_class():
+    class C(object):
+        def __init__(self):
+            return
+        def f(self, value):
+            if value > 0:
+                return self.pos(value)
+            else:
+                return self.neg(value)
+        def pos(self, value):
+            return value * value
+        def neg(self, value):
+            return value + value
+
+    s = Stream('s')
+    t = Stream('t')
+    c = C()
+    @map_e
+    def g(v): return c.f(v)
+    g(in_stream=s, out_stream=t)
+    s.extend(list(range(-4, 4)))
+    run()
+    assert (recent_values(t) == [
+        -8, -6, -4, -2, 0, 1, 4, 9])
+    
+def test_None_in_stream():
+    x = Stream('x', discard_None=False)
+    y = Stream(name='y', discard_None=False)
+    z = Stream(name='z')
+    map_element(lambda v: v, x, y)
+    map_element(lambda v: v, x, z)
+    x.extend([0, None, 1, None, 2, _no_value, 3])
+    run()
+    assert (recent_values(y) == [0, None, 1, None, 2, 3])
+    assert (recent_values(z) == [0, 1, 2, 3])
+            
+        
+
 def test_element():
-    test_1()
-    test_2()
-    test_3()
-    test_4()
-    test_example_1()
-    test_example_2()
-    test_example_3()
-    test_example_4()
-    test_element_simple()
-    test_timed_window()
-    test_map_list()
-    test_stream_arrays_2()
-    test_class()
+    ## test_1()
+    ## test_2()
+    ## test_3()
+    ## test_4()
+    ## test_example_1()
+    ## test_example_2()
+    ## test_example_3()
+    ## test_example_4()
+    ## test_element_simple()
+    ## test_timed_window()
+    ## test_map_list()
+    ## test_stream_arrays_2()
+    ## test_class()
+    ## test_halt_agent()
+    ## test_initial_value()
+    ## test_multiple_relations()
+    ## test_multiple_functions()
+    ## test_multiple_relations_2()
+    ## test_class()
+    test_None_in_stream()
     print ('TEST OF OP (ELEMENT) IS SUCCESSFUL')
     
 if __name__ == '__main__':

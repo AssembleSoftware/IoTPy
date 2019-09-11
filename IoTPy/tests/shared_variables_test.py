@@ -317,7 +317,7 @@ def stop_agent_when_enough_elements(N):
     # contain additional values. For example, if N = 3 then numbers
     # could be 0, 1, 2 or 0, 1, 2, 3, 4, 5.
     return numbers
-    assert range(N) == recent_values(numbers)[:N]
+    assert list(range(N)) == recent_values(numbers)[:N]
 
 def test_shared_variables():
     # EXAMPLE 1: SORT
@@ -335,9 +335,9 @@ def test_shared_variables():
     # EXAMPLE 3: STOP WHEN AGENT AFTER N ELEMENTS GENERATED.
     N = 3
     numbers = stop_agent_when_enough_elements(N)
-    assert range(N) == recent_values(numbers)[:N]
+    assert list(range(N)) == recent_values(numbers)[:N]
 
-    print 'TEST OF SHARED VARIABLES IS SUCCESSFUL!'
+    print ('TEST OF SHARED VARIABLES IS SUCCESSFUL!')
 
 if __name__ == '__main__':
     test_shared_variables()

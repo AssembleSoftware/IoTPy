@@ -122,7 +122,7 @@ def stream_test():
     u = Stream('u')
     v = Stream('v')
     # Add elements 0, 1, 2, 3 to stream u.
-    u.extend(range(4))
+    u.extend(list(range(4)))
     # Increase u.stop to account for the element that has just been
     # added to u.
     assert u.stop == 4

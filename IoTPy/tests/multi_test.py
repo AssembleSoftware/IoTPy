@@ -35,8 +35,8 @@ def test_multi():
 
     multi_element(f, [u,v], [x,y])
 
-    u.extend(range(8, 18, 2))
-    v.extend(range(10, 14, 1))
+    u.extend(list(range(8, 18, 2)))
+    v.extend(list(range(10, 14, 1)))
     scheduler.step()
     assert recent_values(x) == [10, 11, 12, 14]
     assert recent_values(y) == [18, 21, 24, 27]
@@ -50,8 +50,8 @@ def test_multi():
 
     x, y = multi_element_f(f, [u,v], num_out_streams=2)
 
-    u.extend(range(8, 18, 2))
-    v.extend(range(10, 14, 1))
+    u.extend(list(range(8, 18, 2)))
+    v.extend(list(range(10, 14, 1)))
     scheduler.step()
     assert recent_values(x) == [10, 11, 12, 14]
     assert recent_values(y) == [18, 21, 24, 27]
@@ -67,7 +67,7 @@ def test_multi():
 
     multi_element(f, [u], [x])
     
-    u.extend(range(5))
+    u.extend(list(range(5)))
     scheduler.step()
     assert recent_values(x) == [0, 2, 4, 6, 8]
 
@@ -136,14 +136,14 @@ def test_multi():
         out_streams=[y,z], window_size=2, step_size=2,
         state=None, name='multi_window_agent')
     
-    w.extend(range(10))
-    x.extend(range(100, 120, 2))
+    w.extend(list(range(10)))
+    x.extend(list(range(100, 120, 2)))
     
     scheduler.step()
     assert recent_values(y) == [203, 215, 227, 239, 251]
     assert recent_values(z) == [103, 109, 115, 121, 127]
 
-    print "TEST OF MULTI IS SUCCESSFUL"
+    print ("TEST OF MULTI IS SUCCESSFUL")
 
 if __name__ == '__main__':
     test_multi()

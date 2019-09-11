@@ -11,6 +11,9 @@ from stream import _no_value, _multivalue
 from check_agent_parameter_types import *
 from recent_values import recent_values
 from sink import *
+from Buffer import Buffer
+
+
 
 def test_sink():
     import numpy as np
@@ -24,14 +27,14 @@ def test_sink():
     ##     return state+1 # next state
     ## s = Stream()
     ## sink(print_index, s, 0, delimiter=':')
-    ## s.extend(range(100,105))
+    ## s.extend(list(range(100,105)))
 
     ## s = Stream()
     ## def print_index(v, state, delimiter):
     ##     print str(state) + delimiter + str(v)
     ##     return state+1 # next state
     ## sink(print_index, s, 0, delimiter=':')
-    ## s.extend(range(100,105))
+    ## s.extend(list(range(100,105)))
     # Set up parameters for call to stream_to_list
     ## ----------------------------------------------
     ## # Finished examples from AssembleSoftware website
@@ -54,12 +57,12 @@ def test_sink():
     sink(func=print_index, in_stream=s_array, state=0,
          print_list=print_list_for_array)
     
-    s.extend(range(100,103))
+    s.extend(list(range(100,103)))
     s_array.extend(np.arange(100, 103))
     scheduler.step()
     assert print_list == ['0:100', '1:101', '2:102']
     assert print_list_for_array == print_list
-    s.extend(range(200, 203))
+    s.extend(list(range(200, 203)))
     scheduler.step()
     assert print_list == ['0:100', '1:101', '2:102',
                           '3:200', '4:201', '5:202']
@@ -74,7 +77,7 @@ def test_sink():
     stream_to_list(input_stream, output_list)
     stream_to_list(input_stream_array, output_list_array)
     # A test
-    a_test_list = range(100, 105)
+    a_test_list = list(range(100, 105))
     a_test_array = np.arange(100, 105)
     input_stream.extend(a_test_list)
     input_stream_array.extend(a_test_array)
@@ -128,7 +131,7 @@ def test_sink():
     stream_to_list(in_stream=ss_array, target_list=l_array, 
                    element_function=h, state=0,
                    multiplier=2, addend=100 )
-    test_list = range(5)
+    test_list = list(range(5))
     ss.extend(test_list)
     ss_array.extend(np.array(test_list))
     scheduler.step()
@@ -174,7 +177,7 @@ def test_sink():
     d_list = []
     sink(p_s, in_stream_sink_with_state, state=0,
          lst=d_list, stream_name='s')
-    in_stream_sink_with_state.extend(range(2))
+    in_stream_sink_with_state.extend(list(range(2)))
     scheduler.step()
     assert c_list == [['s', 0], ['s', 1]]
     assert d_list == c_list
@@ -237,22 +240,27 @@ def test_sink():
     stream_to_file(stm, 'test2.txt', lambda v: 2*v)
     stream_to_file(stm, 'test3.txt', f_stateful, state=0)
 
-    import Queue
-    queue_1 = Queue.Queue()
-    queue_2 = Queue.Queue()
-    queue_3 = Queue.Queue()
+    
+    is_py2 = sys.version[0] == '2'
+    if is_py2:
+        import Queue as queue
+    else:
+        import queue as queue
+    queue_1 = queue.Queue()
+    queue_2 = queue.Queue()
+    queue_3 = queue.Queue()
     stream_to_queue(stm, queue_1)
     stream_to_queue(stm, queue_2, lambda v: 2*v)
     stream_to_queue(stm, queue_3, f_stateful, 0)
 
-    stm.extend(range(5))
+    stm.extend(list(range(5)))
     scheduler.step()
     assert target_stream_to_list_stateful == [0, 1, 3, 6, 10]
     assert target_stream_to_list_stateful_2 == [0, 0, 2, 9, 24]
     assert side_effect_list_0 == [0, 2, 4, 6, 8]
     assert side_effect_list_1 == [10, 11, 12, 13, 14]
     assert side_effect_list_0 == side_effect_list_2
-    assert target_stream_to_list_simple == range(5)
+    assert target_stream_to_list_simple == list(range(5))
 
     with open('test1.txt') as the_file:
         file_contents_integers = [int(v) for v in (the_file.readlines())]
@@ -300,7 +308,7 @@ def test_sink():
     def h(v, state, multiplier, addend):
         return v*multiplier+addend+state, v+state
     ss = Stream()
-    queue_4 = Queue.Queue()
+    queue_4 = queue.Queue()
     stream_to_queue(ss, queue_4, h, 0, multiplier=2, addend=100)
     test_list = [3, 23, 14]
     ss.extend(test_list)
@@ -325,9 +333,9 @@ def test_sink():
 
     # Another test with state and keyword arguments
     ss = Stream()
-    queue_5 = Queue.Queue()
+    queue_5 = queue.Queue()
     stream_to_queue(ss, queue_5, h, 0, multiplier=2, addend=100)
-    test_list = range(5)
+    test_list = list(range(5))
     ss.extend(test_list)
     scheduler.step()
     queue_contents = []
@@ -339,11 +347,11 @@ def test_sink():
     s = Stream()
     buf = Buffer(max_size=10)
     stream_to_buffer(s, buf)
-    test_list = range(5)
+    test_list = list(range(5))
     s.extend(test_list)
     scheduler.step()
     assert buf.get_all() == test_list
-    next_test = range(5, 10, 1)
+    next_test = list(range(5, 10, 1))
     s.extend(next_test)
     scheduler.step()
     assert buf.read_all() == next_test
@@ -355,7 +363,7 @@ def test_sink():
         print_list.extend(lst)
     sink_window(
         func=f, in_stream=s, window_size=4, step_size=2)
-    s.extend(range(10))
+    s.extend(list(range(10)))
     scheduler.step()
     assert print_list == [
         0, 1, 2, 3, 2, 3, 4, 5, 4,
@@ -366,9 +374,9 @@ def test_sink():
     def f(lst):
         print_list.extend(lst)
     sink_list(func=f, in_stream=s)
-    s.extend(range(10))
+    s.extend(list(range(10)))
     Stream.scheduler.step()
-    assert print_list == range(10)
+    assert print_list == list(range(10))
 
 
     import numpy as np
@@ -379,7 +387,7 @@ def test_sink():
     sink_list(func=f, in_stream=t)
     t.extend(np.arange(10))
     Stream.scheduler.step()
-    assert print_list == range(10)
+    assert print_list == list(range(10))
     print ('TEST OF SINK IS SUCCESSFUL')
     
     

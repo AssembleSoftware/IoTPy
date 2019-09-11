@@ -139,7 +139,7 @@ def test_list():
     #-------------------------------------------------------------------
     # Test many
     def f_many(list_of_lists):
-        snapshots = zip(*list_of_lists)
+        snapshots =list(zip(*list_of_lists))
         return [[max(snapshot) for snapshot in snapshots],
                 [min(snapshot) for snapshot in snapshots]]
     multi_agent = multi_list(
@@ -150,13 +150,13 @@ def test_list():
 
     #-------------------------------------------------------------------
     #-------------------------------------------------------------------
-    x.extend(range(5))
+    x.extend(list(range(5)))
     run()
-    assert recent_values(x) == range(5)
+    assert recent_values(x) == list(range(5))
     assert recent_values(y) == [0, 2, 4, 6, 8]
     assert recent_values(z) == [0, 3, 6, 9, 12]
     assert recent_values(v) == []
-    assert out_list == range(5)
+    assert out_list == list(range(5))
     assert out_list == out_list_stream
     assert recent_values(s) == []
     assert recent_values(r) == [1, 2, 3, 4, 5]
@@ -184,11 +184,11 @@ def test_list():
     w.append(0)
     run()
 
-    assert recent_values(x) == range(5)
+    assert recent_values(x) == list(range(5))
     assert recent_values(y) == [0, 2, 4, 6, 8]
     assert recent_values(z) == [0, 3, 6, 9, 12]
     assert recent_values(v) == [10, 13, 16, 19, 22]
-    assert out_list == range(5)
+    assert out_list == list(range(5))
     assert recent_values(s) == []
     assert recent_values(r) == [1, 2, 3, 4, 5]
     assert recent_values(t) == [0, 2, 4, 6, 8]
@@ -223,11 +223,11 @@ def test_list():
 
     u.extend([96, 95])
     run()
-    assert recent_values(x) == range(5)
+    assert recent_values(x) == list(range(5))
     assert recent_values(y) == [0, 2, 4, 6, 8]
     assert recent_values(z) == [0, 3, 6, 9, 12]
     assert recent_values(v) == [10, 13, 16, 19, 22]
-    assert out_list == range(5)
+    assert out_list == list(range(5))
     assert recent_values(s) == [10, 16, 20, 40, 100]
     assert recent_values(r) == [1, 2, 3, 4, 5]
     assert recent_values(t) == [0, 2, 4, 6, 8]
@@ -750,7 +750,7 @@ def test_list():
     assert out_stream_map_kwargs_stream.recent[:out_stream_map_kwargs_stream.stop] == \
       []
 
-    in_stream_map_args_stream.extend(range(5))
+    in_stream_map_args_stream.extend(list(range(5)))
     run()
     assert out_stream_map_args_stream.recent[:out_stream_map_args_stream.stop] == \
       [0, 2, 4, 6, 8]
@@ -808,7 +808,7 @@ def test_list():
                           np.arange(10.0)*2 + 10)
 
 
-    print 'TEST OF OP (LISTS) IS SUCCESSFUL'
+    print ('TEST OF OP (LISTS) IS SUCCESSFUL')
 
 if __name__ == '__main__':
     test_list()

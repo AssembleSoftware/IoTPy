@@ -74,7 +74,7 @@ def test_some_merge_agents():
     #----------------------------------------------------
     #----------------------------------------------------
     # Append values to stream
-    x.extend(range(3))
+    x.extend(list(range(3)))
     u.extend([10, 15, 18])
     scheduler.step()
     assert recent_values(s) == [10, 16, 20]
@@ -88,7 +88,7 @@ def test_some_merge_agents():
 
     #----------------------------------------------------
     u.append(37)
-    x.extend(range(3, 5, 1))
+    x.extend(list(range(3, 5, 1)))
     scheduler.step()
     assert recent_values(s) == [10, 16, 20, 40]
     assert recent_values(zip_map_g_args) == [2*v for v in recent_values(s)]
@@ -218,13 +218,13 @@ def test_some_merge_agents():
     assert recent_values(blend_z) == recent_values(z)
     assert recent_values(blend_add_z) == [v+10 for v in recent_values(z)]
 
-    x.extend(range(2,4))
+    x.extend(list(range(2,4)))
     scheduler.step()
     assert recent_values(z) == [2, 4, 6]
     assert recent_values(blend_z) == recent_values(z)
     assert recent_values(blend_add_z) == [v+10 for v in recent_values(z)]
 
-    y.extend(range(100, 102))
+    y.extend(list(range(100, 102)))
     scheduler.step()
     assert recent_values(z) == [2, 4, 6, 200, 202]
     assert recent_values(blend_z) == recent_values(z)
@@ -257,8 +257,8 @@ def test_some_merge_agents():
         func=f_many, in_streams=[u_stream, v_stream],
         num_out_streams=2)
 
-    u_stream.extend(range(5))
-    v_stream.extend(range(0, 40, 4))
+    u_stream.extend(list(range(5)))
+    v_stream.extend(list(range(0, 40, 4)))
     scheduler.step()
     assert recent_values(w_stream) == [0, 5, 10, 15, 20]
     assert recent_values(x_stream) == [1, 6, 11, 16, 21]
@@ -292,8 +292,8 @@ def test_some_merge_agents():
             recent_values(x_args_kwargs_stream))
         
     
-    u_args_kwargs_stream.extend(range(5))
-    v_args_kwargs_stream.extend(range(0, 40, 4))
+    u_args_kwargs_stream.extend(list(range(5)))
+    v_args_kwargs_stream.extend(list(range(0, 40, 4)))
     scheduler.step()
     assert recent_values(w_args_kwargs_stream) == [0, 10, 20, 30, 40] 
     assert recent_values(x_args_kwargs_stream) == [10, 15, 20, 25, 30]
@@ -303,7 +303,7 @@ def test_some_merge_agents():
             recent_values(x_args_kwargs_stream))
 
     u_args_kwargs_stream.append(100)
-    v_args_kwargs_stream.extend(range(40, 80, 4))
+    v_args_kwargs_stream.extend(list(range(40, 80, 4)))
     scheduler.step()
     assert recent_values(w_args_kwargs_stream) == \
       [0, 10, 20, 30, 40, 240]
@@ -449,16 +449,16 @@ def test_some_merge_agents():
     #----------------------------------------------------------------
 
     #----------------------------------------------------------------    
-    r.extend(range(16))
+    r.extend(list(range(16)))
     scheduler.step()
-    assert recent_values(r) == range(16)
+    assert recent_values(r) == list(range(16))
     assert recent_values(x) == []
     assert recent_values(merge_stream) == recent_values(x)
     assert recent_values(a) == []
 
     w.extend([10, 12, 14, 16, 18])
     scheduler.step()
-    assert recent_values(r) == range(16)
+    assert recent_values(r) == list(range(16))
     assert recent_values(w) == [10, 12, 14, 16, 18]
     assert recent_values(x) == [(0+1+2)+(10+12+14)]
     assert recent_values(a) == [39]
@@ -520,11 +520,11 @@ def test_some_merge_agents():
     u = Stream('u list merge')
     s = Stream('s list merge')
     def g(list_of_lists):
-        return [sum(snapshot) for snapshot in zip(*list_of_lists)]
+        return [sum(snapshot) for snapshot in list(zip(*list_of_lists))]
     d = merge_list(func=g, in_streams=[x,u], out_stream=s, name='d')
     ss = merge_list_f(g, [x,u])
-    x.extend(range(4))
-    u.extend(range(10, 20, 2))
+    x.extend(list(range(4)))
+    u.extend(list(range(10, 20, 2)))
     scheduler.step()
     assert recent_values(x) == [0, 1, 2, 3]
     assert recent_values(u) == [10, 12, 14, 16, 18]
@@ -665,12 +665,10 @@ def simple_zip_map_test():
 
     # A STEP
     # Put test data into input streams
-    x.extend(range(4))
-    y.extend(range(10, 20, 2))
+    x.extend(list(range(4)))
+    y.extend(list(range(10, 20, 2)))
     # Execute a step
-    ## from stream import run
     run()
-    #scheduler.step()
     # Look at output data
     assert recent_values(z) == [20, 26, 32, 38]
     
@@ -697,8 +695,8 @@ def test_merge_multiple_windows():
         return sum([sum(window) for window in windows])
     merge_multiple_windows(
         func=f, in_streams=[x,y], out_stream=z, window_sizes=[3, 1], step_sizes=[2, 1])
-    x.extend(range(12))
-    y.extend(range(10))
+    x.extend(list(range(12)))
+    y.extend(list(range(10)))
     Stream.scheduler.step()
     assert recent_values(z) == [3, 10, 17, 24, 31]
 
@@ -712,12 +710,12 @@ def test_operator_overloading():
     b = x * y
     c = x % u
     d = x // u
-    e = x / u
+    e = x // u
     f = u < v
-    x.extend(range(100, 120, 2))
-    y.extend(range(10))
-    u.extend(range(1, 11, 1))
-    v.extend(range(0, 20, 2))
+    x.extend(list(range(100, 120, 2)))
+    y.extend(list(range(10)))
+    u.extend(list(range(1, 11, 1)))
+    v.extend(list(range(0, 20, 2)))
     Stream.scheduler.step()
     assert (recent_values(z) ==
             [100, 103, 106, 109, 112, 115,

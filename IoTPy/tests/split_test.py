@@ -61,7 +61,7 @@ def test_split_agents():
     assert recent_values(r_args) == recent_values(r)
     assert recent_values(t_args) == recent_values(t)
 
-    in_stream_split.extend(range(5))
+    in_stream_split.extend(list(range(5)))
     scheduler.step()
     assert recent_values(r) == [1, 2, 3, 4, 5]
     assert recent_values(t) == [0, 2, 4, 6, 8]
@@ -98,7 +98,7 @@ def test_split_agents():
     tt = Stream('tt')
     ee = split_element(func=f_list, in_stream=x, out_streams=[rr, tt], name='ee',
                              list_of_functions=[f_0, f_1])
-    x.extend(range(5))
+    x.extend(list(range(5)))
     scheduler.step()
     assert recent_values(rr) == [0, 2, 4, 6, 8]
     assert recent_values(tt) == [10, 11, 12, 13, 14]
@@ -121,7 +121,7 @@ def test_split_agents():
     assert recent_values(r_state) == []
     assert recent_values(t_state) == []
 
-    in_stream_split_state.extend(range(5))
+    in_stream_split_state.extend(list(range(5)))
     scheduler.step()
     assert recent_values(r_state) == [0, 2, 4, 6, 8]
     assert recent_values(t_state) == [0, 1, 4, 9, 16]
@@ -156,7 +156,7 @@ def test_split_agents():
     assert recent_values(rr_state) == []
     assert recent_values(tt_state) == []
 
-    in_stream_split_state_funcargs.extend(range(5))
+    in_stream_split_state_funcargs.extend(list(range(5)))
     scheduler.step() 
     assert recent_values(rr_state) == [0, 11, 22, 33, 44]
     assert recent_values(tt_state) == [0, 10, 40, 90, 160]
@@ -287,7 +287,7 @@ def test_split_agents():
 
     split_list(f, x, [y, z])
 
-    x.extend(range(3))
+    x.extend(list(range(3)))
     scheduler.step()
     assert recent_values(y) == [v*2 for v in recent_values(x)]
     assert recent_values(z) == [v*10 for v in recent_values(x)]
@@ -311,7 +311,7 @@ def test_split_agents():
     split_window(
         func=f, in_stream=x, out_streams=[y, z], window_size=2, step_size=2)
 
-    x.extend(range(7))
+    x.extend(list(range(7)))
     scheduler.step()
     assert recent_values(y) == [1, 3, 5]
     assert recent_values(z) == [0, 2, 4]
@@ -327,7 +327,7 @@ def test_split_agents():
     split_window(
         func=f, in_stream=x, out_streams=[y, z], window_size=3, step_size=3)
 
-    x.extend(range(12))
+    x.extend(list(range(12)))
     scheduler.step()
     assert recent_values(y) == [2, 5, 8, 11]
     assert recent_values(z) == [0, 3, 6, 9]
@@ -356,7 +356,7 @@ def test_split_agents():
     split_window(
         func=f, in_stream=x, out_streams=[y, z], window_size=3, step_size=3)
 
-    x.extend(range(12))
+    x.extend(list(range(12)))
     scheduler.step()
     assert recent_values(y) == [2, 5, 8, 11]
     assert recent_values(z) == [0, 3, 6, 9]

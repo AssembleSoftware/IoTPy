@@ -89,14 +89,19 @@ def test_source():
 
     map_element(lambda x: x*x, sb, sc)
 
-    import Queue
-    que = Queue.Queue()
+
+    is_py2 = sys.version[0] == '2'
+    if is_py2:
+        import Queue as queue
+    else:
+        import queue as queue
+    que = queue.Queue()
     test_list_source_to_queue = []
     def sqf():
         return random_integer(test_list_source_to_queue, 1, 10)
     sqq = func_to_q(func=sqf, q=que, state=None, sleep_time=0.1, num_steps=5,
                 name='source_to_q')
-    q_to_streams_queue = Queue.Queue()
+    q_to_streams_queue = queue.Queue()
     q_to_streams_test_list = range(5)
     q_to_streams_test_list_0 = []
     q_to_streams_test_list_1 = []
@@ -112,8 +117,8 @@ def test_source():
     q2s_1 = Stream('q2s_1')
     q2sss = q_to_streams(q=q_to_streams_queue, out_streams=[q2s_0, q2s_1])
 
-    q2s_general_queue = Queue.Queue()
-    q2s_test_list = range(5)
+    q2s_general_queue = queue.Queue()
+    q2s_test_list = list(range(5))
 
     random_thread = vv
     list_thread = ww
@@ -130,7 +135,7 @@ def test_source():
     q2s_thread.start()
     sequence_thread.start()
     s_array_thread.start()
-    sb.extend(range(5))
+    sb.extend(list(range(5)))
     
     random_thread.join()
     list_thread.join()
@@ -143,12 +148,12 @@ def test_source():
     scheduler.join()
 
     assert recent_values(s) == test_list
-    assert recent_values(r) ==  range(10)
+    assert recent_values(r) ==  list(range(10))
     assert recent_values(a) == [v*2 for v in range(10)]
     assert recent_values(t) == [v*2 for v in recent_values(s)]
     assert recent_values(u) == [v*10 for v in recent_values(t)]
     assert recent_values(q) == [v*v for v in recent_values(r)]
-    assert recent_values(p) == zip(*[recent_values(u), recent_values(q)])
+    assert recent_values(p) == list(zip(*[recent_values(u), recent_values(q)]))
     assert recent_values(sc) == [x*x for x in range(5)]
     assert recent_values(seq) == test_sequence_list
     assert all(recent_values(s_array) == np.arange(10))
@@ -160,7 +165,7 @@ def test_source():
     assert recent_values(q2s_0) == q_to_streams_test_list_0
     assert recent_values(q2s_1) == q_to_streams_test_list_1
     
-    print 'SOURCE TEST IS SUCCESSFUL!'
+    print ('SOURCE TEST IS SUCCESSFUL!')
 
 if __name__ == '__main__':
     test_source()

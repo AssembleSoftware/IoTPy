@@ -167,6 +167,7 @@ def single_process_multiple_sources_example_1():
         # A simple source which outputs 1, 2, 3, 4, .... on
         # out_stream.
         def generate_sequence(state):
+            print ('generate_sequence: ', state)
             return state+1, state+1
 
         # Return a source which takes 10 steps, and
@@ -237,7 +238,7 @@ def print_from_queue(q):
         v = q.get()
         if v == None:
             break
-        print 'next value in queue is ', v
+        print ('next value in queue is ', v)
 
             
 def simple_actuator_example():
@@ -279,7 +280,7 @@ def simple_actuator_example():
                 v = q.get(timeout=0.5)
             except:
                 return
-            print 'next value in queue is ', v
+            print ('next value in queue is ', v)
 
 
     # STEP 3: DEFINE COMPUTE_FUNC
@@ -320,7 +321,7 @@ def multithread_example():
                 v = q.get(timeout=0.05)
             except:
                 return
-            print 'next value in queue is ', v
+            print ('next value in queue is ', v)
 
     # STEP 3: DEFINE COMPUTATION
     # A function with parameters in_streams and out_streams which
@@ -335,12 +336,25 @@ def multithread_example():
 
 def g(v):
     return v*2 + 1
+
 def actuator_example_2():
+    
+    # STEP 2: DEFINE ACTUATORS
+    # Each function has a single parameter which is a queue.
+    def print_from_queue(q):
+        stopped = False
+        while True:
+            try:
+                v = q.get(timeout=0.005)
+            except:
+                return
+            print ('next value in queue is ', v)
+
     def compute_func(in_streams, out_streams):
         map_element(func=g, in_stream=in_streams[0],
                     out_stream=out_streams[0])
     source_list = SourceList(in_list=range(3))
-    print source_list.in_list
+    print (source_list.in_list)
     
     proc=shared_memory_process(
         compute_func,
@@ -720,16 +734,20 @@ def source_from_func_example():
         return random.random()
     source_function_object = source_function(
         func=f, time_interval=0.01, num_steps=10)
-    single_process_single_source(
+    def compute_func(in_streams, out_streams):
+        print_stream(in_streams[0])
+    run_single_process_single_source(
         source_func=source_function_object.source_func,
-        compute_func=print_stream)
+        compute_func=compute_func)
 
 def source_from_list_example():
     source_list_object = source_list(
         in_list=range(10), num_steps=10)
-    single_process_single_source(
+    def compute_func(in_streams, out_streams):
+        print_stream(in_streams[0])
+    run_single_process_single_source(
         source_func=source_list_object.source_func,
-        compute_func=print_stream)
+        compute_func=compute_func)
     
 
 # ----------------------------------------------------------------
@@ -739,86 +757,86 @@ def source_from_list_example():
 # ----------------------------------------------------------------
 
 def single_process_single_source_example_1_test():
-    print 'You will see input queue empty a few times.'
-    print 'Starting single_process_single_source_example_1()'
+    print ('You will see input queue empty a few times.')
+    print ('Starting single_process_single_source_example_1()')
     single_process_single_source_example_1()
-    print 'Finished single_process_single_source_example_1()'
-    print '10, 20, 30, 40 will be appended to file test.dat'
+    print ('Finished single_process_single_source_example_1()')
+    print ('10, 20, 30, 40 will be appended to file test.dat')
     print
-    print '-----------------------------------------------------'
+    print ('-----------------------------------------------------')
 
 def single_process_multiple_sources_example_1_test():
     print
-    print 'Starting single_process_multiple_sources_example_1()'
+    print ('Starting single_process_multiple_sources_example_1()')
     single_process_multiple_sources_example_1()
-    print 'Finished single_process_multiple_sources_example_1()'
-    print '(1, r1), (2, r2), ... will be appended to file output.dat'
-    print 'where r1, r2, .. are random numbers.'
+    print ('Finished single_process_multiple_sources_example_1()')
+    print ('(1, r1), (2, r2), ... will be appended to file output.dat')
+    print ('where r1, r2, .. are random numbers.')
     print
-    print '-----------------------------------------------------'
+    print ('-----------------------------------------------------')
 def simple_actuator_example_test():
     print
-    print 'Starting simple_actuator_example()'
+    print ('Starting simple_actuator_example()')
     simple_actuator_example()
-    print 'Finished simple_actuator_example()'
-    print 'This example prints: next value in queue is i'
-    print 'for i to num_steps which is set to 10.'
+    print ('Finished simple_actuator_example()')
+    print ('This example prints: next value in queue is i')
+    print ('for i to num_steps which is set to 10.')
     print
-    print '-----------------------------------------------------'
+    print ('-----------------------------------------------------')
 def clock_offset_estimation_single_process_multiple_sources_test():
     print
-    print 'Starting'
-    print 'clock_offset_estimation_single_process_multiple_sources' 
+    print ('Starting')
+    print ('clock_offset_estimation_single_process_multiple_sources')
     clock_offset_estimation_single_process_multiple_sources()
-    print 'Finished'
-    print 'clock_offset_estimation_single_process_multiple_sources'
-    print 'The average of offsets will be appended to average.dat'
+    print ('Finished')
+    print ('clock_offset_estimation_single_process_multiple_sources')
+    print ('The average of offsets will be appended to average.dat')
     print
-    print '-----------------------------------------------------'
+    print ('-----------------------------------------------------')
 def multiprocess_example_1_test():
     print
-    print 'Starting multiprocess_example_1()'
+    print ('Starting multiprocess_example_1()')
     multiprocess_example_1()
-    print 'Finished multiprocess_example_1()'
-    print '2000, 4000, 6000, ... will be appended to result.dat'
+    print ('Finished multiprocess_example_1()')
+    print ('2000, 4000, 6000, ... will be appended to result.dat')
     print
-    print '-----------------------------------------------------'
+    print ('-----------------------------------------------------')
 def clock_offset_estimation_multiprocess_test():
     print
-    print 'Starting clock_offset_estimation_multiprocess()'
+    print ('Starting clock_offset_estimation_multiprocess()')
     clock_offset_estimation_multiprocess()
-    print 'Finished clock_offset_estimation_multiprocess()'
-    print 'offsets from 2 servers will be appended to offsets.dat' 
+    print ('Finished clock_offset_estimation_multiprocess()')
+    print ('offsets from 2 servers will be appended to offsets.dat') 
     print
-    print '-----------------------------------------------------'
+    print ('-----------------------------------------------------')
 def source_from_func_example_test():
     print
-    print 'Starting source_from_func_example'
+    print ('Starting source_from_func_example')
     source_from_func_example()
-    print 'Finished source_from_func_example'
-    print 'Output is sequence of 10 random numbers'
+    print ('Finished source_from_func_example')
+    print ('Output is sequence of 10 random numbers')
     print
-    print '-----------------------------------------------------'
+    print ('-----------------------------------------------------')
 def source_from_list_example_test():
     print
-    print 'Starting source_from_list_example'
+    print ('Starting source_from_list_example')
     source_from_list_example()
-    print 'Finished source_from_list_example'
-    print 'Output is 0, 1, ..., 9'
+    print ('Finished source_from_list_example')
+    print ('Output is 0, 1, ..., 9')
     print
-    print '-----------------------------------------------------'
+    print ('-----------------------------------------------------')
 
 def test():
     multithread_example()
-    ## single_process_single_source_example_1_test()
-    ## actuator_example_2()
-    ## single_process_multiple_sources_example_1_test()
-    ## simple_actuator_example_test()
-    ## clock_offset_estimation_single_process_multiple_sources_test()
-    ## multiprocess_example_1_test()
-    ## clock_offset_estimation_multiprocess_test()
-    ## source_from_func_example_test()
-    ## source_from_list_example_test()
+    single_process_single_source_example_1_test()
+    actuator_example_2()
+    single_process_multiple_sources_example_1_test()
+    simple_actuator_example_test()
+    clock_offset_estimation_single_process_multiple_sources_test()
+    multiprocess_example_1_test()
+    clock_offset_estimation_multiprocess_test()
+    source_from_func_example_test()
+    source_from_list_example_test()
 
 if __name__ == '__main__':
     test()

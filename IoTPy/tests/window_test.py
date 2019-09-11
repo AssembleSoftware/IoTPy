@@ -1,6 +1,6 @@
 import sys
 import os
-sys.path.append(os.path.abspath("../"))
+#sys.path.append(os.path.abspath("../"))
 sys.path.append(os.path.abspath("../core"))
 sys.path.append(os.path.abspath("../agent_types"))
 sys.path.append(os.path.abspath("../helper_functions"))
@@ -10,6 +10,7 @@ from stream import Stream, StreamArray
 from stream import _no_value, _multivalue
 from check_agent_parameter_types import *
 from recent_values import recent_values
+from run import run
 from op import *
 from merge import merge_window, merge_window_f
 from split import split_window
@@ -171,7 +172,7 @@ def test_window_agents():
 
 
     #----------------------------------------------------------------    
-    r.extend(range(16))
+    r.extend(list(range(16)))
     scheduler.step()
     assert recent_values(r) == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
     assert recent_values(s) == [0+1+2+3, 4+5+6+7, 8+9+10+11, 12+13+14+15]
@@ -319,7 +320,7 @@ def test_window_agents():
     x.extend(np.linspace(0.0, 11.0, 12))
     scheduler.step()
     assert np.array_equal(recent_values(x), np.linspace(0.0, 11.0, 12))
-    # y[0] = (0+1+2)/3.0, y[1] = (3+4+5)/3.0
+    # y[0] = (0+1+2)//3.0, y[1] = (3+4+5)//3.0
     assert np.array_equal(recent_values(y), np.array([1.0, 4.0, 7.0, 10.0]))
     
     x = StreamArray('x', dimension=2)
@@ -428,9 +429,9 @@ def test_window_agents():
     assert np.array_equal(recent_values(x),
                           np.array([[1., 5.], [7., 11.]]))
     assert np.array_equal(recent_values(y),
-                          np.array([[(1.+7.)/2.0, (5.+11.)/2.]]))
+                          np.array([[(1.+7.)//2.0, (5.+11.)//2.]]))
     assert np.array_equal(recent_values(t),
-                          np.array([[(1.+5.)/2.0, (7.+11.)/2.]]))
+                          np.array([[(1.+5.)//2.0, (7.+11.)//2.]]))
     assert np.array_equal(recent_values(z), np.array([[1. + 7., 5. + 11]]))
     assert np.array_equal(recent_values(b),
                           [np.array([1.+ 7. + 0. + 2., 5. + 11. + 1. + 3.])])
@@ -461,9 +462,24 @@ def test_window_agents():
     assert np.array_equal(recent_values(r), np.array([[10., 11.], [19., 31.]]))
     assert np.array_equal(recent_values(s), np.array([[0., 1.], [1., 1.]]))
 
-    print 'TEST OF OP (WINDOW) IS SUCCESSFUL'
-
+    print ('TEST OF OP (WINDOW) IS SUCCESSFUL')
     return
 
+def test_halt_agent():
+    x = Stream('x')
+    y = Stream('y')
+    a = map_window(func=sum, in_stream=x, out_stream=y, window_size=2, step_size=2)
+    x.extend(list(range(6)))
+    run()
+    assert recent_values(y) == [1, 5, 9]
+    a.halt()
+    run()
+    assert recent_values(y) == [1, 5, 9]
+    x.extend(list(range(10,15)))
+    run()
+    assert recent_values(y) == [1, 5, 9]
+    
+
 if __name__ == '__main__':
+    test_halt_agent()
     test_window_agents()
