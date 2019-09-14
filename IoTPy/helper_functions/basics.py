@@ -234,23 +234,6 @@ def sink_w(func):
         return g
     return wrapper()
 
-def iot_e(func):
-    def wrapper(**kwargs):
-        def g(in_stream, **kwargs):
-            sink_element(func, in_stream, **kwargs)
-        return g
-    return wrapper()
-
-def iot_w(func):
-    def wrapper(**kwargs):
-        def g(in_stream, window_size, step_size, **kwargs):
-            sink_window(func, in_stream,  window_size, step_size, **kwargs)
-        return g
-    return wrapper()
-
-
-
-
 #------------------------------------------------------------
 #       USEFUL FUNCTIONS OTHER THAN WRAPPERS
 #------------------------------------------------------------
@@ -580,34 +563,57 @@ def test_map_with_state_and_keyword_arg():
     assert recent_values(y) == [10, 12, 14, 16, 18]
     assert recent_values(z) == [10, 12, 14, 16, 18]
 
-def test_iot_1():
+def test_sink_1():
     x = Stream()
     y = Stream()
-    @iot_w
+    @sink_w
     def f(v, out_stream):
         out_stream.append(sum(v)+10)
     f(x, window_size=2, step_size=1, out_stream=y)
     x.extend(list(range(5)))
     run()
     
-def test_iot_2():
+def test_sink_2():
     x = Stream()
     y = Stream()
-    @iot_e
+    @sink_e
     def f(v, out_stream):
         out_stream.append(v+100)
     f(x, out_stream=y)
     x.extend(list(range(5)))
     run()
 
+def test_sink_3():
+    x = StreamArray(dtype='int')
+    y = StreamArray()
+    @sink_w
+    def f(window, y):
+        y.append(window[-1] - np.mean(window))
+    f(x, window_size=2, step_size=1, y=y)
+    x.extend(np.arange(5))
+    run()
+    assert (np.array_equal
+            (recent_values(y), np.array([0.5, 0.5, 0.5, 0.5]))) 
+
+def test_map_list_with_arrays():
+    from op import map_list
+    x = StreamArray(dtype=int)
+    y = StreamArray(dtype=int)
+    def f(A): return 2*A
+
+    map_list(f, x, y)
+    x.extend(np.arange(5))
+    run()
+    assert np.array_equal(recent_values(y), 2*np.arange(5))
 #------------------------------------------------------------
 #       RUN TESTS
 #------------------------------------------------------------
     
 if __name__ == '__main__':
     test_map_with_keyword_arg()
-    test_iot_1()
-    test_iot_2()
+    test_sink_1()
+    test_sink_2()
+    test_sink_3()
     test_f_mul()
     test_r_mul()
     test_f_add()
@@ -629,6 +635,7 @@ if __name__ == '__main__':
     test_map_with_state()
     test_map_window_with_state()
     test_map_with_state_and_keyword_arg()
+    test_map_list_with_arrays()
     
 
     
