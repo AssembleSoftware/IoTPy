@@ -1,105 +1,128 @@
 import numpy as np
+#!/usr/bin/env python
 import sys
 import os
+from scipy.io import wavfile
 from scipy.io.wavfile import read, write
+import sounddevice as sd
 
-
-sys.path.append(os.path.abspath("../../IoTPy/multiprocessing"))
 sys.path.append(os.path.abspath("../../IoTPy/core"))
 sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
 sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
 
+from basics import map_wl, sink_w
+from stream import StreamArray
+from run import run
+from sink import sink_window
+from recent_values import recent_values
 
-from stream import StreamArray, Stream
-from op import map_window_list,map_list
+def speedx(sound_array, factor):
+    """ Multiplies the sound's speed by some `factor` """
+    indices = np.round( np.arange(0, len(sound_array), factor) )
+    indices = indices[indices < len(sound_array)].astype(int)
+    return sound_array[ indices.astype(int) ]
 
-class pitch(object):
-    """ A Class that is used in performing Pitch Shifting.
+
+def stretch(sound_array, f, window_size, h):
+    """ Stretches the sound by a factor `f` """
+    phase  = np.zeros(window_size)
+    hanning_window = np.hanning(window_size)
+    result = np.zeros( int(len(sound_array) /f + window_size))
+
+    window_size = int(window_size)
+    for i in np.arange(0, len(sound_array)-(window_size+h), int(h*f)):
+
+        # two potentially overlapping subarrays
+        a1 = sound_array[i: i + int(window_size)]
+        a2 = sound_array[i + h: i + int(window_size) + int(h)]
+
+        # resynchronize the second array on the first
+        s1 =  np.fft.fft(hanning_window * a1)
+        s2 =  np.fft.fft(hanning_window * a2)
+        phase = (phase + np.angle(s2/s1)) % 2*np.pi
+        a2_rephased = np.fft.ifft(np.abs(s2)*np.exp(1j*phase))
+
+        # add to result
+        i2 = int(i/f)
+        result[i2 : i2 + window_size] += np.real((hanning_window*a2_rephased))
+        
+    #result = ((2**(16-4)) * result/result.max()) # normalize (16bit)
+    result = ((2**(16-4)) * result/4000.0) # normalize (16bit)
+
+    return result.astype('int16')
+
+def pitchshift(snd_array, n, window_size=2**13, h=2**11):
+    """ Changes the pitch of a sound by ``n`` semitones. """
+    factor = 2**(1.0 * n / 12.0)
+    stretched = stretch(snd_array, 1.0/factor, window_size, h)
+    return speedx(stretched[window_size:], factor)
+
+def pitchshift_class(snd_array, n, window_size=2**13, h=2**11):
+    """ Changes the pitch of a sound by ``n`` semitones. """
+    factor = 2**(1.0 * n / 12.0)
+    
+    stretched = stretch(snd_array, 1.0/factor, window_size, h)
+    return speedx(stretched[window_size:], factor)
+
+    x = StreamArray('x', dtype=np.int16)
+    y = StreamArray('y', dtype=np.int16)
+    stretch_object = Stretch(
+        in_stream=x, out_stream=y, tone=-12, N=2**13, M=2**11)
+    x.extend(guitar_sound)
+    run()
+    return speedx(x.recent[window_size:], factor)
+
+class Stretch(object):
+    """
+    Parameters
+    __________
 
     """
-    def __init__(self, chunk_size, overlap, factor):
+    def __init__(self, in_stream, out_stream, f, window_size, h):
+        self.in_stream = in_stream
+        self.out_stream = out_stream
+        self.f = f
+        self.window_size = window_size
+        self.h = h
+        self.phase = np.zeros(window_size)
+        self.hanning_window = np.hanning(self.window_size)
+        self.result = np.zeros(window_size+h)
+        sink_window(
+            func=self.stretch, in_stream=self.in_stream,
+            window_size=self.window_size+self.h,
+            step_size=int(h*f))
+    def stretch(self, window):
+        # two potentially overlapping subarrays
+        a1 = window[:self.window_size]
+        a2 = window[int(self.h): self.window_size+int(self.h)]
 
-        self.chunk_size = chunk_size
-        self.overlap = overlap 
-        self.factor = factor
-        self.phase = np.zeros(self.chunk_size)
-        # Use a smoothing function over the chunk_size.
-        # See np.hanning, np.hamming, np.kaiser, etc.
-        self.smooth = np.hanning(self.chunk_size)
-        self.result = None
-        self.length = int(self.chunk_size/self.overlap)
-
-    def stretch(self, window, num_semitones):
-        """
-        Parameters:
-        window: np.ndarray
-           1-D array, the sequence of values in a stream.
-        num_semitones: int, positive
-           The number of semitones that the pitch should be
-           shifter. (12 semitones is an octave.)
-
-        """
-        no_overlap = np.fft.fft(self.smooth*(window[:self.chunk_size]))
-        with_overlap = np.fft.fft(self.smooth(window[self.overlap:]))
-
-        self.phase = (self.phase + np.angle(with_overlap/no_overlap))%2*np.pi
-    
+        # resynchronize the second array on the first
+        s1 = np.fft.fft(self.hanning_window * a1)
+        s2 = np.fft.fft(self.hanning_window * a2)
+        self.phase = (self.phase + np.angle(s2/s1)) % 2*np.pi
         a2_rephased = np.fft.ifft(np.abs(s2)*np.exp(1j*self.phase))
-        a2_real = self.hanning*a2_rephased.real
+
+        # add to result
+        self.result[self.h : self.h + self.window_size] += np.real(
+            (self.hanning_window*a2_rephased))
+        current_output = (self.result[:self.h]*4096.0/4000.0).astype('int16')
+        self.result = np.roll(self.result, -self.h)
+        self.result[self.h:] = 0.0
+        self.out_stream.extend(current_output)
+                 
+def test_pitchshift():
+    fps, snd_array = wavfile.read("./guitar.wav")
+    n = -12
+    output = pitchshift(snd_array, n)
+    sd.play(output, blocking=True)
+    tones = [-12, 0, 12]
+    for n in tones:
+        transposed = pitchshift(snd_array, n)
+        transposed_class = pitchshift_class(snd_array, n)
+        sd.play(transposed, blocking=True)
+        sd.play(transposed_class, blocking=True)
         
-        if self.result is None:
-            self.result = a2_real
-            result = self.result[:self.overlap]
-            self.result[:(self.length-1)*self.overlap] = self.result[self.overlap:]
-            self.result[(self.length-1)*self.overlap:] = np.zeros(self.overlap)
-            return result
         
-        else:
-            self.result+=a2_real
-            result = self.result[:self.overlap]
-            self.result[:(self.length-1)*self.overlap] = self.result[self.overlap:]
-            self.result[(self.length-1)*self.overlap:] = np.zeros(self.overlap)
-            return result
-         
-    def int_convert(self, in_stream):
-        new_arr = np.array(in_stream)
-        result = ((2**(16-4)) * new_arr/new_arr.max())
-        return result.astype('int16')   
-
-
-    def tempo(self, in_stream):
-        indices = np.round(np.arange(0, len(in_stream), self.factor))
-        indices = indices[indices < len(in_stream)].astype(int)
-        return in_stream[indices]
-
-
+if __name__ == '__main__':
+    test_pitchshift()
     
-
-    
-            
-        
-
-
-def pitch_shifting(pitch_object, in_stream, out_stream, number_of_semitones, hanning_window_size, overlap, fs):
-
-    window_size = hanning_window_size + overlap
-    factor = 2**(1.0*number_of_semitones/12.0)
-    step = overlap*1.0/factor            
-    stretched = StreamArray('Stretched')
-    phase = np.zeros(hanning_window_size)
-    print(step, window_size)
-
-    map_window_list(func = pitch_object.stretch,
-                    in_stream = in_stream,
-                    out_stream = stretched,
-                    window_size = window_size,
-                    step_size = int(step),
-                    number_of_semitones = number_of_semitones
-                    )
-
-    map_window_list(func = pitch_object.tempo,
-                    in_stream = stretched,
-                    out_stream = out_stream,
-                    window_size = fs/10,
-                    step_size = fs/10
-                    )
