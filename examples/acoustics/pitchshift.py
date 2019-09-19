@@ -1,3 +1,35 @@
+"""
+This code is a streaming version of code written by Zulko who
+created the 'pianoputer.' All the ideas are from Zulko's
+version. All we do here is show how to convert code for an
+array into code for streams.
+
+To play music, download sounddevice.
+
+A problem encountered when switching from arrays to streams
+is that code operating on an array can use metrics --- such as
+maximum --- over the entire array, whereas code operating on
+streams has to compute pitch shift based on the available
+data up to that point. For the streaming version we assume
+that the maximum over the entire array is 4096.0 (See the
+last lines of stretch in which result is computed). A poor
+assumption of the maximum may result in clipping or numerical
+problems.
+
+This code has both the original version (modified with max
+assumed to be 4096) and the streaming version so that you
+can see how one is converted into the other. speedx and
+stretch are from the original version, while the method
+Stretch.stretch is the streaming version.
+
+The repository includes a short wav file called 'guitar.wav'
+If you run test_pitchshift you will hear the sound shifted
+to a lower pitch, then the original sound, and then the sound
+shifted to a higher pitch. In each case you will first hear
+the sound created by original version (modified by assuming
+max is 4096) and the streaming version.
+
+"""
 import numpy as np
 #!/usr/bin/env python
 import sys
@@ -46,9 +78,8 @@ def stretch(sound_array, f, window_size, h):
         i2 = int(i/f)
         result[i2 : i2 + window_size] += np.real((hanning_window*a2_rephased))
         
-    #result = ((2**(16-4)) * result/result.max()) # normalize (16bit)
-    result = ((2**(16-4)) * result/4000.0) # normalize (16bit)
-
+    #result = ((2**(16-4)) * result/result.max()) # normalize
+    # Assume result.max() is 2**(16-4)x
     return result.astype('int16')
 
 def pitchshift(snd_array, n, window_size=2**13, h=2**11):
@@ -57,7 +88,7 @@ def pitchshift(snd_array, n, window_size=2**13, h=2**11):
     stretched = stretch(snd_array, 1.0/factor, window_size, h)
     return speedx(stretched[window_size:], factor)
 
-def pitchshift_class(snd_array, n, window_size=2**13, h=2**11):
+def pitchshift_stream(snd_array, n, window_size=2**13, h=2**11):
     """ Changes the pitch of a sound by ``n`` semitones. """
     factor = 2**(1.0 * n / 12.0)
     
@@ -105,7 +136,7 @@ class Stretch(object):
         # add to result
         self.result[self.h : self.h + self.window_size] += np.real(
             (self.hanning_window*a2_rephased))
-        current_output = (self.result[:self.h]*4096.0/4000.0).astype('int16')
+        current_output = (self.result[:self.h]).astype('int16')
         self.result = np.roll(self.result, -self.h)
         self.result[self.h:] = 0.0
         self.out_stream.extend(current_output)
@@ -117,10 +148,12 @@ def test_pitchshift():
     sd.play(output, blocking=True)
     tones = [-12, 0, 12]
     for n in tones:
+        # Original code
         transposed = pitchshift(snd_array, n)
-        transposed_class = pitchshift_class(snd_array, n)
+        # Streaming code
+        transposed_stream = pitchshift_stream(snd_array, n)
         sd.play(transposed, blocking=True)
-        sd.play(transposed_class, blocking=True)
+        sd.play(transposed_stream, blocking=True)
         
         
 if __name__ == '__main__':
