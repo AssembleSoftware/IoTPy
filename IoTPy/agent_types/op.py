@@ -32,6 +32,11 @@ from agent import Agent
 from stream import Stream, _multivalue
 from check_agent_parameter_types import *
 
+def make_out_stream(in_stream):
+    if isinstance(in_stream, Stream):
+        return Stream()
+    if isinstance(in_stream, StreamArray):
+        return StreamArray(dimension=in_stream.dimension, dtype=in_stream.dtype)
 #------------------------------------------------------------------------------------
 def map_element(
         func, in_stream, out_stream,
@@ -284,7 +289,7 @@ def map_element_f(func, in_stream, state=None, *args, **kwargs):
 
     """
     
-    out_stream = Stream(func.__name__+in_stream.name)
+    out_stream = make_out_stream(in_stream)
     map_element(func, in_stream, out_stream, state,
                       None, None,
                       *args, **kwargs)
@@ -549,7 +554,9 @@ def map_window_list(
             if state is None:
                 output_list[i] = _multivalue(func(window, *args, **kwargs))
             else:
-                output_list[i], state = _multivalue(func(window, state, *args, **kwargs))
+                multivalue_output, next_state = func(window, state, *args, **kwargs)
+                output_list[i], state = \
+                  _multivalue(multivalue_output), next_state
         
         return ([output_list], state, [in_list.start+num_steps*step_size])
     # Finished transition
@@ -557,6 +564,16 @@ def map_window_list(
     # Create agent
     return Agent([in_stream], [out_stream], transition, state, call_streams, name)
 
+
+#------------------------------------------------------------------------------------
+def map_window_list_f(
+        func, in_stream,
+        window_size, step_size, state=None,
+        *args, **kwargs):
+    out_stream = Stream(func.__name__+in_stream.name)
+    map_window_list(func, in_stream, out_stream, window_size, step_size,
+                     state, None, None, *args, **kwargs)
+    return out_stream
 
 #------------------------------------------------------------------------------------
 def timed_window(
