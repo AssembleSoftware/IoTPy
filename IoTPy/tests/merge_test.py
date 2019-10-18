@@ -19,6 +19,7 @@ from recent_values import recent_values
 from merge import *
 from multi import *
 from op import timed_window, timed_window_f
+from merge import merge_list, zip_map_list
 
 def run(): Stream.scheduler.step()
 #--------------------------------------------------------
@@ -339,17 +340,21 @@ def test_some_merge_agents():
     #----------------------------------------------------
     x = StreamArray('x')
     y = StreamArray('y')
-    z = StreamArray('z', dimension=2)
+    z = StreamArray('z')
     a = StreamArray('a')
 
-    zip_map(func=lambda v: v, in_streams=[x,y], out_stream=z)
-    zip_map(func=np.mean, in_streams=[x,y], out_stream=a)
+    def sum_array_axis_0(a_list_of_arrays): return np.sum(a_list_of_arrays, axis=0)
+    merge_list(func=sum_array_axis_0, in_streams=[x,y], out_stream=z)
+    
+    def mean_array_axis_0(a_list_of_arrays): return np.mean(a_list_of_arrays, axis=0)
+    zip_map_list(func=mean_array_axis_0, in_streams=[x,y], out_stream=a)
 
     x.extend(np.linspace(0.0, 9.0, 10))
     scheduler.step()
     y.extend(np.linspace(0.0, 4.0, 5))
     scheduler.step()
-    expected_array = np.vstack([np.linspace(0.0, 4.0, 5), np.linspace(0.0, 4.0, 5)]).T
+    expected_array = np.sum([np.linspace(0.0, 4.0, 5), np.linspace(0.0, 4.0, 5)], axis=0)
+    assert isinstance(z, StreamArray)
     assert np.array_equal(recent_values(z), expected_array)
     expected_means = np.linspace(0.0, 4.0, 5)
     assert np.array_equal(recent_values(a), expected_means)
@@ -366,28 +371,28 @@ def test_some_merge_agents():
     def double(v): return 2*v
     def double_add(v, addend): return 2*v+addend
 
-    blend(func=double, in_streams=[x, y], out_stream=z)
-    blend(func=double_add, in_streams=[x, y], out_stream=a, addend=10.0)
+    ## blend(func=double, in_streams=[x, y], out_stream=z)
+    ## blend(func=double_add, in_streams=[x, y], out_stream=a, addend=10.0)
 
-    x.append(np.array(1.0))
-    scheduler.step()
-    assert np.array_equal(recent_values(z), np.array([2.0]))
-    assert np.array_equal(recent_values(a), recent_values(z)+10.0)
+    ## x.append(np.array(1.0))
+    ## scheduler.step()
+    ## assert np.array_equal(recent_values(z), np.array([2.0]))
+    ## assert np.array_equal(recent_values(a), recent_values(z)+10.0)
 
-    x.extend(np.linspace(2.0, 3.0, 2))
-    scheduler.step()
-    assert np.array_equal(recent_values(z), np.array([2., 4., 6.]))
-    assert np.array_equal(recent_values(a), recent_values(z)+10.0)
+    ## x.extend(np.linspace(2.0, 3.0, 2))
+    ## scheduler.step()
+    ## assert np.array_equal(recent_values(z), np.array([2., 4., 6.]))
+    ## assert np.array_equal(recent_values(a), recent_values(z)+10.0)
 
-    y.extend(np.linspace(100.0, 101.0, 2))
-    scheduler.step()
-    assert np.array_equal(recent_values(z), [2., 4., 6., 200., 202.])
-    assert np.array_equal(recent_values(a), recent_values(z)+10.0)
+    ## y.extend(np.linspace(100.0, 101.0, 2))
+    ## scheduler.step()
+    ## assert np.array_equal(recent_values(z), [2., 4., 6., 200., 202.])
+    ## assert np.array_equal(recent_values(a), recent_values(z)+10.0)
 
-    x.extend([10., 20.])
-    scheduler.step()
-    assert np.array_equal(recent_values(z), [2., 4., 6., 200., 202., 20., 40.])
-    assert np.array_equal(recent_values(a), recent_values(z)+10.0)
+    ## x.extend([10., 20.])
+    ## scheduler.step()
+    ## assert np.array_equal(recent_values(z), [2., 4., 6., 200., 202., 20., 40.])
+    ## assert np.array_equal(recent_values(a), recent_values(z)+10.0)
 
 
     #----------------------------------------------------
@@ -529,7 +534,16 @@ def test_some_merge_agents():
     assert recent_values(x) == [0, 1, 2, 3]
     assert recent_values(u) == [10, 12, 14, 16, 18]
     assert recent_values(s) == [10, 13, 16, 19]
-    return
+
+    x = StreamArray()
+    y = StreamArray()
+    z = StreamArray(dtype='bool')
+    def f(two_lists):
+        return np.array(two_lists[0]) > np.array(two_lists[1])
+    merge_list(f, [x,y], z)
+    x.extend(np.array([3.0, 5.0, 7.0]))
+    y.extend(np.array([4.0, 3.0, 10.0]))
+    run()
     #-------------------------------------------------------------------
     
 
