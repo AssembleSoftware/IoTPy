@@ -266,7 +266,8 @@ def multi_window(
         # list of num_outwith one output for each output stream.
         # output_list is a list of num_out_streams lists. Each member of output_list
         # is a list
-        output_lists = [(output_snapshot) for output_snapshot in list(zip(*output_snapshots))]
+        #output_lists = [(output_snapshot) for output_snapshot in list(zip(*output_snapshots))]
+        output_lists = [output_snapshot for output_snapshot in list(zip(*output_snapshots))]
         return (output_lists, state, in_lists_start_values)
     # Finished transition
 
