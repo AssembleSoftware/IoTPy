@@ -21,7 +21,7 @@ from op import filter_element, filter_element_f
 from op import map_list, map_list_f
 from op import timed_window
 from op import map_window_f
-from op import map_window
+from op import map_window, map_window_list
 from helper_control import _no_value, _multivalue
 from merge import zip_map, zip_map_f, merge_window_f, blend_f, blend
 from merge import merge_window
@@ -36,6 +36,9 @@ from run import run
 #       WRAPPERS FOR DECORATORS
 #------------------------------------------------------------
 
+#-------------------------------------------------------------------
+# map_element
+#-------------------------------------------------------------------
 def fmap_e(func):
     def wrapper(**kwargs):
         def g(s, **kwargs):
@@ -51,6 +54,9 @@ def map_e(func):
         return g
     return wrapper()
 
+#-------------------------------------------------------------------
+# map_window
+#-------------------------------------------------------------------
 def fmap_w(func):
     def wrapper(**kwargs):
         def g(in_stream, window_size, step_size, **kwargs):
@@ -66,6 +72,27 @@ def map_w(func):
         return g
     return wrapper()
 
+#-------------------------------------------------------------------
+# map_window_list
+#-------------------------------------------------------------------
+def map_wl(func):
+    def wrapper(**kwargs):
+        def g(in_stream, out_stream, window_size, step_size, **kwargs):
+            return map_window_list(func, in_stream, out_stream,
+                                   window_size, step_size, **kwargs)
+        return g
+    return wrapper()
+
+def fmap_wl(func):
+    def wrapper(**kwargs):
+        def g(in_stream, window_size, step_size, **kwargs):
+            return map_window_list_f(func, in_stream, window_size, step_size, **kwargs)
+        return g
+    return wrapper()
+
+#-------------------------------------------------------------------
+# merge_element: same as zip_map
+#-------------------------------------------------------------------
 def fmerge_e(func):
     def wrapper(**kwargs):
         def g(in_streams, **kwargs):
@@ -80,6 +107,10 @@ def merge_e(func):
         return g
     return wrapper()
 
+#-------------------------------------------------------------------
+# merge_asynch
+#-------------------------------------------------------------------
+
 def merge_asynch(func):
     def wrapper(**kwargs):
         def g(in_streams, out_stream, **kwargs):
@@ -87,7 +118,9 @@ def merge_asynch(func):
         return g
     return wrapper()
 
-
+#-------------------------------------------------------------------
+# merge_2e merge 2 elements. 
+#-------------------------------------------------------------------
 def fmerge_2e(func):
     def wrapper(**kwargs):
         def g(x, y, state=None, **kwargs):
@@ -116,7 +149,9 @@ def fmerge_w(func):
         return g
     return wrapper()
 
-
+#-------------------------------------------------------------------
+# merge_window
+#-------------------------------------------------------------------
 def merge_w(func):
     def wrapper(**kwargs):
         def g(in_streams, out_stream, window_size, step_size, state=None, **kwargs):
@@ -146,7 +181,9 @@ def fmerge_2w(func):
         return g
     return wrapper()
 
-
+#-------------------------------------------------------------------
+# split_element
+#-------------------------------------------------------------------
 def split_e(func):
     def wrapper(**kwargs):
         def g(in_stream, out_streams, state=None, **kwargs):
@@ -166,7 +203,9 @@ def fsplit_2e(func):
         return g
     return wrapper()
 
-
+#-------------------------------------------------------------------
+# split_window
+#-------------------------------------------------------------------
 def split_w(func):
     def wrapper(**kwargs):
         def g(in_streams,  out_streams, window_size, step_size, state=None, **kwargs):
@@ -182,7 +221,9 @@ def split_w(func):
         return g
     return wrapper()
 
-
+#-------------------------------------------------------------------
+# split_window into 2 streams
+#-------------------------------------------------------------------
 def fsplit_2w(func):
     def wrapper(**kwargs):
         def g(in_streams, window_size, step_size, **kwargs):
@@ -193,6 +234,9 @@ def fsplit_2w(func):
         return g
     return wrapper()
 
+#-------------------------------------------------------------------
+# multi_element
+#-------------------------------------------------------------------
 def multi_e(func):
     def wrapper(**kwargs):
         def g_multi_e(in_streams, out_streams, state=None, **kwargs):
@@ -203,7 +247,9 @@ def multi_e(func):
         return g_multi_e
     return wrapper()
 
-
+#-------------------------------------------------------------------
+# multi_window
+#-------------------------------------------------------------------
 def multi_w(func):
     def wrapper(**kwargs):
         def g_multi_w(
@@ -220,6 +266,9 @@ def multi_w(func):
         return g_multi_w
     return wrapper()
 
+#-------------------------------------------------------------------
+# sink_element
+#-------------------------------------------------------------------
 def sink_e(func):
     def wrapper(**kwargs):
         def g(in_stream, **kwargs):
@@ -227,6 +276,10 @@ def sink_e(func):
         return g
     return wrapper()
 
+
+#-------------------------------------------------------------------
+# sink_window
+#-------------------------------------------------------------------
 def sink_w(func):
     def wrapper(**kwargs):
         def g(in_stream, window_size, step_size, **kwargs):
@@ -362,18 +415,20 @@ def test_r_mul():
 
 def test_f_add():
     x = Stream()
-    y = f_add(x, 2)
-    x.extend(list(range(5)))
+    K = 5
+    y = f_add(x, K)
+    x.extend(list(range(3)))
     run()
-    assert recent_values(y) == [2, 3, 4, 5, 6]
+    assert recent_values(y) == [5, 6, 7]
 
 def test_r_add():
     x = Stream()
     y = Stream()
-    r_add(x, y, 2)
-    x.extend(list(range(5)))
+    z = 5
+    r_add(x, y, z)
+    x.extend(list(range(3)))
     run()
-    assert recent_values(y) == [2, 3, 4, 5, 6]
+    assert recent_values(y) == [5, 6, 7]
 
 def test_f_sub():
     x = Stream()
@@ -420,17 +475,90 @@ def test_exponential_smoothing():
     assert recent_values(y) == [
         32.0, 32.0, 24.0, 16.0, 10.0, 6.0, 3.5]
     
-def test_operator():
-    from run import run
+def test_plus_operator():
     x = Stream()
     y = Stream()
     z = x + y
-    x.extend(list(range(10)))
-    y.extend(list(range(100,110)))
+    
+    x.extend(list(range(3)))
+    y.extend(list(range(100, 105)))
     run()
     assert recent_values(z) == [
-        100, 102, 104, 106, 108,
-        110, 112, 114, 116, 118]
+        100, 102, 104]
+
+    x.extend(list(range(3, 7)))
+    run()
+    assert recent_values(z) == [
+        100, 102, 104, 106, 108]
+
+    run()
+    assert recent_values(z) == [
+        100, 102, 104, 106, 108]
+
+def test_plus_operator_with_arrays_1():
+    x = StreamArray(dtype=int)
+    y = StreamArray(dtype=int)
+    z = x + y
+    
+    x.extend(np.arange(3))
+    y.extend(np.arange(100, 105))
+    run()
+    assert isinstance(recent_values(z), np.ndarray)
+    assert np.array_equal(recent_values(z), np.array([100, 102, 104]))
+
+    x.extend(np.arange(3, 7))
+    run()
+    assert np.array_equal(recent_values(z), np.array([
+        100, 102, 104, 106, 108]))
+
+    run()
+    assert np.array_equal(recent_values(z), np.array([
+        100, 102, 104, 106, 108]))
+
+def test_plus_operator_with_arrays():
+    x = StreamArray(dimension=2, dtype=int)
+    y = StreamArray(dimension=2, dtype=int)
+    z = x + y
+    A = np.arange(6).reshape((3, 2))
+    B = np.arange(100, 110).reshape((5, 2))
+    x.extend(A)
+    y.extend(B)
+    run()
+    assert isinstance(z, StreamArray)
+    assert np.array_equal(recent_values(z), np.array([
+        [100, 102], [104, 106], [108, 110]]))
+
+    C = np.arange(6, 12).reshape((3, 2))
+    x.extend(C)
+    run()
+    assert np.array_equal(recent_values(z), np.array([
+        [100, 102], [104, 106], [108, 110],
+        [112, 114], [116, 118]]))
+
+
+def test_minus_operator_with_arrays():
+    x = StreamArray(dtype=int)
+    y = StreamArray(dtype=int)
+    z = y - x
+    
+    x.extend(np.arange(3))
+    y.extend(np.arange(100, 105, 2))
+    run()
+    assert np.array_equal(recent_values(z), np.array([
+        100, 101, 102]))
+
+def test_minus_operator_with_arrays_and_dimension():
+    x = StreamArray(dimension=3, dtype=int)
+    y = StreamArray(dimension=3, dtype=int)
+    z = y - x
+    A = np.array([[10, 20, 30], [40, 50, 60]])
+    B= np.array([[100, 100, 100], [200, 200, 200], [300, 300, 00]])
+    x.extend(A)
+    y.extend(B)
+    run()
+    assert np.array_equal(recent_values(z), np.array([
+        [ 90,  80,  70],
+        [160, 150, 140]]))
 
 def test_prepend():
     from run import run
@@ -563,6 +691,69 @@ def test_map_with_state_and_keyword_arg():
     assert recent_values(y) == [10, 12, 14, 16, 18]
     assert recent_values(z) == [10, 12, 14, 16, 18]
 
+def test_fmap_with_stream_array():
+    x = StreamArray(dimension=2, dtype=int)
+    @fmap_e
+    def g(v): return 2*v
+    y = g(x)
+
+    A = np.array([[1, 10], [2, 20], [3, 30]])
+    x.extend(A)
+    run()
+    assert np.array_equal(
+        recent_values(y),
+        [[2, 20], [4, 40], [6, 60]])
+
+    x.append(np.array([4, 40]))
+    run()
+    assert np.array_equal(
+        recent_values(y),
+        [[2, 20], [4, 40], [6, 60], [8, 80]])
+
+def test_map_window_list_0():
+    x = Stream()
+    y = Stream()
+    @map_wl
+    def f(window): return window
+    f(x, y, window_size=2, step_size=2)
+    x.extend(list(range(10)))
+    run()
+    assert recent_values(y) ==  list(range(10))
+
+def test_map_window_list_1():
+    x = Stream()
+    y = Stream()
+    @map_wl
+    def f(window): return [2*v for v in window]
+    f(x, y, window_size=2, step_size=2)
+    x.extend(list(range(10)))
+    run()
+    assert recent_values(y) ==  list(range(0, 20, 2))
+
+def test_map_window_list_2():
+    x = Stream()
+    y = Stream()
+    @map_wl
+    def f(window, state):
+        return [v+10*state for v in window], state+1
+    f(x, y, window_size=2, step_size=2, state=0)
+    x.extend(list(range(10)))
+    run()
+    assert recent_values(y) == [
+        0, 1, 12, 13, 24, 25, 36, 37, 48, 49]
+
+def test_map_window_list_3():
+    x = Stream()
+    y = Stream()
+    @map_wl
+    def f(window, state, K):
+        return [v+10*state+K for v in window], state+1
+    f(x, y, window_size=2, step_size=2, state=0, K=100)
+    x.extend(list(range(10)))
+    run()
+    assert recent_values(y) == [
+        100, 101, 112, 113, 124, 125, 136, 137, 148, 149]
+
 def test_sink_1():
     x = Stream()
     y = Stream()
@@ -624,7 +815,7 @@ if __name__ == '__main__':
     test_maximum()
     test_clip()
     test_sieve()
-    test_operator()
+    test_plus_operator()
     test_exponential_smoothing()
     test_prepend()
     test_filter_min()
@@ -636,7 +827,15 @@ if __name__ == '__main__':
     test_map_window_with_state()
     test_map_with_state_and_keyword_arg()
     test_map_list_with_arrays()
-    
+    test_plus_operator_with_arrays()
+    test_minus_operator_with_arrays()
+    test_minus_operator_with_arrays_and_dimension()
+    test_plus_operator_with_arrays_1()
+    test_fmap_with_stream_array()
+    test_map_window_list_0()
+    test_map_window_list_1()
+    test_map_window_list_2()
+    test_map_window_list_3()
 
     
     
