@@ -3,30 +3,34 @@ This module consists of functions that merge multiple input streams
 into a single output stream.
 
 Functions in the module:
-   1. zip_map ----------
+   1. zip_map 
    2. zip_map_f
-   3. zip_stream ----------
+   3. zip_stream: same as zip_map with no function on merged stream.
    4. zip_stream_f
-   5. merge_asynch ----------
+   5. merge_asynch: asynch merge which keeps track of which stream an
+                    item came from
    6. merge_asynch_f
-   5. mix ----------
+   5. mix: same as merge_asych with no function on merged stream
    6. mix_f
-   7. blend ----------
+   7. blend: applies func to elements as they arrive. Does not keep
+             track of which input stream an item came from.
    8. blend_f
-   9. merge_window ----------
+   9. merge_window
    10. merge_window_f
-   11. merge_list
+   11. merge_list: func operates on a list of lists (one list for each
+                input stream, and returns a list.
    12. merge_list_f
-   13. timed_zip ----------
+   13. timed_zip
    14. timed_zip_f
-   15. timed_mix -----------
+   15. timed_mix
    16. timed_mix_f
+   17. zip_map_list: same as merge_list
 
 The output stream of a merge agent is declared before calling the 
 agent whereas the merge functions return the output stream.
 
 Agents:
-   1. merge_element is the agent used by zip_stream and zip_map.
+   1. zip_map.
    This agent zips its input streams and then executes a function
    on the zipped stream to produce a single output stream.
    The merge function operates on a list (one element per input stream)
@@ -652,10 +656,14 @@ def merge_list(func, in_streams, out_stream, state=None,
     # 6. Agent name
     return Agent(in_streams, [out_stream], transition, state, call_streams, name)
 
+zip_map_list = merge_list
+
 def merge_list_f(func, in_streams, state=None, *args, **kwargs):
     out_stream = Stream('merge_list_f:' + func.__name__)
     merge_list(func, in_streams, out_stream, state, None, None, *args, **kwargs)
     return out_stream
+
+zip_map_list_f = merge_list_f
 
 
 def timed_zip(in_streams, out_stream, call_streams=None, name=None):
