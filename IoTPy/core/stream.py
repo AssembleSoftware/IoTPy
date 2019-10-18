@@ -547,14 +547,15 @@ class Stream(object):
     # Operator overloading
     def operator_overload(self, another_stream, func):
         from merge import zip_map
-        output_stream = Stream('stream add')
+        output_stream = Stream()
         zip_map(func=func,
                 in_streams=[self, another_stream],
                 out_stream=output_stream)
         return output_stream
         
     def __add__(self, another_stream):
-        return self.operator_overload(another_stream, func=sum)
+        def add_pair(pair): return pair[0] + pair[1]
+        return self.operator_overload(another_stream, func=add_pair)
 
     def __sub__(self, another_stream):
         def subtract(pair): return pair[0] - pair[1]
@@ -723,6 +724,10 @@ class StreamArray(Stream):
             the elements of the stream.
 
         """
+
+        if len(output_array) == 0:
+            return
+        
         # output_array should be an array.
         if isinstance(output_array, list) or isinstance(output_array, tuple):
             output_array = remove_novalue_and_open_multivalue(output_array)
@@ -731,9 +736,6 @@ class StreamArray(Stream):
         assert(isinstance(output_array, np.ndarray)), 'Exending stream array, {0}, ' \
         ' with an object, {1}, that is not an array.'.format(
             self.name, output_array)
-
-        if len(output_array) == 0:
-            return
 
         # output_array has an arbitrary (positive) number of rows.
         # Each row must be of the same type as an element of this
@@ -755,15 +757,17 @@ class StreamArray(Stream):
         # Check dimensions of the array.
         # If dimension is 0 then output_array must be a 1-D array. Equivalently
         # the number of "columns" of this array must be 1.
-        if self.dimension == 0:
+        #if self.dimension == 0:
+        if self.dimension == 0 or self.dimension == 1:
             assert(len(output_array.shape) == 1),\
               'Extending StreamArray {0} which has shape (i.e. dimension) 0' \
               ' by an array with incompatible shape {1}'.\
               format(self.name, output_array.shape[1:])
 
-        # If dimension is a positive integer, then output_array must be a 2-D
+        ## If dimension is a positive integer, then output_array must be a 2-D
+        # If dimension is 2 or higher, then output_array must be a 2-D
         # numpy array, where the number of columns is dimension.
-        if isinstance(self.dimension, int) and self.dimension > 0:
+        if isinstance(self.dimension, int) and self.dimension > 1:
             # output_array.shape[1] is the number of columns in output_array.
             assert (len(output_array.shape) > 0), \
               'Extending StreamArray {0} which has shape (i.e. dimesion) {1}'\
@@ -819,5 +823,34 @@ class StreamArray(Stream):
             print ('self.dtype ='.format(self.dtype))
             raise
         return
+
+    # Operator overloading
+    def operator_overload(self, another_stream, func):
+        from merge import merge_list
+        assert another_stream.dimension == self.dimension, \
+          'Both stream arrays must have the same dimension.' \
+          'The dimensions are {0} and {1}'.format(
+              self.dimension, another_stream.dimension)
+        assert another_stream.dtype == self.dtype, \
+          'Both stream arrays must have the same dtype.' \
+          'The dtypes are {0} and {1}'.format(
+              self.dtype, another_stream.dtype)
+        output_stream = StreamArray(dimension=self.dimension, dtype=self.dtype)
+        merge_list(func=func,
+                in_streams=[self, another_stream],
+                out_stream=output_stream)
+        return output_stream
+        
+    def __add__(self, another_stream):
+        def add_pair(pair): return pair[0] + pair[1]
+        return self.operator_overload(another_stream, func=add_pair)
+
+    def __sub__(self, another_stream):
+        def sub_pair(pair): return pair[0] - pair[1]
+        return self.operator_overload(another_stream, func=sub_pair)
+
+    def __mul__(self, another_stream):
+        def mul_pair(pair): return pair[0] * pair[1]
+        return self.operator_overload(another_stream, func=mul_pair)
 
         
