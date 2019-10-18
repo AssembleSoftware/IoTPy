@@ -43,8 +43,7 @@ def subtract_mean(in_stream, out_stream, window_size):
        of the mean, but also the slower the computation.
 
     """
-    # Wrap a terminating function
-    @map_w
+    # Define a terminating function
     def f(window):
         """
         Parameters
@@ -61,7 +60,10 @@ def subtract_mean(in_stream, out_stream, window_size):
         """
         return window[-1] - sum(window)/float(len(window))
 
-    f(in_stream, out_stream, window_size, step_size=1)
+    # Wrap function to create an agent.
+    map_window(
+        f, in_stream, out_stream, window_size,
+        step_size=1,initial_value=0.0)
 
 
 #----------------------------------------------------
