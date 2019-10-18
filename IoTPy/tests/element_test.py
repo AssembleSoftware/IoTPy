@@ -588,7 +588,6 @@ def test_stream_arrays_2():
     Example where the input stream of an agent is a stream array and
     its output stream is not a stream array.
     """
-    scheduler = Stream.scheduler
     x = StreamArray(name='x', dimension=3, dtype=float)
     y = Stream()
     map_element(func=np.median, in_stream=x, out_stream=y)
@@ -737,25 +736,25 @@ def test_None_in_stream():
         
 
 def test_element():
-    ## test_1()
-    ## test_2()
-    ## test_3()
-    ## test_4()
-    ## test_example_1()
-    ## test_example_2()
-    ## test_example_3()
-    ## test_example_4()
-    ## test_element_simple()
-    ## test_timed_window()
-    ## test_map_list()
-    ## test_stream_arrays_2()
-    ## test_class()
-    ## test_halt_agent()
-    ## test_initial_value()
-    ## test_multiple_relations()
-    ## test_multiple_functions()
-    ## test_multiple_relations_2()
-    ## test_class()
+    test_1()
+    test_2()
+    test_3()
+    test_4()
+    test_example_1()
+    test_example_2()
+    test_example_3()
+    test_example_4()
+    test_element_simple()
+    test_timed_window()
+    test_map_list()
+    test_stream_arrays_2()
+    test_class()
+    test_halt_agent()
+    test_initial_value()
+    test_multiple_relations()
+    test_multiple_functions()
+    test_multiple_relations_2()
+    test_class()
     test_None_in_stream()
     print ('TEST OF OP (ELEMENT) IS SUCCESSFUL')
     
