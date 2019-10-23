@@ -16,8 +16,8 @@ def test():
     test_multi()
     test_shared_variables()
     test_sink()
-    print ('Starting test of source. Takes few seconds.')
-    print ('This test will output "input queue empty" a few times.')
+    print ('STARTING TEST OF SOURCE. Takes few seconds.')
+    print ('This test will output: "Stopped: No more input" a few times.')
     test_source()
 
 
