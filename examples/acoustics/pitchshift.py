@@ -2,7 +2,7 @@
 This code is a streaming version of code written by Zulko who
 created the 'pianoputer.' All the ideas are from Zulko's
 version. All we do here is show how to convert code for an
-array into code for streams.
+array into code for a stream.
 
 To play music, download sounddevice.
 
@@ -42,26 +42,57 @@ sys.path.append(os.path.abspath("../../IoTPy/core"))
 sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
 sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
 
-from basics import map_wl, sink_w
 from stream import StreamArray
 from run import run
 from sink import sink_window
+from op import map_window
 from recent_values import recent_values
 
+#---------------------------------------------------------------------
+# CODE FROM ZULKO, PIANOPUTER
+#---------------------------------------------------------------------
+
 def speedx(sound_array, factor):
-    """ Multiplies the sound's speed by some `factor` """
+    """
+    Multiplies the sound's speed by factor
+    Taken from Zulko, pianoputer
+
+    Parameters
+    ----------
+    sound_array: np.array
+      The array that is being stretched
+    factor: positive number
+      The sound is speeded up when factor > 1.
+
+    """
     indices = np.round( np.arange(0, len(sound_array), factor) )
     indices = indices[indices < len(sound_array)].astype(int)
     return sound_array[ indices.astype(int) ]
 
 
 def stretch(sound_array, f, window_size, h):
-    """ Stretches the sound by a factor `f` """
+    """
+    Stretches the sound by a factor f.
+    Taken from Zulko, pianoputer
+
+    Parameters
+    ----------
+    sound_array: np.array
+      The array that is being stretched
+    f: positive number
+      The amount of stretch when f > 1 and contraction if f < 1.
+    window_size: int or float
+      The sound_array is inspected by subarrays each of which is of
+      size window_size.
+    h: int or float
+      The overlap between successive windows.
+    """
+    window_size = int(window_size)
     phase  = np.zeros(window_size)
     hanning_window = np.hanning(window_size)
     result = np.zeros( int(len(sound_array) /f + window_size))
 
-    window_size = int(window_size)
+   
     for i in np.arange(0, len(sound_array)-(window_size+h), int(h*f)):
 
         # two potentially overlapping subarrays
@@ -82,26 +113,77 @@ def stretch(sound_array, f, window_size, h):
     # Assume result.max() is 2**(16-4)x
     return result.astype('int16')
 
-def pitchshift(snd_array, n, window_size=2**13, h=2**11):
-    """ Changes the pitch of a sound by ``n`` semitones. """
+def pitchshift(sound_array, n, window_size=2**13, h=2**11):
+    """
+    Changes the pitch of a sound by n semitones.
+    Taken from Zulko, pianoputer
+    """
     factor = 2**(1.0 * n / 12.0)
-    stretched = stretch(snd_array, 1.0/factor, window_size, h)
+    stretched = stretch(sound_array, 1.0/factor, window_size, h)
     return speedx(stretched[window_size:], factor)
 
-def pitchshift_stream(snd_array, n, window_size=2**13, h=2**11):
-    """ Changes the pitch of a sound by ``n`` semitones. """
-    factor = 2**(1.0 * n / 12.0)
-    
-    stretched = stretch(snd_array, 1.0/factor, window_size, h)
-    return speedx(stretched[window_size:], factor)
+#---------------------------------------------------------------------
+# END OF CODE FROM ZULKO, PIANOPUTER
+#---------------------------------------------------------------------
 
+
+#---------------------------------------------------------------------
+# CODE TO CONVERT OPERATION ON AN ARRAY TO OPERATION ON A STREAM.
+#---------------------------------------------------------------------
+def pitchshift_stream(sound_array, n, window_size=2**13, h=2**11):
+    """
+    Changes the pitch of a sound by n semitones.
+
+    Notes
+    -----
+    This application has 2 sink_window agents and 3 streams x, y, z.
+    Stretch agent: The first agent gets input x and outputs y which
+    stretches the data in stream x. The stretching code is from Zulko,
+    pianoputer. 
+    Speed up agent: The next agent gets input y and outputs z which
+    speeds up y by the specified factor. This agent interpolates the
+    data in y to the number of points determined by factor.
+
+    """
+    factor = 2**(1.0 * n / 12.0)
+    f = 1.0/factor
+
+    # Declare streams
     x = StreamArray('x', dtype=np.int16)
     y = StreamArray('y', dtype=np.int16)
+    z = StreamArray('z', dtype=np.int16)
+
+    # Define the stretch agent
     stretch_object = Stretch(
-        in_stream=x, out_stream=y, tone=-12, N=2**13, M=2**11)
-    x.extend(guitar_sound)
-    run()
-    return speedx(x.recent[window_size:], factor)
+        in_stream=x, out_stream=y, factor=factor,
+        window_size=window_size, h=h) 
+    sink_window(
+        func=stretch_object.stretch, in_stream=x,
+        window_size=window_size+h, step_size=int(h*f))
+
+    # Define the speed up agent.
+    def f(window, out_stream):
+        indices = np.arange(0, window_size, factor)
+        out_stream.extend(
+            np.int16(np.interp(
+                indices, np.arange(window_size), window))) 
+    sink_window(func=f, in_stream=y, window_size=window_size,
+    step_size=window_size, out_stream=z)
+
+    # Partition sound_array into sound bites. Extend the
+    # input with a sequence of sound bites and run each
+    # sound bite until the sound_array data is finished.
+    sound_bite_size = 2**14
+    for i in range(0, sound_array.size, sound_bite_size):
+        # sound_bite = sound_array[i:i+sound_bite_size]
+        x.extend(sound_array[i:i+sound_bite_size])
+        run()
+    # Process any data in sound_array that wasn't processed
+    # in the for loop.
+    x.extend(sound_array[i:])
+
+    # Return the result.
+    return z.recent[:z.stop]
 
 class Stretch(object):
     """
@@ -109,21 +191,21 @@ class Stretch(object):
     __________
 
     """
-    def __init__(self, in_stream, out_stream, f, window_size, h):
+    def __init__(self, in_stream, out_stream, factor, window_size, h):
         self.in_stream = in_stream
         self.out_stream = out_stream
-        self.f = f
+        self.factor = factor
+        self.f = 1.0/factor
         self.window_size = window_size
         self.h = h
         self.phase = np.zeros(window_size)
         self.hanning_window = np.hanning(self.window_size)
         self.result = np.zeros(window_size+h)
-        sink_window(
-            func=self.stretch, in_stream=self.in_stream,
-            window_size=self.window_size+self.h,
-            step_size=int(h*f))
     def stretch(self, window):
-        # two potentially overlapping subarrays
+        # -----------------------------------------------------
+        # From Zulko stretch()
+        # a1 and a2 are two overlapping subarrays, each of size
+        # window_size with an overlap of h.
         a1 = window[:self.window_size]
         a2 = window[int(self.h): self.window_size+int(self.h)]
 
@@ -133,29 +215,32 @@ class Stretch(object):
         self.phase = (self.phase + np.angle(s2/s1)) % 2*np.pi
         a2_rephased = np.fft.ifft(np.abs(s2)*np.exp(1j*self.phase))
 
-        # add to result
-        self.result[self.h : self.h + self.window_size] += np.real(
+        # Add resynchronized second array to result, and output
+        # on out_stream. Recall that the size of self.result is
+        # self.window_size + self.h.
+        self.result[: self.window_size] += np.real(
             (self.hanning_window*a2_rephased))
-        current_output = (self.result[:self.h]).astype('int16')
-        self.result = np.roll(self.result, -self.h)
-        self.result[self.h:] = 0.0
+        current_output = (self.result[:self.h]).astype(np.int16)
         self.out_stream.extend(current_output)
+
+        # Save self.result[self.h : ] for next window.
+        self.result = np.roll(self.result, -self.h)
+        self.result[self.window_size:] = 0.0
                  
 def test_pitchshift():
-    fps, snd_array = wavfile.read("./guitar.wav")
-    n = -12
-    output = pitchshift(snd_array, n)
-    sd.play(output, blocking=True)
+    fps, sound_array = wavfile.read("./guitar.wav")
     tones = [-12, 0, 12]
-    for n in tones:
-        # Original code
-        transposed = pitchshift(snd_array, n)
-        # Streaming code
-        transposed_stream = pitchshift_stream(snd_array, n)
+    for tone in tones:
+        # Array code
+        transposed = pitchshift(sound_array, tone)
+        # Stream code
+        transposed_stream = pitchshift_stream(sound_array, tone)
+        print ('tone is ', tone)
+        print ('Playing sound from array code')
         sd.play(transposed, blocking=True)
+        print ('Playing sound from stream code')
         sd.play(transposed_stream, blocking=True)
-        
+        print ()
         
 if __name__ == '__main__':
     test_pitchshift()
-    
