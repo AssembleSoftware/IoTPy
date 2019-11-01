@@ -29,11 +29,16 @@ shifted to a higher pitch. In each case you will first hear
 the sound created by original version (modified by assuming
 max is 4096) and the streaming version.
 
+The streaming code was written by Deepak Narayanan and Mani
+Chandy. The Stretch.stretch() function is based on Zulko's
+code.
+
 """
-import numpy as np
+
 #!/usr/bin/env python
 import sys
 import os
+import numpy as np
 from scipy.io import wavfile
 from scipy.io.wavfile import read, write
 import sounddevice as sd
@@ -45,11 +50,9 @@ sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
 from stream import StreamArray
 from run import run
 from sink import sink_window
-from op import map_window
-from recent_values import recent_values
 
 #---------------------------------------------------------------------
-# CODE FROM ZULKO, PIANOPUTER
+# CODE FROM ZULKO, PIANOPUTER. MERELY FOR REFERENCE.
 #---------------------------------------------------------------------
 
 def speedx(sound_array, factor):
@@ -161,7 +164,7 @@ def pitchshift_stream(sound_array, n, window_size=2**13, h=2**11):
         func=stretch_object.stretch, in_stream=x,
         window_size=window_size+h, step_size=int(h*f))
 
-    # Define the speed up agent.
+    # Define the speedup agent.
     def f(window, out_stream):
         indices = np.arange(0, window_size, factor)
         out_stream.extend(
@@ -226,18 +229,23 @@ class Stretch(object):
         # Save self.result[self.h : ] for next window.
         self.result = np.roll(self.result, -self.h)
         self.result[self.window_size:] = 0.0
-                 
+
+#---------------------------------------------------------------------
+# TEST
+#---------------------------------------------------------------------
 def test_pitchshift():
     fps, sound_array = wavfile.read("./guitar.wav")
     tones = [-12, 0, 12]
     for tone in tones:
+        print ('tone is ', tone)
+
         # Array code
-        transposed = pitchshift(sound_array, tone)
+        # transposed = pitchshift(sound_array, tone)
+        # print ('Playing sound from array code')
+        # sd.play(transposed, blocking=True)
+
         # Stream code
         transposed_stream = pitchshift_stream(sound_array, tone)
-        print ('tone is ', tone)
-        print ('Playing sound from array code')
-        sd.play(transposed, blocking=True)
         print ('Playing sound from stream code')
         sd.play(transposed_stream, blocking=True)
         print ()
