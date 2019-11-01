@@ -588,10 +588,10 @@ def multiprocess_example_1():
     # Specify connections: A list of 4-tuples:
     # (process, output stream name, process, input stream name)
     # ----------------------------------------------------------------
-    vm = Multiprocess(
+    mp = Multiprocess(
         processes=[proc_0, proc_1],
         connections=[(proc_0, 's', proc_1, 't')])
-    vm.run()
+    mp.run()
 
 
 def clock_offset_estimation_multiprocess():
