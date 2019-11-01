@@ -168,4 +168,5 @@ def test_source():
     print ('SOURCE TEST IS SUCCESSFUL!')
 
 if __name__ == '__main__':
+    print ('Takes a few seconds')
     test_source()
