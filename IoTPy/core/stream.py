@@ -1,7 +1,7 @@
 """ This module contains the Stream class. The
 Stream and Agent classes are the building blocks
 of PythonStreams.
-(Version 1.5 May 21, 2017. Created by: K. Mani Chandy)
+(Version 1.5 January, 2020. Created by: K. Mani Chandy)
 """
 from __future__ import division
 import sys
@@ -18,7 +18,6 @@ if is_py2:
     import Queue as queue
 else:
     import queue as queue
-#import Queue
 import logging.handlers
 import threading
 from compute_engine import ComputeEngine
@@ -28,11 +27,6 @@ from helper_control import _no_value
 from helper_control import remove_novalue_and_open_multivalue
 from helper_control import remove_None
 # from merge import zip_map
-# TimeAndValue is used for timed messages.
-# When using NumPy arrays, use an array whose first column
-# is a timestamp, and don't use TimeAndValue.
-# TimeAndValue is in ../helper_functions
-# TimeAndValue = namedtuple('TimeAndValue', ['time', 'value'])
 
 class Stream(object):
     """
@@ -82,14 +76,13 @@ class Stream(object):
     stream has a new value.
 
     The most recent values of a stream are stored either
-    in a list or a NumPy array. For the array case see
+    in a list or a NumPy array. For the NumPy array case see
     the class StreamArray.
 
     Parameters
     ----------
     name : str, optional
-          name of the stream. Though the name is optional
-          a name helps with debugging.
+          name of the stream. The name helps with debugging.
           default : 'UnnamedStream'
     initial_value : list or array, optional
           The list (or array) of initial values in the
@@ -103,6 +96,7 @@ class Stream(object):
           num_in_memory elements of the stream.
     discard_None: Boolean (optional)
           default is True
+          The default is that a stream does not contain None values.
           If discard_None is True then None values are discarded from
           the stream. If discard_None is False then the stream may
           contain elements that are None.
@@ -142,8 +136,7 @@ class Stream(object):
     start : dict
             key = reader
             value = start index of the reader
-            The next element of stream s that reader r will read is
-            in: 
+            The next element of stream s that reader r will read is: 
                      s.recent[s.start[r]]
             The usual case is that a reader r starts reading a stream s
             when the stream is created, and reads at a rate that keeps
@@ -157,8 +150,8 @@ class Stream(object):
             key = reader
             value = int
             The value is the number of elements in the stream that the
-            reader missed reading because it read slower than the stream
-            was being written. If the buffer, recent, gets full
+            reader missed reading because a reader read slower than the
+            stream was being written. If the buffer, recent, gets full
             before a reader has read the first elements of the buffer
             then these elements are over-written and the reader
             misses reading them.
@@ -211,12 +204,14 @@ class Stream(object):
     
     An agent that reads a stream is also a subscriber to
     that stream unless the agent has a call-stream. 
-    Default: an agent has no call-stream.
+    Default Case: an agent has no call-stream.
       In this case the agent is woken up whenever any of
       its input streams is modified.
-    Case: the agent has one or more call streams.
+    Non Default Case: the agent has one or more call streams.
       The agent is woken up only when one of its call
-      streams is modified. 
+      streams is modified. If an input stream s is not a
+      call stream then the agent is not woken up when s
+      gets modified.
 
     An agent r registered to read a stream s can read
     the stream from its next value at index s.start[r]
@@ -226,7 +221,7 @@ class Stream(object):
     read values with indexes greater than or
     equal to j in the list, recent,  by executing
                   s.set_start(rt, j)
-    which causes s.start[r] to be set to j.
+    which makes s.start[r] to be set to j.
 
 
     3. WRITING A STREAM
@@ -251,14 +246,17 @@ class Stream(object):
     # SCHEDULER
     # The scheduler is a Class attribute. It is not an
     # object instance attribute. All instances of Stream
-    # use the same scheduler.
+    # use the same scheduler. Each process has its own
+    # scheduler. Each process executes its computation in
+    # a single thread. This computational thread takes an
+    # agent from the scheduler queue and executes a step
+    # of that agent.
     scheduler = ComputeEngine()
     
     def __init__(self, name="UnnamedStream", 
                  initial_value=[],
                  num_in_memory=DEFAULT_NUM_IN_MEMORY,
                  discard_None=True):
-        self.lock = threading.RLock()
         self.name = name
         self.num_in_memory = num_in_memory
         self._begin = 0
@@ -272,19 +270,19 @@ class Stream(object):
         # way data in recent is compacted. See _set_up_next_recent()
         self.recent = [0] * (2*self.num_in_memory)
         self.discard_None = discard_None
+        # Set up the initial value of the stream.
         self.extend(initial_value)
         
-
-    def register_reader(self, r, start_index=0):
+    def register_reader(self, new_reader, start_index=0):
         """
-        A newly registered reader starts reading recent
-        from index start, i.e., reads  recent[start_index:s.stop]
+        A newly registered reader starts reading  the stream from
+        the point start_index.
         If reader has already been registered with this stream
         its start value is updated to start_index.
         
         """
-        self.start[r] = start_index
-        self.num_elements_lost[r] = 0
+        self.start[new_reader] = start_index
+        self.num_elements_lost[new_reader] = 0
 
     def delete_reader(self, reader):
         """
@@ -312,11 +310,10 @@ class Stream(object):
 
     def wakeup_subscribers(self):
         # Put subscribers (i.e. agents in self.subscribers_set) into
-        # the compute_engine's queue. The agents in this queue will be
-        # woken up later. 
+        # the compute_engine's queue. Each agents in this queue will be
+        # removed from the queue and then execute a step.  
         for subscriber in self.subscribers_set:
             self.scheduler.put(subscriber)
-
 
     def append(self, value):
         """
@@ -340,6 +337,7 @@ class Stream(object):
         ----------
             value_list: list
         """
+        # Convert arrays and tuples into lists.
         # Since this stream is a regular Stream (i.e.
         # implemented as a list) rather than Stream_Array
         # (which is implemented as a NumPy array), convert
@@ -361,21 +359,23 @@ class Stream(object):
         # open up each _multivalue element into a list.
         value_list = remove_novalue_and_open_multivalue(value_list)
         if self.discard_None:
+            # Remove None from the value_list.
             value_list = remove_None(value_list)
 
         # Make a new version of self.recent if the space in
-        # self.recent is insufficient.
+        # self.recent is insufficient. 
         # This operation changes self.recent, self.stop and self.start.
         if self.stop + len(value_list) >= len(self.recent):
+            # Insufficient space to store value_list.
             self._set_up_next_recent()
 
         # Check that this method is not putting a value_list that is
-        # too large for specified num_in_memory.
+        # too large for the memory size.
         assert(self.stop+len(value_list) < len(self.recent)), \
-          'num_in_memory is too small to store the stream, {0}. ' \
+          'memory is too small to store the stream, {0}. ' \
           ' Currently the stream has {1} elements in main memory. ' \
           ' We are now adding {2} more elements to main memory. '\
-          ' The length of the buffer, recent, is only {3}. '.format(
+          ' The length of the buffer is only {3}. '.format(
               self.name, self.stop, len(value_list), len(self.recent))
 
         # Put value_list into the appropriate slice of self.recent and
@@ -390,17 +390,18 @@ class Stream(object):
 
     def print_recent(self):
         print('{0}  = {1}'.format(self.name, self.recent[:self.stop]))
-        #print self.name, '=', self.recent[:self.stop]
 
     def set_start(self, reader, starting_value):
         """ The reader tells the stream that it is only accessing
-        elements of the list recent with index start or higher.
+        elements of the list, recent, with index start or higher.
 
         """
         self.start[reader] = starting_value
  
     def get_latest(self, default_for_empty_stream=0):
         """ Returns the latest element in the stream.
+        The latest element is the most recent element put in
+        the stream.
         If the stream is empty then it returns the empty list
 
         """
@@ -451,17 +452,25 @@ class Stream(object):
 
     def get_elements_after_index(self, index):
         """
-        index is a pointer to an element in the stream.
-        (Example: stream has 38 elements, num_in_memory is
-        10, and index is 35.)
-        Case 1: if index is greater than the length of
-        the stream the function returns the tuple:
-          (length of stream, empty list)
-        Case 2: index is at most the stream length.
-        The function returns the tuple (p, l) where p
-        is a pointer into the stream and l is stream[p:].
-        p is the max of index and the index of the earliest
-        element of the stream in main memory.
+        Parameters
+        ----------
+        index: int
+           index is a pointer to an element in the stream.
+           (Example: stream has 38 elements, num_in_memory is
+           10, and index is 35.)
+        Returns
+        -------
+           (pointer, list)
+           Case 1: if index is greater than the length of
+           the stream the function returns the tuple:
+             (length of stream, empty list)
+           Case 2: index is less than or equal to the stream length.
+           The function returns the tuple (p, l) where p
+           is a pointer into the buffer, recent, and l is stream[p:].
+           In the example where a stream s has 38 elements and
+           index is 35, l is s[35:39].
+           If this section of the stream is stored in recent[3:7] then
+           p is 3.
 
         """
         assert isinstance(index, int)
@@ -472,7 +481,6 @@ class Stream(object):
             return (self.offset, self.recent[:self.stop])
         else:
             return (index, self.recent[index - self.offset: self.stop])
-        
 
     def get_contents_after_column_value(self, column_number, value):
         """ Assumes that the stream consists of rows where the
@@ -524,25 +532,51 @@ class Stream(object):
         not accessed by any reader.
         
         """
-        # Shift the self.num_in_memory latest elements to the
-        # beginning of self.recent.
-        assert self.stop >= self.num_in_memory
-        self.recent[:self.num_in_memory] = \
-            self.recent[self.stop - self.num_in_memory : self.stop]
-        self.stop = self.num_in_memory
-        self.offset += self.num_in_memory
+        if self.start == {}:
+            # If no agents are subscribed to this stream then
+            # set min_start to the end of the stream. Doing so
+            # says that all agents have read the entire stream.
+            min_start = self.stop
+        else:
+            min_start = min(self.start.values())
+        # We want to retain in self.recent the segment of the
+        # stream from min_start to the end of the stream.
+        # The number of elements that we are retaining is
+        # num_retain_in_memory
+        num_retain_in_memory = 1 + self.stop - min_start
+        assert num_retain_in_memory > 0
+        # If we want to retain more elements in memory than
+        # there is space available, then we can only
+        # retain elements that fill the space.
+        if num_retain_in_memory > self.num_in_memory:
+            num_retain_in_memory = self.num_in_memory 
+        # Shift the most recent num_retain_in_memory elements in
+        # the stream to start of the buffer.
+        num_shift = self.stop - num_retain_in_memory
+        self.recent[:num_retain_in_memory] = \
+          self.recent[num_shift : self.stop]
+        self.offset += num_shift
+        self.stop = num_retain_in_memory
+        # Zero out the unused part of self.recent. This step isn't
+        # necessary; however, doing so helps in debugging. If an
+        # agent reads a list of zeros then the agent is probably
+        # reading an uninitialized part of the stream
+        self.recent[self.stop:] = [0]*(len(self.recent) - self.stop)
 
         # A reader reading the value in a slot j in the old recent
-        # will now read the same value in slot (j - num_in_memory) in the
-        # next recent. A reader who is slower than writers of
-        # the stream and is reading more than num_in_memory elements 
-        # behind the last element written will miss some elements.
-        for reader in self.start.iterkeys():
-            self.start[reader] -= self.num_in_memory
+        # will now read the same value in slot (j - num_shift) in the
+        # next recent.
+        for reader in self.start.keys():
+            # Update self.start[reader] because of the downward shift
+            # in values in the buffer, recent.
+            self.start[reader] -= num_shift
             if self.start[reader] < 0:
+                # This reader was too slow and so a part of the stream
+                # that this reader hasn't yet read is deleted from the
+                # buffer, recent. Update the number of elements lost
+                # to this reader.
                 self.num_elements_lost[reader] -= self.start[reader]
                 self.start[reader] = 0
-
                 
     # Operator overloading
     def operator_overload(self, another_stream, func):
@@ -552,19 +586,23 @@ class Stream(object):
                 in_streams=[self, another_stream],
                 out_stream=output_stream)
         return output_stream
-        
+
+    # Overload stream operation for add
     def __add__(self, another_stream):
         def add_pair(pair): return pair[0] + pair[1]
         return self.operator_overload(another_stream, func=add_pair)
 
+    # Overload stream operation for subtract
     def __sub__(self, another_stream):
         def subtract(pair): return pair[0] - pair[1]
         return self.operator_overload(another_stream, func=subtract)
 
+    # Overload stream operation for multiply
     def __mul__(self, another_stream):
         def multiply(pair): return pair[0] * pair[1]
         return self.operator_overload(another_stream, func=multiply)
 
+    # Overload stream operation for modulus.
     def __mod__(self, another_stream):
         def modulus(pair): return pair[0] % pair[1]
         return self.operator_overload(another_stream, func=modulus)
@@ -603,8 +641,9 @@ class Stream(object):
         return self.operator_overload(another_stream, func=greater_than_or_equal)
 
     
-##########################################################
-##########################################################
+#----------------------------------------------------------------------------------
+#    NumPy Arrays
+#----------------------------------------------------------------------------------
 class StreamArray(Stream):
     def __init__(self, name="NoName",
                  dimension=0, dtype=float, initial_value=None,
@@ -657,7 +696,6 @@ class StreamArray(Stream):
                 isinstance(dimension, np.ndarray) and
                 all(isinstance(v, int) and v > 0 for v in dimension)))
                )
-        self.lock = threading.RLock()
         self.num_in_memory = num_in_memory
         self.name = name
         self.dimension = dimension
@@ -677,7 +715,7 @@ class StreamArray(Stream):
         where the length of the array is size.
 
         """
-        if self.dimension is 0:
+        if self.dimension == 0:
             return np.zeros(size, self.dtype)
         elif isinstance(self.dimension, int):
             return np.zeros([size, self.dimension], self.dtype)
