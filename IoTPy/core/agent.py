@@ -1,6 +1,5 @@
 """ This module contains the Agent class. The Agent
-and Stream classes are the building blocks of
-PythonStreams.
+and Stream classes are the building blocks of IoTPy.
 
 """
 import sys
@@ -51,28 +50,33 @@ class Agent(object):
     
     The default is that every input stream is also a call stream,
     i.e., the agent executes a state transition when any of its
-    input streams is modified. For performance reasons, we
-    may not want the agent to execute state transitions each time
-    any of its input streams is modified; we may want the agent to
-    execute state transitions periodically --- for example, every
-    second. In this case, the call streams will be different from
-    the input streams. A call stream that has a value appended to
-    it every second will cause the agent to execute a state
-    transition every second.
+    input streams is modified.
 
-    
+    You may want the agent to execute a step when some event occurs
+    where the event is not a change in an input stream.
+    For example, for performance reasons, we may want an agent to
+    execute state transitions periodically --- for example, every
+    second --- rather than when an input stream is modified.
+    In this case, the call streams will be different from
+    the input streams because the call streams will be the streams
+    that cause the agent to be woken up. For example, a call stream
+    that has a value appended to it every second will cause the agent
+    to execute a state transition every second.
+  
     Parameters
     ----------
     in_streams : list of streams
-        The list of the agent's input streams. This list may be empty.
+        The list of the agent's input streams.
+        This list may be empty.
     out_streams : list of streams
-        The list of the agent's output streams. This list may be empty.
+        The list of the agent's output streams.
+        This list may be empty.
     call_streams : list of streams
         When a new value is added to a stream in this list
         a state transition is invoked.
-        This the usual way (but not the only way) in which
-        state transitions occur. A state transiton for an
-        agent ag can also be executed by calling ag.next()
+        This the usual way in which state transitions occur.
+        A state transiton for an agent ag can also be
+        executed by calling ag.next()
     state: object
         The state of the agent. The state is updated after
         a transition.
@@ -87,18 +91,15 @@ class Agent(object):
     Attributes
     ----------
     _in_lists: list of InList
-        InList defines the slice of a list.
-        The j-th element of _in_lists is an InList
-        that defines the slice of the j-th input stream
-        that can be read by this agent in a state
-        transition. For example, if
-        listj = _in_lists[j].lists
-        startj = _in_lists[j].start
-        stopj = _in_lists[j].stop
-        Then this agent can read the slice:
-               listj[startj:stopj]
-        of the jth input stream. This slice is a slice
-        of the most recent values of the stream.
+        Recall that Inlist has fields: ['list', 'start', 'stop']
+        _in_lists[j].list refers to a slice of the most recent
+        values of the j-th input stream of this agent.
+        The slice into self.recent of the j-th input stream
+        starts at _in_lists[j].start and stops at _in_lists[j].stop.
+        This agent can read the following slice of self.recent of
+        the j-th input stream:
+           _in_lists[j][  _in_lists[j].start :  _in_lists[j].stop  ]
+        of the jth input stream. 
               
     _out_lists: list
         The j-th element of _out_lists is the list of
@@ -115,9 +116,12 @@ class Agent(object):
                 (a) get the values to be appended to output streams,
                 (b) get the next state, and
                 (c) update 'start' indices for each input stream.
-                    The agent no longer accesses elements of its input
+                    A start index for a stream indicates that this
+                    agent no longer accesses elements of this input
                     streams with indices earlier (i.e. smaller) than
-                    'start'.
+                    'start'. So, as far as this agent is concerned,
+                    elements with indices earlier than start can be
+                    discarded.
            (iii) update data structures after the transition.
 
     """
@@ -158,8 +162,10 @@ class Agent(object):
         for s in self.call_streams:
             s.register_subscriber(self)
 
-        # Initially each element of in_lists is the
+        # Initially each element of each in_list is the
         # empty InList: list = [], start=0, stop=0
+        # Initially, the agent has no visibility into any of its
+        # input streams.
         self._in_lists = [InList([], 0, 0) for s in self.in_streams]
 
         # self._in_lists_start_values[i] is the index into the i-th
@@ -182,7 +188,7 @@ class Agent(object):
         """
         This function can be used only after the agent has been
         halted by calling halt(). The restart is nondeterministic.
-        The restarted agent may read parts of streams that it had
+        The restarted agent may re-read parts of streams that it had
         read before it was halted. Also, it may skip parts of
         streams that it hasn't read. This function is rarely used
         in most applications.
@@ -209,7 +215,10 @@ class Agent(object):
         stream_name : str, optional
             A new value was appended to the stream with name
             stream_name as a result of which this agent
-            executes a state transition.
+            executes a state transition. The stream_name tells this
+            agent the name of stream that is causing this agent
+            to be woken up and execute a state transition.
+            
 
         """
         #----------------------------------------------------------------
@@ -294,7 +303,7 @@ class Agent(object):
 
 
 #------------------------------------------------------------------------------------------
-# TESTS
+# SIMPLE TEST. See IoTPy/IoTPy/tests for extensive tests.
 #------------------------------------------------------------------------------------------
 
 def test():
@@ -329,7 +338,6 @@ def test():
     assert(output_stream_1.recent[:15] == list(range(10, 25, 1)))
     assert(input_stream_0.start == {A:10})
     assert(input_stream_1.start == {A:15})
-
 
 if __name__ == '__main__':
     test()
