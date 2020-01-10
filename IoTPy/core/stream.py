@@ -110,27 +110,20 @@ class Stream(object):
           agents.
           recent[:stop] contains the most recent elements of
           the stream. The elements of recent[stop:] are garbage.
-          The length of recent is: 2*num_in_memory
-          2*num_in_memory is used for reasons explained
-          in the documentation about the implementation.
+          The length of recent is: num_in_memory
     stop : int
           index into the list recent.
-            0 <= stop < len(self.recent) = 2*num_in_memory
+            0 <= stop < len(self.recent) = num_in_memory
           recent[:stop] contains the stop most recent
           values of this stream.
           recent[stop:] contains arbitrary (garbage) values.
-          The length of a stream is the number of elements in it.
-          If the length of stream s is more than num_in_memory
-          then:
-               2*num_in_memory >= s.stop >= s.num_in_memory
-          else s.stop is the length of the stream.
     offset: int (nonnegative)
           recent is a list or array of a given length whereas
           a stream can grow to an arbitrary length.
-          offset maps a value in a stream to a value in recent.
+          offset maps a value in a stream to a value in the buffer
+          self.recent.
           For a stream s:
-                   s.recent[i] = s[i + s.offset]
-                      for i in range(s.stop)
+            s.recent[i] = s[i + s.offset] for i in range(s.stop)
           The length of a stream s (i.e. the number of elements in
           it) is s.offset + s.stop.
     start : dict
@@ -266,9 +259,8 @@ class Stream(object):
         self.start = dict()
         self.num_elements_lost = dict()
         self.subscribers_set = set()
-        # The length of recent is twice num_in_memory because of the
-        # way data in recent is compacted. See _set_up_next_recent()
-        self.recent = [0] * (2*self.num_in_memory)
+        # The length of recent is num_in_memory.
+        self.recent = [0] * self.num_in_memory
         self.discard_None = discard_None
         # Set up the initial value of the stream.
         self.extend(initial_value)
@@ -649,9 +641,11 @@ class StreamArray(Stream):
                  dimension=0, dtype=float, initial_value=None,
                  num_in_memory=DEFAULT_NUM_IN_MEMORY):
         """
-        A StreamArray is a version of Stream in which recent
-        is a NumPy array. The parameters are the same as for Stream
-        except for dimension and dtype (see below).
+        A StreamArray is a version of Stream treated as a NumPy array.
+        The buffer, recent, is a NumPy array.
+        
+        The parameters for StreamArray are the same as for Stream
+        except that StreamArray has dimension and dtype (see below).
 
         Parameters
         ----------
@@ -669,21 +663,24 @@ class StreamArray(Stream):
             each element of the stream is a 1-D array where the 
             length of the array is dimension. Each element of the array
             is of type, dtype.
-            In this case, self.recent is a 2-D array whose elements are of
-            type dtype, and the number of columns of self.recent is dimension
-            and the number of rows is num_in_memory.
-            We think of the stream as an infinite 2-D array where the
+            Think of the stream as an infinite 2-D array where the
             number of columns is dimension and the number of rows is
             unbounded.
-            For example, if dimension is 3 and dtype is float, then the
+            For example, if dimension is 10 and dtype is int32, then the
             stream is a 2-D NumPy array in which each row is:
-            (float, float, float)
+            an array with 10 elements each of type 32-bit integer and
+            the number of columns is arbitrarily large.
+            An unbounded stream is stored in the buffer, self.recent, which
+            is a 2-D array whose elements are of type dtype. The number of
+            columns of self.recent is dimension and the number of rows is
+            num_in_memory, and only the most recent num_in_memory elements
+            of the stream are saved in main memory.
         If dimension is a tuple or list then:
-            the elements of dimension must be strictly positive integers.
+            this tuple or list must be strictly positive integers.
             In this case, each element of the stream is an N-dimensional
-            array where N is the length of the tuple, and the lengths of
-            the N dimensions are the elements of the tuple. The type of
-            the elements of the array is dtype.
+            array where N is the length of the tuple.  The elements of
+            the array are of type dtype. The size of the array is given by
+            the tuple.
             For example, if dimension is (2, 2) and dtype is float, then
             each element of the stream is a 2 X 2 NumPy array of floats.
 
@@ -737,6 +734,8 @@ class StreamArray(Stream):
         -----
             See self._create_recent() for a description of
             the elements of the stream.
+            This function extends the stream by a single
+            element, i.e, value.
 
         """
         # Reshape the appended value so that it fits the
@@ -820,7 +819,6 @@ class StreamArray(Stream):
                 ' with an array with incompatible shape {2}'.\
                 format(self.name, self.dimension, output_array.shape[1:][0])
                 
-
         # If dimension is a tuple, list or array, then output_array is a numpy array
         # whose dimensions are output_array.shape[1:].
         # The number of elements entered into the stream is output_array.shape[0:].
@@ -862,7 +860,7 @@ class StreamArray(Stream):
             raise
         return
 
-    # Operator overloading
+    # Operator overloading for addition, subtraction, multiplication.
     def operator_overload(self, another_stream, func):
         from merge import merge_list
         assert another_stream.dimension == self.dimension, \
