@@ -39,12 +39,14 @@ class ComputeEngine(object):
     name_to_stream: dict
        key: stream name
        value: stream
-    q_agents: Queue.Queue() or multiprocessing.Queue()
+       The values in name_to_stream are the in_streams of
+       compute_func. name_to_stream is set by multicore.
+    q_agents: multiprocessing.Queue()
        The queue of agents scheduled for execution.
     scheduled_agents: Set
        An agent is in the set if and only if it is
-       in the queue. This set is used to ensure that
-       each agent appears at most once in the queue.
+       in the queue, q_agent. This set is used to ensure
+       that each agent appears at most once in the queue.
     compute_thread: threading.Thread
        The compute engine runs in this thread.
     lock: threading.Lock()
@@ -107,13 +109,14 @@ class ComputeEngine(object):
             self.scheduled_agents.discard(a)
             return a
 
-    def start(self):
-        def execute_computation():
+    def create_compute_thread(self):
+        def target_of_compute_thread():
             while not self.stopped:
                 # Wait at most max_wait_time seconds to get the next
                 # message from self.input_queue. If the message is
                 # obtained then process it; else, stop this iteration
                 # and thread.
+                # max_wait_time is specified in system_parameters.
                 try:
                     v = self.input_queue.get(
                         timeout=max_wait_time)
@@ -137,11 +140,19 @@ class ComputeEngine(object):
             # Exit loop, and terminate thread when self.stopped is
             # True. 
             return
-            
         self.compute_thread = threading.Thread(
-            target=execute_computation, name=self.name, args=())
+            target=target_of_compute_thread,
+            name=self.name, args=())
+
+    def start(self):
+        """
+        Starts the compute thread.
+        Gets stream_name, data_for_stream from input_queue and appends
+        the data to the stream with the specified name.
+
+        """
+        self.create_compute_thread()
         self.compute_thread.start()
-        return
 
     def step(self):
         """
