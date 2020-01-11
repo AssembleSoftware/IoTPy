@@ -394,13 +394,36 @@ class Stream(object):
         """ Returns the latest element in the stream.
         The latest element is the most recent element put in
         the stream.
-        If the stream is empty then it returns the empty list
+        If the stream is empty then it returns the default.
 
         """
         if self.stop == 0:
             return default_for_empty_stream
         else:
             return self.recent[self.stop - 1]
+ 
+    def get_latest_index(self, default_for_empty_stream=-1):
+        """ Returns the index of the latest element in the stream.
+        The latest element is the most recent element put in
+        the stream.
+        If the stream is empty then it returns the default.
+
+        """
+        if self.stop == 0:
+            return default_for_empty_stream
+        else:
+            return self.offset + self.stop - 1
+ 
+    def get_earliest_index_in_memory(self, default_for_empty_stream=-1):
+        """ Returns the index of the earliest element in the stream
+        that is in main memory.
+        If the stream is empty then it returns the default.
+
+        """
+        if self.stop == 0:
+            return default_for_empty_stream
+        else:
+            return self.offset
 
     def get_last_n(self, n):
         """
