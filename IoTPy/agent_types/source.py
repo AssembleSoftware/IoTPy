@@ -529,14 +529,16 @@ class source_float_file(source_file):
     """
     def __init__(
             self, filename,
-            time_interval=0.0, num_steps=None):
+            time_interval=0.0, num_steps=None,
+            window_size=1):
         self.filename = filename
         self.time_interval = time_interval
         self.num_steps=num_steps
+        self.window_size = window_size
         self.name = 'source_float_file'
         source_file.__init__(
             self, filename, lambda v: float(v),
-            time_interval, num_steps)
+            time_interval, num_steps, window_size)
 
 
 class source_int_file(source_file):
@@ -547,14 +549,16 @@ class source_int_file(source_file):
     """
     def __init__(
             self, filename,
-            time_interval=0.0, num_steps=None):
+            time_interval=0.0, num_steps=None,
+            window_size=1):
         self.filename = filename
         self.time_interval = time_interval
         self.num_steps=num_steps
+        self.window_size = window_size
         self.name = 'source_float_file'
         source_file.__init__(
             self, filename, lambda v: int(v),
-            time_interval, num_steps)
+            time_interval, num_steps, window_size)
 
 class source_list(object):
     """
