@@ -301,6 +301,14 @@ class Agent(object):
         for j in range(len(self.out_streams)):
             self.out_streams[j].extend(self._out_lists[j])
 
+#-------------------------------------------------------------------------
+class BasicAgent(Agent):
+    def __init__(self, call_streams, next):
+        super(BasicAgent, self).__init__(
+            in_streams=[], out_streams=[], transition=None,
+            call_streams=call_streams)
+        self.next = next
+        return
 
 #------------------------------------------------------------------------------------------
 # SIMPLE TEST. See IoTPy/IoTPy/tests for extensive tests.
