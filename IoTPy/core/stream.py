@@ -213,7 +213,7 @@ class Stream(object):
     Reader r informs stream s that it will only
     read values with indexes greater than or
     equal to j in the list, recent,  by executing
-                  s.set_start(rt, j)
+                  s.set_start(r, j)
     which makes s.start[r] to be set to j.
 
 
@@ -234,6 +234,41 @@ class Stream(object):
     analogous to operations with the same names on
     lists.
 
+    Notes
+    -----
+    1. Implementing the functionality of mapping an
+    infinite stream on finite memory.
+    
+    The elements of a stream are stored in the buffer
+    self.recent which is a NumPy array or a list of
+    fixed size num_in_memory. The most recent values
+    of the stream are in self.recent[: self.stop].
+
+    If appending values to self.recent causes self.stop
+    to exceed num_in_memory, then the elements in
+    self.recent are compacted so as to retain only the
+    most recent values, and the earlier values are
+    discarded. This is done by the function
+    _set_up_next_recent().
+
+    A reader r does not read elements of the stream
+    before index self.start[r]. So, no reader reads
+    elements of the stream before:
+         min_start = min(self.start.values()
+    So, only the elements of recent with indices
+    between min_start and stop need to be retained
+    in self.recent. These elements are shifted down
+    by _set_up_next_recent().
+
+    2. Waking up agents subscribing to a stream.
+    When a stream is modified, the stream calls
+    wakeup_subscribers() which puts the subscribing
+    agents into a queue in ComputeEngine. This queue is
+    called q_agents and contains agents waiting for
+    execution. The main compute thread of the process
+    (see create_compute_thread() in ComputeEngine)
+    gets agents from this queue and calls the funcion
+    next() of each agent.
 
     """
     # SCHEDULER
