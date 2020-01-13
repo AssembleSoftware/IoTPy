@@ -58,6 +58,42 @@ class ComputeEngine(object):
        This attribute can be set to True in
        compute_engine.
 
+    Notes
+    -----
+    1. Implementation of functionality to get new data from
+    sensors and other sources. Also see:
+    IoTPy/IoTPy/multiprocessing/multicore.py.
+    
+    The function create_compute_thread() creates a thread
+    and makes self.compute_thread that thread. This thread
+    gets a message from input_queue. A message is a 2-tuple:
+    (stream_name, data). The thread appends data to the
+    stream with the name stream_name. It gets the stream
+    from its name by looking up the dict self.name_to_stream.
+    
+    Incoming messages are "pickleable" provided that
+    the data is "pickleable". The thread calls self.step()
+    which causes agents to execute their next() functions.
+
+    2. Implementation of execution of agents.
+    The queue, q_agents, is the queue of agents scheduled
+    for execution. The function self.step() executes a loop
+    to get the next agent from the queue and call its next()
+    function. The loop terminates when the queue becomes
+    empty.
+
+    When an agent that is executing its next() function
+    extends a stream s, the stream puts an agent A in
+    the queue, q_agents, if s is a call stream of A. So,
+    self.step() continues execution until all agents are
+    quiescent, i.e., no stream has been modified since an
+    agent has read it.
+
+    When self.step() terminates, the compute thread attempts
+    to get more data from input_queue. The compute thread
+    terminates if no data is available in input_queue for
+    a specified time, max_wait_time.
+
     """
     def __init__(self, name='compute_engine_thread'):
         self.name = name
