@@ -1,6 +1,16 @@
 """ This module contains the Agent class. The Agent
 and Stream classes are the building blocks of IoTPy.
 
+The module also contains the BasicAgent class. This
+class has only two parameters: call_streams and next().
+When a call_stream is modified, next() is called.
+
+The Agent class, in contrast to BasicAgent, has an
+parameter transition() which is called when a call
+stream is modified. The difference between transition()
+and next() is that transition operates on lists whereas
+next() operates on streams.
+
 """
 import sys
 import os
@@ -123,6 +133,19 @@ class Agent(object):
                     elements with indices earlier than start can be
                     discarded.
            (iii) update data structures after the transition.
+    Notes
+    -----
+    Implementation notes: The next() method of this agent is called
+    when any call_stream of this agent is modified. Calling the
+    next() method happens in the following way.
+
+    Step 1.  When a call_stream is modified, the agent is placed in
+    the queue, q_agents, of the ComputeEngine of this process. See
+    ComputeEngine.q_agents. This queue contains agents waiting to
+    execute a next() step.
+    Step 2. The main compute thread of this process gets agents from
+    this queue and calls next() on them. (See create_compute_thread()
+    in ComputeEngine).
 
     """
 
