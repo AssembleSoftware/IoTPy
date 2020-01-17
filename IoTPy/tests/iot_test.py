@@ -30,6 +30,90 @@ from iot import iot, iot_merge
 #---------------------------------------------------------------------------
 #     TESTS
 #---------------------------------------------------------------------------
+def test_simple():
+    """
+    Create an agent with a single input stream, x, and a single
+    output stream, y. The elements of y are twice the corresponding
+    elements of x.
+
+    """
+    # Create the streams.
+    x = Stream(name='x')
+    y = Stream(name='y')
+
+    def f(list_of_numbers, s):
+        """
+        Parameters
+        ----------
+        f: func
+           the function that is wrapped by iot to create an
+           agent.
+        list_of_numbers: list
+           the list obtained from the input
+           stream of the agent and passed to f.
+        s: stream
+           the output stream of the agent.
+
+        Returns
+        -------
+        The function returns len(list_of_numbers) because the
+        agent has finished processing the entire list of numbers.
+
+        """
+        output_list = [2*number for number in list_of_numbers]
+        s.extend(output_list)
+        return len(list_of_numbers)
+
+    iot(f, x, y)
+
+    # Extend stream x with an array
+    x.extend(list(range(5)))
+    run()
+
+    assert (recent_values(y) == [0, 2, 4, 6, 8])
+    
+def test_simple_array():
+    """
+    Same as test_simple except that StreamArray is used in place
+    of Stream.
+    
+    Create an agent with a single input stream array, x, and a single
+    output stream array, y. The elements of y are twice the corresponding
+    elements of x.
+
+    """
+    # Create the streams arrays.
+    x = StreamArray(name='x', dtype=int)
+    y = StreamArray(name='y', dtype=int)
+
+    def f(array_of_int, s):
+        """
+        Parameters
+        ----------
+        f: func
+           the function that is wrapped by iot to create an
+           agent.
+        array_of_int: NumPy array of int
+        s: StreamArray
+           the output stream array of the agent.
+
+        Returns
+        -------
+        The function returns len(array_of_int) because the
+        agent has finished processing the entire array.
+
+        """
+        s.extend(array_of_int * 2)
+        return len(array_of_int)
+
+    # Create the agent by wrapping function f.
+    iot(f, x, y)
+
+    # Extend input stream x of the agent with an array
+    x.extend(np.arange(5, dtype=int))
+    run()
+    assert np.array_equal(
+        recent_values(y), np.array([0, 2, 4, 6, 8]))
 
 def test_iot():
     x = StreamArray(dtype=int)
@@ -180,6 +264,8 @@ def test_iot_class():
                           np.array([10, 20., 30, 40, 50, 60, 70, 80]))
 
 if __name__ == '__main__':
+    test_simple()
+    test_simple_array()
     test_iot()
     test_iot_merge()
     test_iot_class()
