@@ -17,12 +17,17 @@ import threading
 import time
 sys.path.append(os.path.abspath("../agent_types"))
 sys.path.append(os.path.abspath("../core"))
+sys.path.append(os.path.abspath("../helper_functions"))
+
 # sink, op are in the agent_types folder
 from sink import stream_to_queue, sink_list, sink_element
 from op import map_element, map_list
 # compute_engine, stream are in the core folder
 from compute_engine import ComputeEngine
 from stream import Stream
+# basics is in the helper_functions folder
+from basics import map_e, fmap_e, map_l, f_mul
+from print_stream import print_stream
 
 # BUFFER_SIZE is the default length of each buffer.
 BUFFER_SIZE = 20
@@ -307,9 +312,10 @@ class Proc(object):
                 # buffer associated with this source, and
                 # informs all in_streams connected to this source that
                 # new data has arrived.
-                thread_creation_func = description['func']
+                thread_target = description['func']
                 # Get the source_thread for the source with this name.
-                source_thread = thread_creation_func(self.copy_stream, source_name)
+                #source_thread = thread_creation_func(self.copy_stream, source_name)
+                source_thread = self.create_source_thread(thread_target, source_name)
                 source_threads.append(source_thread)
 
             # STEP 9
@@ -330,6 +336,10 @@ class Proc(object):
 
         # Create the process.
         self.process = multiprocessing.Process(target=target)
+
+    def create_source_thread(self, thread_target, stream_name):
+        return threading.Thread(target=thread_target,
+                                args=(self, stream_name,))
     
     def copy_stream(self, lst, stream_name):
         """
@@ -391,6 +401,10 @@ class Proc(object):
         buffer_ptr.value = buffer_end_ptr
         return
 
+def copy_data_to_stream(data, proc, stream_name):
+    proc.copy_stream(data, stream_name)
+    
+
 def copy_buffer_segment(message, out_stream, buffer, in_stream_type):
     """
     copy_buffer_segment() is the function executed by the agent
@@ -432,58 +446,67 @@ def multicore(processes, connections):
         procs[name].process.join()
     for name in processes.keys():
         procs[name].process.terminate()
-        
-def test_1():
-    def f(in_streams, out_streams):
-        def ff(lst):
-            return [2*v for v in lst]
-        map_list(ff, in_streams[0], out_streams[0])
-    def g(in_streams, out_streams):
-        def gg(lst):
-            for v in lst: print ('v is ', v)
-        sink_list(gg, in_streams[0])
-    def h(extend_stream_func, stream_name):
-        def thread_target():
-            num_steps=8
-            step_size=4
-            for i in range(num_steps):
-                data = list(range(i*step_size, (i+1)*step_size))
-                extend_stream_func(data, stream_name)
-                time.sleep(0)
-        return threading.Thread(
-            target=thread_target,
-            args=()
-            )
 
+#-------------------------------------------------------------
+#  TESTS
+#-------------------------------------------------------------
+def test_1():
+    @map_e
+    def double(v): return 2*v
+    @map_e
+    def increment(v): return v+1
+    
+    # Functions wrapped by agents
+    def f(in_streams, out_streams):
+        double(in_stream=in_streams[0], out_stream=out_streams[0])
+
+    def g(in_streams, out_streams):
+        s = Stream(name='s')
+        increment(in_stream=in_streams[0], out_stream=s)
+        print_stream(s, name=s.name)
+
+    # Target of source thread.
+    def source_thread_target(proc, stream_name):
+        num_steps=2
+        step_size=4
+        for i in range(num_steps):
+            data = list(range(i*step_size, (i+1)*step_size))
+            copy_data_to_stream(data, proc, stream_name)
+            time.sleep(0)
+        return
+
+    # Specify processes and connections.
     processes = \
       {
-        'source_process':
+        'get_source_data_and_compute_process':
            {'in_stream_names_types': [('in', 'i')],
             'out_stream_names_types': [('out', 'i')],
             'compute_func': f,
             'sources':
               {'acceleration':
                   {'type': 'i',
-                   'func': h
+                   'func': source_thread_target
                   },
-               }
+               },
+            'actuators': {}
            },
-        'sink_process':
+        'aggregate_and_output_process':
            {'in_stream_names_types': [('in', 'i')],
             'out_stream_names_types': [],
             'compute_func': g,
-            'sources': {}
+            'sources': {},
+            'actuators': {}
            }
       }
     
     connections = \
       {
-          'source_process' :
+          'get_source_data_and_compute_process' :
             {
-                'out' : [('sink_process', 'in')],
-                'acceleration' : [('source_process', 'in')]
+                'out' : [('aggregate_and_output_process', 'in')],
+                'acceleration' : [('get_source_data_and_compute_process', 'in')]
             },
-           'sink_process':
+           'aggregate_and_output_process':
             {}
       }
 
