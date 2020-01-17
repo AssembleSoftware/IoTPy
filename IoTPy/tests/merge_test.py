@@ -746,6 +746,33 @@ def test_operator_overloading():
             [100, 51, 34, 26, 21, 18, 16, 14, 12, 11])
     assert (recent_values(f) ==
             [False, False, True, True, True, True, True, True, True, True])
+
+def test_simple_merge_2():
+    scheduler = Stream.scheduler
+    x = Stream('x')
+    y = Stream('y')
+    z = Stream('z')
+
+    zip_map(func=sum, in_streams=[x,y], out_stream=z)
+
+    x.extend(list(range(5)))
+    y.extend(list(range(10)))
+    
+    run()
+    
+    assert(recent_values(z) == [0, 2, 4, 6, 8])
+
+def test_simple_merge_1():
+    scheduler = Stream.scheduler
+    x = Stream('x')
+    u = Stream('u')
+    s = Stream('s')
+    d = zip_map(func=sum, in_streams=[x,u], out_stream=s, name='d')
+    x.extend(list(range(3)))
+    u.extend([10, 15, 18])
+    
+    run()
+    assert(recent_values(s) == [10, 16, 20])
     
 def test_merge_agents():
     simple_zip_map_test()
@@ -754,6 +781,8 @@ def test_merge_agents():
     test_timed_zip_agents()
     test_merge_multiple_windows()
     test_operator_overloading()
+    test_simple_merge_2()
+    test_simple_merge_1()
     print ('TEST OF MERGE IS SUCCESSFUL')
     
 if __name__ == '__main__':
