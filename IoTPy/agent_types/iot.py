@@ -51,7 +51,10 @@ def iot(func, in_stream, *args, **kwargs):
     Parameters
     ----------
         func: function
-           function on a single array and *args, **kwargs.
+           function on a single array or a single list and
+           *args, **kwargs. Note that func does not operate
+           on a single element of a list or an array. func
+           operates on the entire list or array.
         in_stream: Stream
             The input stream of this function, i.e., the
             input stream of the agent executing this
