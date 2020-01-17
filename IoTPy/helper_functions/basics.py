@@ -54,6 +54,25 @@ def map_e(func):
         return g
     return wrapper()
 
+
+#-------------------------------------------------------------------
+# map_list
+#-------------------------------------------------------------------
+def fmap_l(func):
+    def wrapper(**kwargs):
+        def g(s, **kwargs):
+            return map_list_f(func, s, **kwargs)
+        return g
+    return wrapper()
+
+def map_l(func):
+    def wrapper(**kwargs):
+        def g(in_stream, out_stream, **kwargs):
+            map_list(func, in_stream, out_stream, **kwargs)
+            return out_stream
+        return g
+    return wrapper()
+
 #-------------------------------------------------------------------
 # map_window
 #-------------------------------------------------------------------
@@ -796,6 +815,23 @@ def test_map_list_with_arrays():
     x.extend(np.arange(5))
     run()
     assert np.array_equal(recent_values(y), 2*np.arange(5))
+
+def test_merge_1():
+    @merge_e
+    def f(list_of_numbers):
+        return sum(list_of_numbers)
+    x = Stream('x')
+    y = Stream('y')
+    z = Stream('z')
+
+    f([x,y], z)
+    x.extend(list(range(5)))
+    y.extend(list(range(10)))
+    run()
+    assert(recent_values(z) == [0, 2, 4, 6, 8])
+
+
+    
 #------------------------------------------------------------
 #       RUN TESTS
 #------------------------------------------------------------
@@ -836,6 +872,7 @@ if __name__ == '__main__':
     test_map_window_list_1()
     test_map_window_list_2()
     test_map_window_list_3()
+    test_merge_1()
 
     
     
