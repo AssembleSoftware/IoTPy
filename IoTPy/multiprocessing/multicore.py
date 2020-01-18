@@ -55,8 +55,14 @@ class Proc(object):
         # network of agents. compute_func starts executing by starting
         # stream.scheduler.
         self.compute_func = self.spec['compute_func']
-        # sources is a list of threads. Each thread in the list gets data from
-        # somewhere (a source) and puts data into the computation.
+        # sources is a dict where the keys are names of sources, and the values
+        # are source descriptions. A source description is also a dict. A key
+        # in a source description is either 'type' or 'func'. The type specifies
+        # the type of data obtained by the source, and func specifies a function
+        # which acquires data from the source and passes it to a stream. This
+        # function runs in its own thread. The function passes data that it
+        # acquires from a source to a stream by calling the function:
+        # copy_data_to_stream(data, proc, stream_name)
         self.sources = self.spec['sources']
         # out_to_in is a dict. out_to_in[out_stream name] is a list of pairs:
         #             (receiver process name, in_stream).
