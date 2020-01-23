@@ -24,9 +24,12 @@ def timed_zip_map_agent(func, in_streams, out_stream,
     Parameters
     ----------
         in_streams: list of Stream
-           The list of input streams of the agent
+           The list of input streams of the agent.
+           Each input stream is timed, i.e. the elements
+           are pairs (timestamp, value)
         out_stream: Stream
-           The single output stream of the agent
+           The single output stream of the agent.
+           The output_stream is also timed.
         call_streams: list of Stream
            The list of call_streams. A new value in any stream in this
            list causes a state transition of this agent.
@@ -50,6 +53,7 @@ def timed_zip_map_agent(func, in_streams, out_stream,
 
     Examples
     --------
+       See test_timed_zip_agents() at the end of this file.
 
     """
     # Check types of arguments
@@ -136,12 +140,24 @@ def timed_zip_map_agent(func, in_streams, out_stream,
     # 6. Agent name
     return Agent(in_streams, [out_stream], transition, state, call_streams, name)
 
+
 def timed_zip_agent(in_streams, out_stream, call_streams=None, name=None):
+    """
+    Same as timed_zip_map except that no function is applied to the zipped
+    streams.
+
+    """
     func = lambda x: x
     timed_zip_map_agent(
         func, in_streams, out_stream, call_streams=None, name=None)
+    
 
 def timed_zip(list_of_streams):
+    """
+    Same as timed_zip_map except that no function is applied to the
+    zipped streams and this function returns out_stream.
+
+    """
     out_stream = Stream('output of timed zip')
     timed_zip_agent(list_of_streams, out_stream)
     return out_stream
