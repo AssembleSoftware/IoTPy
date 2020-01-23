@@ -30,7 +30,7 @@ from basics import map_e, fmap_e, map_l, f_mul
 from print_stream import print_stream
 
 # BUFFER_SIZE is the default length of each buffer.
-BUFFER_SIZE = 20
+BUFFER_SIZE = 2**20
 
 class Proc(object):
     """
