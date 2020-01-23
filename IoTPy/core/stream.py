@@ -762,7 +762,7 @@ class StreamArray(Stream):
         self.start = dict()
         self.num_elements_lost = dict()
         self.subscribers_set = set()
-        if initial_value:
+        if initial_value is not None:
             self.extend(initial_value)
 
     def _create_recent(self, size):
