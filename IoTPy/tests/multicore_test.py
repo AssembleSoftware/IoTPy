@@ -91,8 +91,12 @@ def source_thread_target(proc, stream_name):
 
 def test_1_single_process():
     """
+    test_1_single_process() and test_1() show how to convert a
+    single thread application into a multicore application.
+    
     This is a single process example which is converted into a
-    multicore example in test_1(), see below.
+    multicore example in test_1(), see below. Read this function
+    while you read function test_1().
 
     The partitioning to obtain multiple cores and threads is
     done as follows.
@@ -403,7 +407,56 @@ def test_4():
     multicore(processes, connections)
 
 
+#--------------------------------------------------------------------
+def test_0():
+    # Example with a source thread and a single process.
+    def f(in_streams, out_streams):
+        x = Stream('x')
+        y = Stream('y')
+        double(in_streams[0], x)
+        increment(x, y)
+        print_stream(y, name=y.name)
+
+    # Specify processes and connections.
+    processes = \
+      {
+        'process':
+           {'in_stream_names_types': [('in', 'i')],
+            'out_stream_names_types': [],
+            'compute_func': f,
+            'sources':
+              {'acceleration':
+                  {'type': 'i',
+                   'func': source_thread_target
+                  },
+               },
+            'actuators': {}
+           }
+      }
+    
+    connections = \
+      {
+          'process' :
+            {
+                'acceleration' : [('process', 'in')]
+            }
+      }
+
+    multicore(processes, connections)
+
+
+
 if __name__ == '__main__':
+    print ('starting test_0')
+    print ('example of a single process with a source thread')
+    print ('s[j] = 2*j + 1')
+    print ('')
+    test_0()
+    print ('')
+    print ('')
+    print ('--------------------------------')
+    print ('')
+    print ('')
     print ('starting test_1')
     print ('s[j] = 2*j + 1')
     print ('')
