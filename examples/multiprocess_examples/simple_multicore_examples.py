@@ -56,7 +56,7 @@ def increment(v): return v+1
 def square(v): return v**2
 
 @map_e
-def identical(v): return v
+def identity(v): return v
 
 @map_e
 def multiply(v, multiplicand): return v*multiplicand
@@ -81,6 +81,12 @@ def sum_window(window):
 def sum_numbers(numbers):
     return sum(numbers)
 
+def copy_in_to_out(in_streams, out_streams):
+    identity(in_streams[0], out_streams[0])
+
+def print_input_stream(in_streams, out_streams):
+    print_stream(in_streams[0], in_streams[0].name)
+
 # Target of source thread.
 def source_thread_target(proc, stream_name):
     num_steps=5
@@ -90,6 +96,122 @@ def source_thread_target(proc, stream_name):
         copy_data_to_stream(data, proc, stream_name)
         time.sleep(0)
     return
+
+# Target of source thread reading from a file
+def read_file_thread_target(proc, stream_name):
+    filename = 'test.dat'
+    window_size = 2
+    with open(filename) as the_file:
+        data = list(map(float, the_file))
+        for i in range(0, window_size, len(data)):
+            window = data[i:i+window_size]
+            copy_data_to_stream(data, proc, stream_name)
+            time.sleep(0)
+    return
+
+def pass_data_from_one_process_to_another():
+    # Specify processes and connections.
+    processes = \
+      {
+        'source_process':
+           {'in_stream_names_types': [('in', 'i')],
+            'out_stream_names_types': [('out', 'i')],
+            'compute_func': copy_in_to_out,
+            'sources':
+              {'sequence':
+                  {'type': 'i',
+                   'func': source_thread_target
+                  },
+               },
+            'actuators': {}
+           },
+        'output_process':
+           {'in_stream_names_types': [('in', 'i')],
+            'out_stream_names_types': [],
+            'compute_func': print_input_stream,
+            'sources': {},
+            'actuators': {}
+           }
+      }
+    
+    connections = \
+      {
+          'source_process' :
+            {
+                'out' : [('output_process', 'in')],
+                'sequence' : [('source_process', 'in')]
+            },
+           'output_process':{}
+      }
+
+    multicore(processes, connections)
+
+
+def pass_data_from_one_process_to_another_v2():
+    # Example that uses floats and shows a source
+    # thread that reads a file.
+    # Specify processes and connections.
+    processes = \
+      {
+        'source_process':
+           {'in_stream_names_types': [('in', 'f')],
+            'out_stream_names_types': [('out', 'f')],
+            'compute_func': copy_in_to_out,
+            'sources':
+              {'sequence':
+                  {'type': 'f',
+                   'func': read_file_thread_target
+                  },
+               },
+            'actuators': {}
+           },
+        'output_process':
+           {'in_stream_names_types': [('in', 'f')],
+            'out_stream_names_types': [],
+            'compute_func': print_input_stream,
+            'sources': {},
+            'actuators': {}
+           }
+      }
+    
+    connections = \
+      {
+          'source_process' :
+            {
+                'out' : [('output_process', 'in')],
+                'sequence' : [('source_process', 'in')]
+            },
+           'output_process':{}
+      }
+
+    multicore(processes, connections)
+
+def test_multicore_with_single_process():
+    processes = \
+      {
+        'process':
+           {'in_stream_names_types': [('in', 'f')],
+            'out_stream_names_types': [],
+            'compute_func': print_input_stream,
+            'sources':
+              {'sequence':
+                  {'type': 'f',
+                   'func': read_file_thread_target
+                  },
+               },
+            'actuators': {}
+           }
+      }
+    
+    connections = \
+      {
+          'process' :
+            {
+                'sequence' : [('process', 'in')]
+            }
+      }
+
+    multicore(processes, connections)
 
 def test_1_single_process():
     """
@@ -357,7 +479,7 @@ def test_4():
 
     # Functions wrapped by agents
     def f(in_streams, out_streams):
-        identical(in_streams[0], out_streams[0])
+        identity(in_streams[0], out_streams[0])
 
     def g(in_streams, out_streams):
         multiply(in_streams[0], out_streams[0],
@@ -429,6 +551,25 @@ def test_4():
 
 
 if __name__ == '__main__':
+    test_multicore_with_single_process()
+    print ('starting pass data from one process to another')
+    print ('in[j] = j')
+    print ('')
+    pass_data_from_one_process_to_another()
+    print ('')
+    print ('')
+    print ('--------------------------------')
+    print ('')
+    print ('')
+    print ('starting pass data from one process to another')
+    print ('in[j] = j')
+    print ('')
+    pass_data_from_one_process_to_another_v2()
+    print ('')
+    print ('')
+    print ('--------------------------------')
+    print ('')
+    print ('')
     print ('starting test_1')
     print ('s[j] = 2*j + 1')
     print ('')
