@@ -375,6 +375,7 @@ class Proc(object):
 
         # STEP 2: COPY LST INTO THE CIRCULAR BUFFER
         n = len(lst)
+        assert n < BUFFER_SIZE, "The length of input data is greater than the buffer size (2**20)"
         buffer_end_ptr = buffer_ptr.value + n
         if buffer_end_ptr < BUFFER_SIZE:
             # In this case, don't need to wrap around the
