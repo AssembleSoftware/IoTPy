@@ -42,6 +42,8 @@ from multicore import *
 from merge import zip_stream
 from basics import map_e, map_l, map_w, merge_e
 from run import run
+from stream import StreamArray
+
 
 
 @map_e
@@ -445,18 +447,96 @@ def test_0():
     multicore(processes, connections)
 
 
+#--------------------------------------------------------------------
+@map_e
+def gg(v, ADD_VALUE):
+    return v + ADD_VALUE
+            
+def test_parameter(ADDEND_VALUE):
+    @map_e
+    def double(v): return 2*v
+    @map_e
+    def increment(v): return v+1
+    
+    # Functions wrapped by agents
+    def f(in_streams, out_streams, ADDEND):
+        gg(in_streams[0], out_streams[0], ADD_VALUE=ADDEND)
 
+    def g(in_streams, out_streams):
+        s = Stream(name='s')
+        increment(in_stream=in_streams[0], out_stream=s)
+        print_stream(s, name=s.name)
+
+    # Target of source thread.
+    def source_thread_target(proc, stream_name):
+        num_steps=2
+        step_size=4
+        for i in range(num_steps):
+            data = list(range(i*step_size, (i+1)*step_size))
+            copy_data_to_stream(data, proc, stream_name)
+            time.sleep(0)
+        return
+
+    # Specify processes and connections.
+    processes = \
+      {
+        'get_source_data_and_compute_process':
+           {'in_stream_names_types': [('in', 'i')],
+            'out_stream_names_types': [('out', 'i')],
+            'compute_func': f,
+            'keyword_args' : {'ADDEND' :ADDEND_VALUE},
+            'sources':
+              {'acceleration':
+                  {'type': 'i',
+                   'func': source_thread_target
+                  },
+               },
+            'actuators': {}
+           },
+        'aggregate_and_output_process':
+           {'in_stream_names_types': [('in', 'i')],
+            'out_stream_names_types': [],
+            'compute_func': g,
+            'keyword_args' : {},
+            'sources': {},
+            'actuators': {}
+           }
+      }
+    
+    connections = \
+      {
+          'get_source_data_and_compute_process' :
+            {
+                'out' : [('aggregate_and_output_process', 'in')],
+                'acceleration' : [('get_source_data_and_compute_process', 'in')]
+            },
+           'aggregate_and_output_process':
+            {}
+      }
+
+
+    multicore(processes, connections)
+
+
+#------------------------------------------------------------------------
 if __name__ == '__main__':
     print ('starting test_0')
     print ('example of a single process with a source thread')
-    print ('s[j] = 2*j + 1')
+    print ('y[j] = 2*j + 1')
     print ('')
     test_0()
     print ('')
     print ('')
     print ('--------------------------------')
+    print ('starting test_parameter(500)')
+    print ('example of a single process with a source thread')
+    print ("and a parameter. See 'keyword_args' : {'ADDEND' :ADDEND_VALUE}")
+    print ('s[j] = ADDEND + 1')
+    print ('')
+    test_parameter(500)
     print ('')
     print ('')
+    print ('--------------------------------')
     print ('starting test_1')
     print ('s[j] = 2*j + 1')
     print ('')
@@ -469,7 +549,7 @@ if __name__ == '__main__':
     print ('start test_1_single_process')
     print ('Output of test_1_single process() is identical:')
     print ('to output of test_1()')
-    print ('[1, 3, 5, ..., 39]')
+    print ('s[j] = 2*j + 1')
     print ('')
     test_1_single_process()
     print ('')
@@ -484,7 +564,7 @@ if __name__ == '__main__':
     print ('Output of filter_and_square_process is:')
     print ('[1, 9, 25, 49, 81, 121, 169, 225, 289, 361]')
     print ('')
-    print('Output of aggregate_and_output_process is:')
+    print('s: Output of aggregate_and_output_process is:')
     print('[1+9+25, 49+81+121, 169+225+289] which is:')
     print ('[35, 251, 683]')
     print ('')    
@@ -517,7 +597,7 @@ if __name__ == '__main__':
     print ('Output of square process is source**2:')
     print ('[0, 1, 4, 9, ... 361]')
     print ('')
-    print ('Output of aggregate process is:')
+    print ('s: Output of aggregate process is:')
     print ('[0+0, 2+1, 4+4, 6+9, ..., 38+361]')
     print ('')
     test_4()
