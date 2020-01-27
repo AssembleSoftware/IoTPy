@@ -57,6 +57,10 @@ class Proc(object):
         # network of agents. compute_func starts executing by starting
         # stream.scheduler.
         self.compute_func = self.spec['compute_func']
+        if 'keyword_args' in self.spec:
+            self.keyword_args = self.spec['keyword_args']
+        else:
+            self.keyword_args = {}
         # sources is a dict where the keys are names of sources, and the values
         # are source descriptions. A source description is also a dict. A key
         # in a source description is either 'type' or 'func'. The type specifies
@@ -66,6 +70,10 @@ class Proc(object):
         # acquires from a source to a stream by calling the function:
         # copy_data_to_stream(data, proc, stream_name)
         self.sources = self.spec['sources']
+        if 'actuators' in self.spec:
+            self.actuators = self.spec['actuators']
+        else:
+            self.actuators = {}
         # out_to_in is a dict. out_to_in[out_stream name] is a list of pairs:
         #             (receiver process name, in_stream).
         # This list is the list of in_streams connected to this out_stream.
@@ -243,7 +251,7 @@ class Proc(object):
 
             # STEP 4
             # CREATE THE COMPUTE AGENT FOR THIS PROCESS.
-            self.compute_func(self.in_streams, self.out_streams)
+            self.compute_func(self.in_streams, self.out_streams, **self.keyword_args)
 
             # STEP 5
             # CREATE AGENTS TO COPY EACH OUT_STREAM TO IN_STREAMS.
@@ -337,9 +345,10 @@ class Proc(object):
 
             # STEP 10
             # JOIN SOURCE THREADS AND JOIN SCHEDULER.
-            Stream.scheduler.join()
             for source_thread in source_threads:
                 source_thread.join()
+
+            Stream.scheduler.join()
             return
 
         # Create the process.
@@ -377,7 +386,6 @@ class Proc(object):
 
         # STEP 2: COPY LST INTO THE CIRCULAR BUFFER
         n = len(lst)
-        assert n < BUFFER_SIZE, "The length of input data is greater than the buffer size (2**20)"
         buffer_end_ptr = buffer_ptr.value + n
         if buffer_end_ptr < BUFFER_SIZE:
             # In this case, don't need to wrap around the
@@ -463,15 +471,34 @@ def multicore(processes, connections):
 #-------------------------------------------------------------
 #  TESTS
 #-------------------------------------------------------------
+@map_e
+def gg(v, ADD_VALUE, VAL):
+    print ('in gg. VAL is ', VAL.value)
+    VAL.value += 1
+    return v + ADD_VALUE
+            
 def test_1():
     @map_e
     def double(v): return 2*v
     @map_e
     def increment(v): return v+1
-    
+
+    class val(object):
+        def __init__(self):
+            self.value = 1
+    class trial(object):
+        def __init__(self, state):
+            self.state = state
+        def ggg(self, v):
+            self.state += v
+            print ('self.state is ', self.state)
+            return v
+        def f(self, in_streams, out_streams):
+            map_element(self.ggg, in_streams[0], out_streams[0])
+        
     # Functions wrapped by agents
-    def f(in_streams, out_streams):
-        double(in_stream=in_streams[0], out_stream=out_streams[0])
+    def f(in_streams, out_streams, ADDEND, VAL):
+        gg(in_streams[0], out_streams[0], ADD_VALUE=ADDEND, VAL=VAL)
 
     def g(in_streams, out_streams):
         s = Stream(name='s')
@@ -488,28 +515,32 @@ def test_1():
             time.sleep(0)
         return
 
+    global obj
+    obj = val()
+    trial_obj = trial(state=0)
     # Specify processes and connections.
     processes = \
-        {
-            'get_source_data_and_compute_process': {
-                'in_stream_names_types': [('in', 'i')],
-                'out_stream_names_types': [('out', 'i')],
-                'compute_func': f,
-                'sources': {
-                    'acceleration': {
-                        'type': 'i',
-                        'func': source_thread_target
-                    }
-                },
-                'actuators': {}
-            },
-            'aggregate_and_output_process': {
-                'in_stream_names_types': [('in', 'i')],
-                'out_stream_names_types': [],
-                'compute_func': g,
-                'sources': {},
-                'actuators': {}
-            }
+      {
+        'get_source_data_and_compute_process':
+           {'in_stream_names_types': [('in', 'i')],
+            'out_stream_names_types': [('out', 'i')],
+            'compute_func': trial_obj.f,
+            'sources':
+              {'acceleration':
+                  {'type': 'i',
+                   'func': source_thread_target
+                  },
+               },
+            'actuators': {}
+           },
+        'aggregate_and_output_process':
+           {'in_stream_names_types': [('in', 'i')],
+            'out_stream_names_types': [],
+            'compute_func': g,
+            'keyword_args' : {},
+            'sources': {},
+            'actuators': {}
+           }
       }
     
     connections = \
@@ -523,6 +554,9 @@ def test_1():
         }
 
     multicore(processes, connections)
+
+    print ('val is ', obj.value)
+    print ('trial_obj.state is ', trial_obj.state)
 
 
 if __name__ == '__main__':
