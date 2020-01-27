@@ -28,9 +28,12 @@ from stream import Stream
 # basics is in the helper_functions folder
 from basics import map_e, fmap_e, map_l, f_mul
 from print_stream import print_stream
+# utils is in the current folder
+from utils import check_processes_connections_format, check_connections_validity
 
 # BUFFER_SIZE is the default length of each buffer.
 BUFFER_SIZE = 2**20
+
 
 class Proc(object):
     """
@@ -270,7 +273,7 @@ class Proc(object):
                 # Step 5.1.3 Get the list of pairs (q, in_stream_signal_name) connected
                 # to this out_stream
                 q_and_in_stream_signal_names = \
-                  self.out_to_q_and_in_stream_signal_names[out_stream_name]
+                    self.out_to_q_and_in_stream_signal_names[out_stream_name]
                 # STEP 5.2: Make agent that copies out_stream to the in_streams to
                 # which it is connected. The input stream to this agent is out_stream.
                 # stream_name is a keyword argument of copy_stream().
@@ -380,10 +383,11 @@ class Proc(object):
         # STEP 1: GET BUFFER, QUEUE, STREAMS CONNECTED TO THIS STREAM
         buffer, buffer_ptr = self.out_to_buffer[stream_name]
         q_and_in_stream_signal_names = \
-          self.out_to_q_and_in_stream_signal_names[stream_name]
+            self.out_to_q_and_in_stream_signal_names[stream_name]
 
         # STEP 2: COPY LST INTO THE CIRCULAR BUFFER
         n = len(lst)
+        assert n < BUFFER_SIZE, "The length of input data is greater than the buffer size"
         buffer_end_ptr = buffer_ptr.value + n
         if buffer_end_ptr < BUFFER_SIZE:
             # In this case, don't need to wrap around the
@@ -416,6 +420,7 @@ class Proc(object):
         buffer_ptr.value = buffer_end_ptr
         return
 
+
 def copy_data_to_stream(data, proc, stream_name):
     proc.copy_stream(data, stream_name)
     
@@ -439,13 +444,16 @@ def copy_buffer_segment(message, out_stream, buffer, in_stream_type):
         # Set up an array with appropriate length to be filled in later.
         return_value = array.array(in_stream_type, range(segment_length))
         return_value[:remaining_space] = \
-          array.array(in_stream_type, buffer[start:])
+            array.array(in_stream_type, buffer[start:])
         return_value[remaining_space:] = \
-          array.array(in_stream_type, buffer[:end])
+            array.array(in_stream_type, buffer[:end])
     out_stream.extend(list(return_value))
     return
 
+
 def multicore(processes, connections):
+    check_processes_connections_format(processes, connections)
+    check_connections_validity(processes, connections)
     procs = {}
     for name, spec in processes.items():
         procs[name] = Proc(spec, connections, name)
@@ -501,8 +509,8 @@ def test_1():
 
     # Target of source thread.
     def source_thread_target(proc, stream_name):
-        num_steps=2
-        step_size=4
+        num_steps = 2
+        step_size = 4
         for i in range(num_steps):
             data = list(range(i*step_size, (i+1)*step_size))
             copy_data_to_stream(data, proc, stream_name)
@@ -514,49 +522,48 @@ def test_1():
     trial_obj = trial(state=0)
     # Specify processes and connections.
     processes = \
-      {
-        'get_source_data_and_compute_process':
-           {'in_stream_names_types': [('in', 'i')],
-            'out_stream_names_types': [('out', 'i')],
-            'compute_func': trial_obj.f,
-            'sources':
-              {'acceleration':
-                  {'type': 'i',
-                   'func': source_thread_target
-                  },
-               },
-            'actuators': {}
-           },
-        'aggregate_and_output_process':
-           {'in_stream_names_types': [('in', 'i')],
-            'out_stream_names_types': [],
-            'compute_func': g,
-            'keyword_args' : {},
-            'sources': {},
-            'actuators': {}
-           }
+        {
+            'get_source_data_and_compute_process':
+                {
+                    'in_stream_names_types': [('in', 'i')],
+                    'out_stream_names_types': [('out', 'i')],
+                    'compute_func': trial_obj.f,
+                    'sources':
+                        {
+                            'acceleration':
+                                {
+                                    'type': 'i',
+                                    'func': source_thread_target
+                                },
+                       },
+                    'actuators': {}
+                },
+            'aggregate_and_output_process':
+                {
+                    'in_stream_names_types': [('in', 'i')],
+                    'out_stream_names_types': [],
+                    'compute_func': g,
+                    'keyword_args' : {},
+                    'sources': {},
+                    'actuators': {}
+                }
       }
     
     connections = \
-      {
-          'get_source_data_and_compute_process' :
-            {
-                'out' : [('aggregate_and_output_process', 'in')],
-                'acceleration' : [('get_source_data_and_compute_process', 'in')]
-            },
-           'aggregate_and_output_process':
-            {}
-      }
-
+        {
+            'get_source_data_and_compute_process':
+                {
+                    'out': [('aggregate_and_output_process', 'in')],
+                    'acceleration': [('get_source_data_and_compute_process', 'in')],
+                },
+            'aggregate_and_output_process': {}
+        }
 
     multicore(processes, connections)
 
-    print ('val is ', obj.value)
-    print ('trial_obj.state is ', trial_obj.state)
+    print('val is ', obj.value)
+    print('trial_obj.state is ', trial_obj.state)
 
 
 if __name__ == '__main__':
     test_1()
- 
-
-    
