@@ -21,6 +21,7 @@ sys.path.append(os.path.abspath("../helper_functions"))
 
 # sink, op are in the agent_types folder
 from sink import stream_to_queue, sink_list, sink_element
+from op import map_element, map_list
 # compute_engine, stream are in the core folder
 from compute_engine import ComputeEngine
 from stream import Stream
@@ -386,6 +387,7 @@ class Proc(object):
 
         # STEP 2: COPY LST INTO THE CIRCULAR BUFFER
         n = len(lst)
+        assert n < BUFFER_SIZE, "The length of input data is greater than the buffer size"
         buffer_end_ptr = buffer_ptr.value + n
         if buffer_end_ptr < BUFFER_SIZE:
             # In this case, don't need to wrap around the
@@ -520,27 +522,31 @@ def test_1():
     trial_obj = trial(state=0)
     # Specify processes and connections.
     processes = \
-      {
-        'get_source_data_and_compute_process':
-           {'in_stream_names_types': [('in', 'i')],
-            'out_stream_names_types': [('out', 'i')],
-            'compute_func': trial_obj.f,
-            'sources':
-              {'acceleration':
-                  {'type': 'i',
-                   'func': source_thread_target
-                  },
-               },
-            'actuators': {}
-           },
-        'aggregate_and_output_process':
-           {'in_stream_names_types': [('in', 'i')],
-            'out_stream_names_types': [],
-            'compute_func': g,
-            'keyword_args' : {},
-            'sources': {},
-            'actuators': {}
-           }
+        {
+            'get_source_data_and_compute_process':
+                {
+                    'in_stream_names_types': [('in', 'i')],
+                    'out_stream_names_types': [('out', 'i')],
+                    'compute_func': trial_obj.f,
+                    'sources':
+                        {
+                            'acceleration':
+                                {
+                                    'type': 'i',
+                                    'func': source_thread_target
+                                },
+                       },
+                    'actuators': {}
+                },
+            'aggregate_and_output_process':
+                {
+                    'in_stream_names_types': [('in', 'i')],
+                    'out_stream_names_types': [],
+                    'compute_func': g,
+                    'keyword_args' : {},
+                    'sources': {},
+                    'actuators': {}
+                }
       }
     
     connections = \
@@ -555,8 +561,8 @@ def test_1():
 
     multicore(processes, connections)
 
-    print ('val is ', obj.value)
-    print ('trial_obj.state is ', trial_obj.state)
+    print('val is ', obj.value)
+    print('trial_obj.state is ', trial_obj.state)
 
 
 if __name__ == '__main__':

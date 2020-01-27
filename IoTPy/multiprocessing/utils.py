@@ -1,7 +1,6 @@
 """
 This module provides utility functions for other files in multiprocessing directory.
 """
-import inspect
 
 
 def check_processes_connections_format(processes, connections):
@@ -51,12 +50,6 @@ def check_processes_connections_format(processes, connections):
             # check source type validity
             assert source['type'] in type_code_set, \
                 "source '{}' of process  '{}' does not have a valid data type".format(source_name, process_name)
-            # check source func validity
-            assert inspect.isfunction(source['func']), \
-                "source func of source '{}' of process '{}' is not a function".format(source_name, process_name)
-
-        assert inspect.isfunction(process['compute_func']), \
-            "compute_func of process '{}' is not a function".format(process_name)
 
         # need assertion for actuators
 
