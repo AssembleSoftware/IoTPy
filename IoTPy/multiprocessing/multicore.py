@@ -433,7 +433,7 @@ def copy_buffer_segment(message, out_stream, buffer, in_stream_type):
     between start and end.
     """
     start, end = message
-    if end > start:
+    if end >= start:
         return_value = buffer[start:end]
     else:
         # The return value is read from the circular buffer
@@ -471,37 +471,29 @@ def multicore(processes, connections):
         procs[name].process.terminate()
 
 #-------------------------------------------------------------
-#  TESTS
+#  TEST
 #-------------------------------------------------------------
+
 @map_e
-def gg(v, ADD_VALUE, VAL):
-    print ('in gg. VAL is ', VAL.value)
-    VAL.value += 1
+def gg(v, ADD_VALUE):
     return v + ADD_VALUE
+
+@map_e
+def increment(v): return v+1
             
-def test_1():
-    @map_e
-    def double(v): return 2*v
-    @map_e
-    def increment(v): return v+1
-
-    class val(object):
-        def __init__(self):
-            self.value = 1
-    class trial(object):
-        def __init__(self, state):
-            self.state = state
-        def ggg(self, v):
-            self.state += v
-            print ('self.state is ', self.state)
-            return v
-        def f(self, in_streams, out_streams):
-            map_element(self.ggg, in_streams[0], out_streams[0])
-        
+def test_parameter(ADDEND_VALUE):
     # Functions wrapped by agents
-    def f(in_streams, out_streams, ADDEND, VAL):
-        gg(in_streams[0], out_streams[0], ADD_VALUE=ADDEND, VAL=VAL)
-
+    # Function f is used in get_source_data_and_compute_process
+    # ADDEND is a keyword arg of f.
+    # Note: ADDEND must be passed in the specification of
+    # the process. See the line:
+    # 'keyword_args' : {'ADDEND' :ADDEND_VALUE},
+    def f(in_streams, out_streams, ADDEND):
+        gg(in_streams[0], out_streams[0], ADD_VALUE=ADDEND)
+    # Function g is used in aggregate_and_output_process
+    # Function g has no arguments other than in_streams and out_streams.
+    # So we do not have to add 'keyword_args' : {}
+    # to the specification of the process.
     def g(in_streams, out_streams):
         s = Stream(name='s')
         increment(in_stream=in_streams[0], out_stream=s)
@@ -509,61 +501,93 @@ def test_1():
 
     # Target of source thread.
     def source_thread_target(proc, stream_name):
-        num_steps = 2
-        step_size = 4
+        num_steps=2
+        step_size=4
         for i in range(num_steps):
             data = list(range(i*step_size, (i+1)*step_size))
             copy_data_to_stream(data, proc, stream_name)
             time.sleep(0)
         return
 
-    global obj
-    obj = val()
-    trial_obj = trial(state=0)
+    #---------------------------------------------------------------------
     # Specify processes and connections.
+    # This example has two processes:
+    # (1) get_source_data_and_compute_process and
+    # (2) aggregate_and_output_process.
+    
+    # Specification of get_source_data_and_compute_process:
+    # (1) Inputs: It has a single input stream called 'in' which
+    # is of type int ('i').
+    # (2) Outputs: It has a single output stream called 'out'
+    # which is of type int ('i').
+    # (3) Computation: It creates a network of agents that carries
+    # out computation in the main thread by calling function f.
+    # (4) Keyword arguments: Function f has a keyword argument
+    # called ADDEND. This argument must be a constant.
+    # (5) sources: This process has a single source called
+    # 'acceleration'. The source thread target is specified by
+    # the function source_thread_target. This function generates
+    # int ('i').
+    # (6) actuators: This process has no actuators.
+    
+    # Specification of aggregate_and_output_process:
+    # (1) Inputs: It has a single input stream called 'in' which
+    # is of type int ('i').
+    # (2) Outputs: It has no outputs.
+    # (3) Computation: It creates a network of agents that carries
+    # out computation in the main thread by calling function g.
+    # (4) Keyword arguments: Function g has no keyword argument
+    # (5) sources: This process has no sources
+    # (6) actuators: This process has no actuators.
+
+    # Connections between processes.
+    # (1) Output 'out' of 'get_source_data_and_compute_process' is
+    # connected to input 'in' of aggregate_and_output_process.
+    # (2) The source, 'acceleration', of 'get_source_data_and_compute_process'
+    # is connected to input 'in' of 'get_source_data_and_compute_process'.
+    
     processes = \
-        {
-            'get_source_data_and_compute_process':
-                {
-                    'in_stream_names_types': [('in', 'i')],
-                    'out_stream_names_types': [('out', 'i')],
-                    'compute_func': trial_obj.f,
-                    'sources':
-                        {
-                            'acceleration':
-                                {
-                                    'type': 'i',
-                                    'func': source_thread_target
-                                },
-                       },
-                    'actuators': {}
-                },
-            'aggregate_and_output_process':
-                {
-                    'in_stream_names_types': [('in', 'i')],
-                    'out_stream_names_types': [],
-                    'compute_func': g,
-                    'keyword_args' : {},
-                    'sources': {},
-                    'actuators': {}
-                }
+      {
+        'get_source_data_and_compute_process':
+           {'in_stream_names_types': [('in', 'i')],
+            'out_stream_names_types': [('out', 'i')],
+            'compute_func': f,
+            'keyword_args' : {'ADDEND' :ADDEND_VALUE},
+            'sources':
+              {'acceleration':
+                  {'type': 'i',
+                   'func': source_thread_target
+                  },
+               },
+            'actuators': {}
+           },
+        'aggregate_and_output_process':
+           {'in_stream_names_types': [('in', 'i')],
+            'out_stream_names_types': [],
+            'compute_func': g,
+            'keyword_args' : {},
+            'sources': {},
+            'actuators': {}
+           }
       }
     
     connections = \
-        {
-            'get_source_data_and_compute_process':
-                {
-                    'out': [('aggregate_and_output_process', 'in')],
-                    'acceleration': [('get_source_data_and_compute_process', 'in')],
-                },
-            'aggregate_and_output_process': {}
-        }
+      {
+          'get_source_data_and_compute_process' :
+            {
+                'out' : [('aggregate_and_output_process', 'in')],
+                'acceleration' : [('get_source_data_and_compute_process', 'in')]
+            },
+           'aggregate_and_output_process':
+            {}
+      }
+    #--------------------------------------------------------------------
 
+    #--------------------------------------------------------------------
+    # Create and run multiple processes in a multicore machine.
     multicore(processes, connections)
 
-    print('val is ', obj.value)
-    print('trial_obj.state is ', trial_obj.state)
-
-
 if __name__ == '__main__':
-    test_1()
+    print ('Output printed are values of stream s. See function g')
+    print ('s[j] = 500 + j, because the ADDEND is 500')
+    test_parameter(500)
