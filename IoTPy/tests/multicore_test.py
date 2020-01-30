@@ -32,11 +32,11 @@ import threading
 import random
 import multiprocessing
 import numpy as np
-sys.path.append(os.path.abspath("../multiprocessing"))
 sys.path.append(os.path.abspath("../core"))
 sys.path.append(os.path.abspath("../agent_types"))
 sys.path.append(os.path.abspath("../helper_functions"))
 sys.path.append(os.path.abspath("../../examples/timing"))
+sys.path.append(os.path.abspath("../concurrency"))
 
 from multicore import *
 from merge import zip_stream
