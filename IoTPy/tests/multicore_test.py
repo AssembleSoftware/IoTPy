@@ -12,7 +12,7 @@ import threading
 import random
 import multiprocessing
 import numpy as np
-sys.path.append(os.path.abspath("../multiprocessing"))
+sys.path.append(os.path.abspath("../concurrency"))
 sys.path.append(os.path.abspath("../core"))
 sys.path.append(os.path.abspath("../agent_types"))
 sys.path.append(os.path.abspath("../helper_functions"))
@@ -82,12 +82,12 @@ def sum_numbers(numbers):
     return sum(numbers)
 
 # Target of source thread.
-def source_thread_target(proc, stream_name):
+def source_thread_target(source):
     num_steps=5
     step_size=4
     for i in range(num_steps):
         data = list(range(i*step_size, (i+1)*step_size))
-        copy_data_to_stream(data, proc, stream_name)
+        copy_data_to_source(data, source)
         time.sleep(0)
     return
 
@@ -448,36 +448,71 @@ def test_0():
 
 
 #--------------------------------------------------------------------
-@map_e
-def gg(v, ADD_VALUE):
-    return v + ADD_VALUE
-            
 def test_parameter(ADDEND_VALUE):
-    @map_e
-    def double(v): return 2*v
-    @map_e
-    def increment(v): return v+1
-    
     # Functions wrapped by agents
+    # Function f is used in get_source_data_and_compute_process
+    # ADDEND is a keyword arg of f.
+    # Note: ADDEND must be passed in the specification of
+    # the process. See the line:
+    # 'keyword_args' : {'ADDEND' :ADDEND_VALUE},
     def f(in_streams, out_streams, ADDEND):
         gg(in_streams[0], out_streams[0], ADD_VALUE=ADDEND)
-
+    # Function g is used in aggregate_and_output_process
+    # Function g has no arguments other than in_streams and out_streams.
+    # So we do not have to add 'keyword_args' : {}
+    # to the specification of the process.
     def g(in_streams, out_streams):
         s = Stream(name='s')
         increment(in_stream=in_streams[0], out_stream=s)
         print_stream(s, name=s.name)
 
     # Target of source thread.
-    def source_thread_target(proc, stream_name):
+    def source_thread_target(source):
         num_steps=2
         step_size=4
         for i in range(num_steps):
             data = list(range(i*step_size, (i+1)*step_size))
-            copy_data_to_stream(data, proc, stream_name)
+            copy_data_to_source(data, source)
             time.sleep(0)
         return
 
+    #---------------------------------------------------------------------
     # Specify processes and connections.
+    # This example has two processes:
+    # (1) get_source_data_and_compute_process and
+    # (2) aggregate_and_output_process.
+    
+    # Specification of get_source_data_and_compute_process:
+    # (1) Inputs: It has a single input stream called 'in' which
+    # is of type int ('i').
+    # (2) Outputs: It has a single output stream called 'out'
+    # which is of type int ('i').
+    # (3) Computation: It creates a network of agents that carries
+    # out computation in the main thread by calling function f.
+    # (4) Keyword arguments: Function f has a keyword argument
+    # called ADDEND. This argument must be a constant.
+    # (5) sources: This process has a single source called
+    # 'acceleration'. The source thread target is specified by
+    # the function source_thread_target. This function generates
+    # int ('i').
+    # (6) actuators: This process has no actuators.
+    
+    # Specification of aggregate_and_output_process:
+    # (1) Inputs: It has a single input stream called 'in' which
+    # is of type int ('i').
+    # (2) Outputs: It has no outputs.
+    # (3) Computation: It creates a network of agents that carries
+    # out computation in the main thread by calling function g.
+    # (4) Keyword arguments: Function g has no keyword argument
+    # (5) sources: This process has no sources
+    # (6) actuators: This process has no actuators.
+
+    # Connections between processes.
+    # (1) Output 'out' of 'get_source_data_and_compute_process' is
+    # connected to input 'in' of aggregate_and_output_process.
+    # (2) The source, 'acceleration', of 'get_source_data_and_compute_process'
+    # is connected to input 'in' of 'get_source_data_and_compute_process'.
+    
     processes = \
       {
         'get_source_data_and_compute_process':
@@ -513,7 +548,6 @@ def test_parameter(ADDEND_VALUE):
            'aggregate_and_output_process':
             {}
       }
-
 
     multicore(processes, connections)
 
