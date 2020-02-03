@@ -1,172 +1,82 @@
-"""
-This module tests source.py
-
-"""
-import numpy as np
 import sys
 import os
-sys.path.append(os.path.abspath("../helper_functions"))
+import threading
+import random
+import multiprocessing
+import numpy as np
+sys.path.append(os.path.abspath("../concurrency"))
 sys.path.append(os.path.abspath("../core"))
 sys.path.append(os.path.abspath("../agent_types"))
-
-from agent import Agent
-from stream import Stream, StreamArray
-from stream import _no_value, _multivalue
-from check_agent_parameter_types import *
+sys.path.append(os.path.abspath("../helper_functions"))
+sys.path.append(os.path.abspath("../../examples/timing"))
+from multicore import *
 from recent_values import recent_values
-from source import *
+from basics import map_e, map_l, map_w, merge_e, sink_e
+
+def test_0():
+    NUM_STEPS=5
+    STEP_SIZE=4
+    DATA = list(range(NUM_STEPS * STEP_SIZE))
+
+    @sink_e
+    def f(v, state):
+        # v is an incoming message
+        # state is the index into DATA. It is initially
+        # 0 because of the call f(in_streams[0], state=0).
+        # state is incremented by each call to f because
+        # next_state = state + 1, and f returns next_state.
+        assert v == DATA[state]
+        next_state = state + 1
+        return next_state
+
+    def compute_func(in_streams, out_streams):
+        f(in_streams[0], state=0)
+
+    # You can use any function for the generation of source data.
+    # This function should sleep for an arbitrarily small positive
+    # value so that the thread that generates the source yields to
+    # the main compute_func thread.
+    # The source generation function calls copy_data_to_source()
+    # to pass data into the source.
+    # The source generation function calls source_finished() to
+    # indicate that the source generation has finished.
+    def source_generator(source):
+        for i in range(NUM_STEPS):
+            data_segment = DATA[i*STEP_SIZE : (i+1)*STEP_SIZE]
+            copy_data_to_source(data_segment, source)
+            time.sleep(0.001)
+        source_finished(source)
+        return
+
+    # Specify processes and connections.
+    processes = \
+      {
+        'process':
+           {'in_stream_names_types': [('in', 'i')],
+            'out_stream_names_types': [],
+            'compute_func': compute_func,
+            'sources':
+              {'example_source':
+                  {'type': 'i',
+                   'func': source_generator
+                  },
+               }
+           }
+      }
+    
+    connections = \
+      {
+          'process' :
+            {
+                'example_source' : [('process', 'in')]
+            }
+      }
+
+    multicore(processes, connections)
 
 def test_source():
-    import random
-    import multiprocessing
-    import time
-
-    scheduler = Stream.scheduler
-    from op import map_element, map_list
-    from merge import zip_stream, zip_stream_f
-
-    # Function created by the source agent
-    test_list = []
-    def random_integer(test_list, a, b):
-        return_value = random.randint(a, b)
-        test_list.append(return_value)
-        return return_value
-    def read_list(state, in_list):
-        return in_list[state], state+1
-
-    a = Stream('a')
-    q = Stream('q')
-    r = Stream('r')
-    s = Stream('s')
-    t = Stream('t')
-    u = Stream('u')
-    sb = Stream('sb')
-    sc = Stream('sc')
-    seq = Stream('seq')
-    s_array = StreamArray(dtype=int, name='s_array')
-
-    filename = 'test.dat'
-    with open(filename, 'w') as output_file:
-        for i in range(10):
-            output_file.write(str(i) + '\n')
-
-    
-    test_sequence_list = []
-    def gen_repeatedly(output_list):
-        return_value = output_list
-        test_sequence_list.append(return_value)
-        return return_value
-
-    scheduler.name_to_stream = {
-        's': s, 'r':r, 'a':a, 'seq':seq, 's_array':s_array}
-    vv = source_func_to_stream(
-        func=random_integer, out_stream=s, num_steps=5,
-        name='random', window_size=2,
-        test_list=test_list, a=10, b=20)
-    
-    ww = source_list_to_stream(
-        in_list=range(10), out_stream=r, num_steps=5,
-        name='read list', window_size=2)
-
-    s_array_thread = source_list_to_stream(
-        in_list=np.arange(10), out_stream=s_array)
-        
-    xx = source_file_to_stream(
-        func=lambda x: 2*int(x), out_stream=a, filename='test.dat',
-        time_interval=0.5, num_steps=None)
-
-    sequence_thread = source_func_to_stream(
-        func=gen_repeatedly, out_stream=seq, num_steps=3,
-        output_list=[1,2])
-    
-
-    map_element(lambda x: 2*x, s, t)
-    def f(lst):
-        return [10*v for v in lst]
-    map_list(f, t, u)
-    map_element(lambda x: x*x, r, q)
-    p = zip_stream_f([u,q])
-
-    map_element(lambda x: x*x, sb, sc)
-
-
-    is_py2 = sys.version[0] == '2'
-    if is_py2:
-        import Queue as queue
-    else:
-        import queue as queue
-    que = queue.Queue()
-    test_list_source_to_queue = []
-    def sqf():
-        return random_integer(test_list_source_to_queue, 1, 10)
-    sqq = func_to_q(func=sqf, q=que, state=None, sleep_time=0.1, num_steps=5,
-                name='source_to_q')
-    q_to_streams_queue = queue.Queue()
-    q_to_streams_test_list = range(5)
-    q_to_streams_test_list_0 = []
-    q_to_streams_test_list_1 = []
-    for v in q_to_streams_test_list:
-        if v%2:
-            q_to_streams_queue.put(('q2s_0', v))
-            q_to_streams_test_list_0.append(v)
-        else:
-            q_to_streams_queue.put(('q2s_1', v))
-            q_to_streams_test_list_1.append(v)
-    q_to_streams_queue.put('_close')
-    q2s_0 = Stream('q2s_0')
-    q2s_1 = Stream('q2s_1')
-    q2sss = q_to_streams(q=q_to_streams_queue, out_streams=[q2s_0, q2s_1])
-
-    q2s_general_queue = queue.Queue()
-    q2s_test_list = list(range(5))
-
-    random_thread = vv
-    list_thread = ww
-    file_thread = xx
-    q_thread = sqq
-    q2s_thread = q2sss
-
-    scheduler.start()
-    
-    random_thread.start()
-    list_thread.start()
-    file_thread.start()
-    q_thread.start()
-    q2s_thread.start()
-    sequence_thread.start()
-    s_array_thread.start()
-    sb.extend(list(range(5)))
-    
-    random_thread.join()
-    list_thread.join()
-    file_thread.join()
-    q_thread.join()
-    q2s_thread.join()
-    sequence_thread.join()
-    s_array_thread.join()
-
-    scheduler.join()
-
-    assert recent_values(s) == test_list
-    assert recent_values(r) ==  list(range(10))
-    assert recent_values(a) == [v*2 for v in range(10)]
-    assert recent_values(t) == [v*2 for v in recent_values(s)]
-    assert recent_values(u) == [v*10 for v in recent_values(t)]
-    assert recent_values(q) == [v*v for v in recent_values(r)]
-    assert recent_values(p) == list(zip(*[recent_values(u), recent_values(q)]))
-    assert recent_values(sc) == [x*x for x in range(5)]
-    assert recent_values(seq) == test_sequence_list
-    assert all(recent_values(s_array) == np.arange(10))
-
-    que_contents = []
-    while not que.empty():
-        que_contents.append(que.get())
-    assert test_list_source_to_queue == que_contents
-    assert recent_values(q2s_0) == q_to_streams_test_list_0
-    assert recent_values(q2s_1) == q_to_streams_test_list_1
-    
-    print ('SOURCE TEST IS SUCCESSFUL!')
+    test_0()
+    print ('TEST OF SOURCE IS SUCCESSFUL.')
 
 if __name__ == '__main__':
-    print ('Takes a few seconds')
     test_source()

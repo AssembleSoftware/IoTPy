@@ -88,7 +88,8 @@ def source_thread_target(source):
     for i in range(num_steps):
         data = list(range(i*step_size, (i+1)*step_size))
         copy_data_to_source(data, source)
-        time.sleep(0)
+        time.sleep(0.001)
+    source_finished(source)
     return
 
 def test_1_single_process():
@@ -473,7 +474,8 @@ def test_parameter(ADDEND_VALUE):
         for i in range(num_steps):
             data = list(range(i*step_size, (i+1)*step_size))
             copy_data_to_source(data, source)
-            time.sleep(0)
+            time.sleep(0.001)
+        source_finished(source)
         return
 
     #---------------------------------------------------------------------
@@ -610,7 +612,7 @@ if __name__ == '__main__':
     print ('')
     print ('starting test_3')
     print ('')
-    print ('p1 is [1, 3, 5,...., 39]')
+    print ('p1 is [1, 9, 25, 49, 81,...., 361]')
     print ('')
     print ('p2 is [1+3+5, 7+9+11, 13+15+17, ..]')
     print ('')
