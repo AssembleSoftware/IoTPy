@@ -336,7 +336,6 @@ class Proc(object):
             10. Join the scheduler and source threads.
                
             """
-            
             # STEP 1
             # CREATE THE IN_STREAMS OF COMPUTE_FUNC 
             # and compute the dict, name_to_stream.
@@ -434,7 +433,6 @@ class Proc(object):
             # CREATE A NEW STREAM.SCHEDULER FOR THIS PROCESS
             # Specify the scheduler, input_queue and name_to_stream for
             # this processes.
-            #Stream.scheduler = ComputeEngine(self.name)
             Stream.scheduler = ComputeEngine(self)
             # input_queue is the queue into which all streams for this
             # process are routed.

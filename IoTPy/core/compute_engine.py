@@ -27,9 +27,10 @@ class ComputeEngine(object):
     Parameters
     ----------
     name: str (optional)
-      The name given to the thread in which the
-      computational engine executes. Used in
-      debugging.
+      The name of the process in which this ComputeEngine
+      operates.
+      A process name is required for executing multicore
+      computations using multicore.py
 
     Attributes
     ----------
@@ -95,8 +96,20 @@ class ComputeEngine(object):
     a specified time, max_wait_time.
 
     """
-    def __init__(self, name='compute_engine_thread'):
-        self.name = name
+    def __init__(self, process=None):
+        self.process = process
+        if self.process == None:
+            self.process_name = 'DefaultProcess'
+            self.process_id = 0
+            self.main_lock = None
+            self.source_status = None
+            self.queue_status = None
+        else:
+            self.process_name = process.name
+            self.process_id = self.process.process_ids[self.process_name]
+            self.main_lock = self.process.main_lock
+            self.source_status = self.process.source_status
+            self.queue_status = self.process.queue_status
         self.input_queue = multiprocessing.Queue()
         self.name_to_stream = {}
         self.q_agents = queue.Queue()
@@ -153,32 +166,50 @@ class ComputeEngine(object):
                 # obtained then process it; else, stop this iteration
                 # and thread.
                 # max_wait_time is specified in system_parameters.
+                self.main_lock.acquire()
+                if self.input_queue.empty():
+                    self.queue_status[self.process_id] = 0
+                if sum(self.source_status) + sum(self.queue_status) == 0:
+                    self.process.broadcast('stop', 'stop')
+                self.main_lock.release()
                 try:
-                    v = self.input_queue.get(
-                        timeout=max_wait_time)
+                    v = self.input_queue.get()
                 except:
-                    print ('Stopped: No more input.')
                     self.stopped = True
 
                 if not self.stopped:
                     # Succeeded in getting a message from input_queue.
-                    # This message is:
+                    # This message, v, is:
                     #     (stream name, element for this stream)
-                    # Get the specified stream and its next element.
+                    # Get the specified stream name and its next element.
                     out_stream_name, new_data_for_stream = v
-                    # Get the stream from its name
-                    out_stream = self.name_to_stream[out_stream_name] 
-                    out_stream.append(new_data_for_stream)
-                    # Take a step of the computation, i.e.
-                    # process the new input data and continue
-                    # executing this thread.
-                    self.step()
+                    if out_stream_name == 'source_finished':
+                        # Then new_data_for_stream is the
+                        # (process name, source name) of the source
+                        # that has finished execution.
+                        # Check the termination condition to determine
+                        # if the entire computation has terminated.
+                        # Go to the beginning of the while loop.
+                        pass
+                    elif out_stream_name == 'stop':
+                        # Stop this process.
+                        self.stopped = True
+                    else:
+                        # This message is to be appended to the specified
+                        # out_stream.
+                        # Get the stream from its name
+                        out_stream = self.name_to_stream[out_stream_name] 
+                        out_stream.append(new_data_for_stream)
+                        # Take a step of the computation, i.e.
+                        # process the new input data and continue
+                        # executing this thread.
+                        self.step()
             # Exit loop, and terminate thread when self.stopped is
             # True. 
             return
         self.compute_thread = threading.Thread(
             target=target_of_compute_thread,
-            name=self.name, args=())
+            name=self.process_name, args=())
 
     def start(self):
         """
