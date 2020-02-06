@@ -680,7 +680,44 @@ def multicore(processes, connections):
     for name in processes.keys():
         procs[name].process.terminate()
 
+def run_single_process_single_source(source_func, compute_func, source_type='f'):
+    """
+    Function for creating a multiprocess application consisting
+    of a single process with a single source and no actuators
+    and with no external input or output streams from or to other
+    processes.
+    This function creates the process, starts the process and
+    finally joins (stops) the process.
+    """
 
+    # Specify processes and connections.
+    processes = \
+      {
+        'process':
+           {'in_stream_names_types': [('in', source_type)],
+            'out_stream_names_types': [],
+            'compute_func': compute_func,
+            'sources':
+              {'single_source':
+                  {'type': source_type,
+                   'func': source_func
+                  },
+               },
+            'actuators': {}
+           }
+      }
+    
+    connections = \
+      {
+          'process' :
+            {
+                'single_source' : [('process', 'in')]
+            }
+      }
+
+    multicore(processes, connections)
+    
+    
 #-------------------------------------------------------------
 #  TEST
 #-------------------------------------------------------------
@@ -799,8 +836,27 @@ def test_parameter(ADDEND_VALUE):
     # Create and run multiple processes in a multicore machine.
     multicore(processes, connections)
 
+def test_single_process_single_source():
+    # Target of source thread.
+    def source_func(source):
+        num_steps=5
+        step_size=4
+        for i in range(num_steps):
+            data = list(range(i*step_size, (i+1)*step_size))
+            copy_data_to_source(data, source)
+            time.sleep(0.001)
+        source_finished(source)
+    def compute_func(in_streams, out_streams):
+        print_stream(in_streams[0])
+
+    run_single_process_single_source(source_func, compute_func)
+
+
+
+
 
 if __name__ == '__main__':
     print ('Output printed are values of stream s. See function g')
     print ('s[j] = 500 + j, because the ADDEND is 500')
     test_parameter(500)
+    test_single_process_single_source()

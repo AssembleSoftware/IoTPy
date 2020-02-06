@@ -32,6 +32,10 @@ import threading
 import random
 import multiprocessing
 import numpy as np
+import time
+import ntplib
+import logging
+
 sys.path.append(os.path.abspath("../core"))
 sys.path.append(os.path.abspath("../agent_types"))
 sys.path.append(os.path.abspath("../helper_functions"))
@@ -554,6 +558,73 @@ def test_parameter(ADDEND_VALUE):
     multicore(processes, connections)
 
 
+class ntp_mgr(object):
+    def __init__(self, ntp_server):
+        self.ntp_server = ntp_server
+        self.ntp_client = ntp_client = ntplib.NTPClient()
+    def get_offset(self):
+        try:
+            response = self.ntp_client.request(self.ntp_server, version=3)
+            return response.offset
+        except:
+            print ('ERROR IN get_offset')
+
+def test_ntp_1():
+    ntp_obj = ntp_mgr("0.us.pool.ntp.org")
+    v = ntp_obj.get_offset()
+    print ('v is ', v)
+    def source_thread_target(source):
+        num_steps=3
+        for i in range(num_steps):
+            v = ntp_obj.get_offset()
+            copy_data_to_source([v], source)
+            time.sleep(0.01)
+        source_finished(source)
+    def compute_func(in_streams, out_streams):
+        print_stream(in_streams[0])
+
+    # Specify processes and connections.
+    processes = \
+      {
+        'process':
+           {'in_stream_names_types': [('in', 'f')],
+            'out_stream_names_types': [],
+            'compute_func': compute_func,
+            'sources':
+              {'ntp_times':
+                  {'type': 'f',
+                   'func': source_thread_target
+                  },
+               },
+            'actuators': {}
+           }
+      }
+    
+    connections = \
+      {
+          'process' :
+            {
+                'ntp_times' : [('process', 'in')]
+            }
+      }
+
+    multicore(processes, connections)
+
+def test_ntp_2():
+    ntp_obj = ntp_mgr("0.us.pool.ntp.org")
+    v = ntp_obj.get_offset()
+    print ('v is ', v)
+    def source_thread_target(source):
+        num_steps=3
+        for i in range(num_steps):
+            v = ntp_obj.get_offset()
+            copy_data_to_source([v], source)
+            time.sleep(0.01)
+        source_finished(source)
+    def compute_func(in_streams, out_streams):
+        print_stream(in_streams[0])
+    run_single_process_single_source(source_thread_target, compute_func)
+
 #------------------------------------------------------------------------
 if __name__ == '__main__':
     print ('starting test_0')
@@ -636,6 +707,7 @@ if __name__ == '__main__':
     print ('s: Output of aggregate process is:')
     print ('[0+0, 2+1, 4+4, 6+9, ..., 38+361]')
     print ('')
-    test_4()
+    test_ntp_1()
+    test_ntp_2()
 
     
