@@ -177,6 +177,7 @@ class Proc(object):
             self.sources = self.spec['sources']
         else:
             self.sources = {}
+        self.source_keyword_args = {}
         if 'actuators' in self.spec:
             self.actuators = self.spec['actuators']
         else:
@@ -452,9 +453,14 @@ class Proc(object):
                 # informs all in_streams connected to this source that
                 # new data has arrived.
                 thread_target = description['func']
+                if 'keyword_args' in description.keys():
+                    self.source_keyword_args = description['keyword_args']
+                else:
+                    self.source_keyword_args = {}
                 # Get the source_thread for the source with this name.
                 #source_thread = thread_creation_func(self.copy_stream, source_name)
-                source_thread = self.create_source_thread(thread_target, source_name)
+                source_thread = self.create_source_thread(thread_target, source_name,
+                                                          **self.source_keyword_args)
                 source_threads.append(source_thread)
 
             # STEP 9
@@ -477,7 +483,7 @@ class Proc(object):
         # Create the process.
         self.process = multiprocessing.Process(target=target)
 
-    def create_source_thread(self, thread_target, stream_name):
+    def create_source_thread(self, thread_target, stream_name, **source_keyword_args):
         this_source = (self, stream_name)
         return threading.Thread(target=thread_target,
                                 args=(this_source,))
@@ -680,7 +686,8 @@ def multicore(processes, connections):
     for name in processes.keys():
         procs[name].process.terminate()
 
-def run_single_process_single_source(source_func, compute_func, source_type='f'):
+def run_single_process_single_source(source_func, compute_func, source_type='f',
+                                     **source_keyword_args):
     """
     Function for creating a multiprocess application consisting
     of a single process with a single source and no actuators

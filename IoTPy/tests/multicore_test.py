@@ -557,22 +557,28 @@ def test_parameter(ADDEND_VALUE):
 
     multicore(processes, connections)
 
-
+#------------------------------------------------
+# An ntp manager class
+#------------------------------------------------
 class ntp_mgr(object):
     def __init__(self, ntp_server):
+        # ntp_server is a string such as "0.us.pool.ntp.org"
         self.ntp_server = ntp_server
-        self.ntp_client = ntp_client = ntplib.NTPClient()
+        self.ntp_client = ntplib.NTPClient()
     def get_offset(self):
         try:
             response = self.ntp_client.request(self.ntp_server, version=3)
             return response.offset
         except:
-            print ('ERROR IN get_offset')
+            print ('no response from ntp client')
 
+#------------------------------------------------
+# Test of ntp running in its own thread.
+# Usually, do not run ntp in a separate thread.
+#------------------------------------------------
 def test_ntp_1():
     ntp_obj = ntp_mgr("0.us.pool.ntp.org")
     v = ntp_obj.get_offset()
-    print ('v is ', v)
     def source_thread_target(source):
         num_steps=3
         for i in range(num_steps):
@@ -610,10 +616,14 @@ def test_ntp_1():
 
     multicore(processes, connections)
 
+#------------------------------------------------
+# Test of ntp running in its own thread using
+# run_single_process_single_source() instead of
+# explicitly writing processes and connections.
+#------------------------------------------------
 def test_ntp_2():
     ntp_obj = ntp_mgr("0.us.pool.ntp.org")
     v = ntp_obj.get_offset()
-    print ('v is ', v)
     def source_thread_target(source):
         num_steps=3
         for i in range(num_steps):
@@ -624,6 +634,21 @@ def test_ntp_2():
     def compute_func(in_streams, out_streams):
         print_stream(in_streams[0])
     run_single_process_single_source(source_thread_target, compute_func)
+
+def test_ntp_3():
+    def source_thread_target(source, ntp_server):
+        num_steps=3
+        for i in range(num_steps):
+            response = ntp_client.request(ntp_server, version=3)
+            v = response.offset
+            copy_data_to_source([v], source)
+            time.sleep(0.01)
+        source_finished(source)
+    def compute_func(in_streams, out_streams):
+        print_stream(in_streams[0])
+    run_single_process_single_source(source_thread_target, compute_func,
+                                     ntp_server="0.us.pool.ntp.org")
+    
 
 #------------------------------------------------------------------------
 if __name__ == '__main__':
@@ -706,8 +731,16 @@ if __name__ == '__main__':
     print ('')
     print ('s: Output of aggregate process is:')
     print ('[0+0, 2+1, 4+4, 6+9, ..., 38+361]')
+    test_4()
     print ('')
+    print ('starting test_ntp_1')
+    print ('output is sequence of ntp offsets which is the')
+    print ('difference between the clock on this computer and ntp')
     test_ntp_1()
+    print ('')
+    print ('starting test_ntp_2')
+    print ('output is sequence of ntp offsets')
     test_ntp_2()
+    
 
     
