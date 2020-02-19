@@ -194,19 +194,39 @@ class Proc(object):
         # self.out_stream_names_types is a list of pairs:
         #                   ( out_stream_name, out_stream_type)
         for out_stream_name, out_stream_type in self.out_stream_names_types:
-            buffer = multiprocessing.Array(out_stream_type, BUFFER_SIZE)
-            # buffer_ptr is an integer with initial value of 0.
-            buffer_ptr = multiprocessing.Value('i', 0)
+            if out_stream_type != 'x':
+                buffer = multiprocessing.Array(out_stream_type, BUFFER_SIZE)
+                # buffer_ptr is an integer with initial value of 0.
+                buffer_ptr = multiprocessing.Value('i', 0)
+                
+            else:
+                # TO DO: use the scheduler queues to send data from this output stream
+                # to the inpute streams to which it is connected.
+                pass
             self.out_to_buffer[out_stream_name] =  (buffer, buffer_ptr)
+                
         # 2. Create a buffer for each source of this process.
         # self.out_to_buffer[source_name] is the buffer for the source called
         # source_name
         for source_name, source_type_and_func in self.sources.items():
             source_type  = source_type_and_func['type']
-            buffer = multiprocessing.Array(source_type, BUFFER_SIZE)
-            # buffer_ptr is an integer with initial value of 0.
-            buffer_ptr = multiprocessing.Value('i', 0)
+            if source_type != 'x':
+                # This source generates data of a type accepted by
+                # multiprocessing.Array
+                buffer = multiprocessing.Array(source_type, BUFFER_SIZE)
+                # buffer_ptr is a shared integer with initial value of 0.
+                buffer_ptr = multiprocessing.Value('i', 0)
+            else:
+                # This source feeds a stream inside the same process in
+                # which the source thread runs. This source does not feed
+                # any other process. So, it does not need to use
+                # multiprocessing.Array.
+                # This source can generate arbitrary Python objects such as
+                # tuples.
+                buffer_ptr = 0
+                buffer = [0] * BUFFER_SIZE
             self.out_to_buffer[source_name] =  (buffer, buffer_ptr)
+
         # out_to_q_and_in_stream_signal_names[out_stream_name] is 
         # a list of pairs (q, in_stream_signal_name).
         # where q is the queue of the receiving process and
@@ -518,20 +538,28 @@ class Proc(object):
         n = len(lst)
         assert n < BUFFER_SIZE, \
           "The length of input data is greater than the buffer size"
-        buffer_end_ptr = buffer_ptr.value + n
+        if isinstance(buffer_ptr, int):
+            # This buffer is for a local stream.
+            # This buffer is a Python list and not multiprocessing.Array
+            buffer_end_ptr = buffer_ptr + n
+            buffer_current_ptr = buffer_ptr
+        else:
+            # This buffer uses multiprocessing.Array
+            buffer_end_ptr = buffer_ptr.value + n
+            buffer_current_ptr = buffer_ptr.value
         if buffer_end_ptr < BUFFER_SIZE:
             # In this case, don't need to wrap around the
             # end of the buffer.
-            buffer[buffer_ptr.value : buffer_end_ptr] = lst
+            buffer[buffer_current_ptr : buffer_end_ptr] = lst
         else:
             # In this case, must wrap around the end of
             # the circular buffer.
             # remaining_space is the space remaining from
             # buffer_ptr to the end of the buffer.
-            remaining_space = BUFFER_SIZE - buffer_ptr.value
+            remaining_space = BUFFER_SIZE - buffer_end_ptr
             # Copy remaining_space elements of the list
             # to fill up the buffer.
-            buffer[buffer_ptr.value:] =  lst[:remaining_space]
+            buffer[buffer_current_ptr:] =  lst[:remaining_space]
             # That leaves n-remaining_space elements of the
             # list that are yet to be copied into the buffer.
             # Copy the remaining elements of list into the
@@ -564,11 +592,14 @@ class Proc(object):
         #           in the buffer between pointers:
         #             (buffer_ptr.value, buffer_end_ptr)
         for q, in_stream_signal_name in q_and_in_stream_signal_names:
-            q.put((in_stream_signal_name, (buffer_ptr.value, buffer_end_ptr)))
+            q.put((in_stream_signal_name, (buffer_current_ptr, buffer_end_ptr)))
         self.main_lock.release()
 
         # STEP 4: UPDATE BUFFER_PTR TO GET READY FOR NEXT INPUT.
-        buffer_ptr.value = buffer_end_ptr
+        if isinstance(buffer_ptr, int):
+            buffer_ptr = buffer_end_ptr
+        else:
+            buffer_ptr.value = buffer_end_ptr
         return
     def broadcast(self, receiver_stream_name, msg):
         for process_name in self.all_process_specs.keys():

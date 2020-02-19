@@ -1,5 +1,6 @@
 """
 This module provides utility functions for other files in multiprocessing directory.
+Written by Daniel Lee.
 """
 
 
@@ -17,7 +18,7 @@ def check_processes_connections_format(processes, connections):
     -------
     None
     """
-    type_code_set = set(['b', 'B', 'u', 'h', 'H', 'i', 'I', 'l', 'L', 'q', 'Q', 'f', 'd'])
+    type_code_set = set(['b', 'B', 'u', 'h', 'H', 'i', 'I', 'l', 'L', 'q', 'Q', 'f', 'd', 'x'])
 
     # 1. check the format of processes
     for process_name in processes:

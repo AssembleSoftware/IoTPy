@@ -55,6 +55,10 @@ def magnitude_of_vector(coordinates):
 def subtract_mean(window):
     return window[-1] - np.mean(window)
 
+@map_w
+def subtract_mean_block(window, block_size):
+    return window[:block_size] - np.mean(window)
+
 
 #---------------------------------------------------------
 # Agent that subtracts the mean in a stream incrementally
@@ -301,6 +305,14 @@ def test_subtract_mean():
     assert (np.array_equal(
         recent_values(y),
         np.array([-1.0,  2.0,  0.0, -2.0,  0.0,  1.0, -1.0])))
+    
+def test_subtract_mean_block():
+    x = StreamArray('x')
+    y = StreamArray('y')
+    subtract_mean_block(x, y, window_size=4, step_size=4, block_size=4)
+    x.extend(np.arange(20, dtype=float))
+    run()
+    print (recent_values(y))
 
 def test_time_of_crossing_threshold():
     # Declare streams
@@ -331,6 +343,7 @@ if __name__ == '__main__':
     test_evaluate_polynomial()
     test_magnitude_of_vector()
     test_subtract_mean()
+    #test_subtract_mean_block()
     test_time_of_crossing_threshold()
     test_quenched_time_of_crossing_threshold()
     

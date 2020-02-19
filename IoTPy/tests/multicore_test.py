@@ -557,6 +557,45 @@ def test_parameter(ADDEND_VALUE):
 
     multicore(processes, connections)
 
+
+#--------------------------------------------------------------------
+def test_local_source():
+    # Example with a local source thread and a single process.
+    def f(in_streams, out_streams):
+        x = Stream('x')
+        y = Stream('y')
+        double(in_streams[0], x)
+        increment(x, y)
+        print_stream(y, name=y.name)
+
+    # Specify processes and connections.
+    processes = \
+      {
+        'process':
+           {'in_stream_names_types': [('in', 'x')],
+            'out_stream_names_types': [],
+            'compute_func': f,
+            'sources':
+              {'acceleration':
+                  {'type': 'x',
+                   'func': source_thread_target
+                  },
+               },
+            'actuators': {}
+           }
+      }
+    
+    connections = \
+      {
+          'process' :
+            {
+                'acceleration' : [('process', 'in')]
+            }
+      }
+
+    multicore(processes, connections)
+
+
 #------------------------------------------------
 # An ntp manager class
 #------------------------------------------------
@@ -733,14 +772,27 @@ if __name__ == '__main__':
     print ('[0+0, 2+1, 4+4, 6+9, ..., 38+361]')
     test_4()
     print ('')
+    print ('')
+    print ('--------------------------------')
     print ('starting test_ntp_1')
     print ('output is sequence of ntp offsets which is the')
     print ('difference between the clock on this computer and ntp')
     test_ntp_1()
     print ('')
+    print ('')
+    print ('--------------------------------')
     print ('starting test_ntp_2')
     print ('output is sequence of ntp offsets')
     test_ntp_2()
+    print ('')
+    print ('')
+    print ('--------------------------------')
+    print ('starting test_local_source')
+    print ('output is same as for test_0')
+    test_local_source()
+    print ('')
+    print ('')
+    print ('--------------------------------')
     
 
     

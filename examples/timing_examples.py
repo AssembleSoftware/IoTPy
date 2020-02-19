@@ -5,6 +5,7 @@ sys.path.append(os.path.abspath("../../IoTPy/core"))
 sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
 sys.path.append(os.path.abspath("../../IoTPy/concurrency"))
 from source import source_func_to_stream
+from multicore import multicore
 from multicore import run_single_process_single_source
 from multicore import copy_data_to_source, source_finished
 from sink import sink_element
@@ -34,7 +35,7 @@ class ntp_single_server(object):
             return response.offset
         except:
             print ('no response from ntp client')
-
+            return 0.0
 
 class ntp_multiple_servers(object):
     def __init__(self, ntp_servers):
@@ -49,6 +50,13 @@ class ntp_multiple_servers(object):
                 return offset
         # None of the servers returned an offset. So return 0
         return 0.0
+    def time_and_first_offset(self):
+        for server in self.servers:
+            offset = server.offset()
+            if offset:
+                return (time.time(), offset)
+        # None of the servers returned an offset. So return 0
+        return (time.time(), 0.0)
     def offsets(self):
         offsets = []
         for server in self.servers:
@@ -120,25 +128,64 @@ def test_1():
     run_single_process_single_source(source_thread_target, compute_func)
 
 def test_2():
-    servers = ntp_multiple_servers(list_of_ntp_servers)
     def source_thread_target(source):
+        servers = ntp_multiple_servers(list_of_ntp_servers)
         num_steps=1
         for i in range(num_steps):
-            v = servers.mean_offset()
+            v = servers.time_and_first_offset()
             copy_data_to_source([v], source)
             time.sleep(0.01)
         source_finished(source)
     def compute_func(in_streams, out_streams):
         print_stream(in_streams[0])
-    run_single_process_single_source(source_thread_target, compute_func)
+
+    # Specify processes and connections.
+    processes = \
+      {
+        'process':
+           {'in_stream_names_types': [('in', 'x')],
+            'out_stream_names_types': [],
+            'compute_func': compute_func,
+            'sources':
+              {'ntp':
+                  {'type': 'x',
+                   'func': source_thread_target
+                  },
+               },
+            'actuators': {}
+           }
+      }
+    
+    connections = \
+      {
+          'process' :
+            {
+                'ntp' : [('process', 'in')]
+            }
+      }
+
+    multicore(processes, connections)
 
 if __name__ == '__main__':
     print ('starting test_0')
     test_0()
-    print
+    print ('')
+    print ('')
+    print ('---------------------------')
+    print ('')
+    print ('')
     print ('starting test_1')
     test_1()
-    print
+    print ('')
+    print ('')
+    print ('---------------------------')
+    print ('')
+    print ('')
     print ('starting test_2')
     test_2()
-    print
+    print ('')
+    print ('')
+    print ('---------------------------')
+    print ('')
+    print ('')
+
