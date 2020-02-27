@@ -11,27 +11,23 @@ sys.path.append(os.path.abspath("../../IoTPy/core"))
 sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
 sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
 
-# multicore is in multiprocessing
-from multicore import multicore, copy_data_to_source
+# multicore is in concurrency
+from multicore import multicore, copy_data_to_source, source_finished
 # stream is in core
 from stream import Stream, StreamArray
-# op, merge, source, sink are in agent_types
+# op, merge, split, source, sink are in agent_types
 from op import map_element, map_window, filter_element
 from merge import zip_stream, merge_window
 from split import unzip
 from sink import stream_to_file
 from helper_control import _no_value
 
+SLEEP_TIME_INTERVAL = 0.001
+
 # constants related to reading data from file
 PICKER_INTERVAL = 0.02
-
-# 3 directions for sensors
-N_DIR = 3
-
-# our special order CSN Phidgets are scaled to +/- 2g instead of +/- 6g
 PHIDGETS_ACCELERATION_TO_G = 1.0/3.0
 PHIDGETS_DECIMATION = 1
-PICKER_THRESHOLD = 0.0025
 
 # we request samples at 250 per second
 PHIDGETS_NOMINAL_DATA_INTERVAL_MS = 4
@@ -41,26 +37,44 @@ MINIMUM_REPICK_INTERVAL_SECONDS = 1.0
 delta = PHIDGETS_NOMINAL_DATA_INTERVAL_MS * PHIDGETS_DECIMATION * 0.001
 LTA = 10.0
 LTA_COUNT = int(LTA / delta)
-LTA_COUNT = int(LTA_COUNT / 100)
+LTA_COUNT = int(LTA_COUNT / 100) # for testing purpose
 print('LTA_COUNT: ', LTA_COUNT)
 
+# threshold for picker to detect as anomaly
+PICKER_THRESHOLD = 0.0025
 
-# Read from input and output sensor readings
+
 def f(in_streams, out_streams):
-    # in_stream[0] ~ in_stream[2] - re-ordered sensor data, in_stream[3] - time stamp,
+    """
+    Compute Function for Sensor Reader
+    Parameters
+    ----------
+    in_streams: list of input Streams - acceleration reordered to conform SAF standard of [N, E, Z]
+        in_streams[0] - acceleration N
+        in_streams[1] - acceleration E
+        in_streams[2] - acceleration Z
+        in_streams[3] - timestamp
+    out_streams: list of Streams
+        out_streams[0] - acceleration N (averaged and picked)
+        out_streams[1] - acceleration E (averaged and picked)
+        out_streams[2] - acceleration Z (averaged and picked)
+        out_streams[3] - timestamp
+    """
     n_acc = len(in_streams) - 1
 
-    # assume 3 in_streams of raw data - reordered
-    scaled_acc = [Stream('scaled_acc_' + str(i)) for i in range(n_acc)]
-    inverted_acc = Stream('inverted_acc')
-    averaged_acc = [Stream('averaged_acc_' + str(i)) for i in range(n_acc)]
-    # time stamp that corresponds to the averaged acc
-    acc_timestamp = Stream('acc_timestamp')
-    # acc merged with timestamp data
-    acc_merged = Stream('acc_merged')
-    # acc data picked according to timestamp
-    acc_picked = Stream('acc_picked')
+    # DECLARE STREAMS
 
+    scaled_acc = [Stream('scaled_acc_' + str(i)) for i in range(n_acc)]
+    inverted_acc = Stream('inverted_acc')  # stream for inverted acceleration E
+    averaged_acc = [Stream('averaged_acc_' + str(i)) for i in range(n_acc)]
+    acc_timestamp = Stream('acc_timestamp')  # timestamp corresponding to the averaged_acc
+    acc_merged = Stream('acc_merged')  # acceleration stream merged with timestamp stream
+    acc_picked = Stream('acc_picked')  # stream of acc data picked according to timestamp
+
+    # CREATE AGENTS
+
+    # 1. SCALE ACCELERATION
+    # our special order CSN Phidgets are scaled to +/- 2g instead of +/- 6g
     def scale_g(v):
         return PHIDGETS_ACCELERATION_TO_G * v
 
@@ -71,7 +85,7 @@ def f(in_streams, out_streams):
             out_stream=scaled_acc[i]
         )
 
-    # need a mechanism to check missing samples
+    # TODO: CHECK AND REPORT MISSING SAMPLES
     # if self.last_phidgets_timestamp:
     #     sample_increment = int(
     #         round((phidgets_timestamp - self.last_phidgets_timestamp) / PHIDGETS_NOMINAL_DATA_INTERVAL))
@@ -82,37 +96,40 @@ def f(in_streams, out_streams):
     #         logging.warn('Excess samples: last sample %s current sample %s equiv samples %s', \
     #                      self.last_phidgets_timestamp, phidgets_timestamp, sample_increment)
 
+    # 2. INVERT ACCELERATION E
+    # invert channel 1 (E-W) - this results in +1g being reported when the sensor is resting on its E side
     def invert_channel(v):
         return -1 * v
 
-    # invert channel 1 (E-W) - this results in +1g being reported when the sensor is resting on its E side
     map_element(
         func=invert_channel,
         in_stream=scaled_acc[1],
         out_stream=inverted_acc
     )
 
+    # 3. AVERAGE WINDOW
     def average_samples(window):
         return sum(window) / float(len(window))
 
-    for i in range(n_acc):
-        if i == 1:
-            map_window(
-                func=average_samples,
-                in_stream=inverted_acc,
-                out_stream=averaged_acc[i],
-                window_size=PHIDGETS_DECIMATION,
-                step_size=PHIDGETS_DECIMATION
-            )
-        else:
-            map_window(
-                func=average_samples,
-                in_stream=scaled_acc[i],
-                out_stream=averaged_acc[i],
-                window_size=PHIDGETS_DECIMATION,
-                step_size=PHIDGETS_DECIMATION
-            )
+    # average for inverted channel
+    map_window(
+        func=average_samples,
+        in_stream=inverted_acc,
+        out_stream=averaged_acc[1],
+        window_size=PHIDGETS_DECIMATION,
+        step_size=PHIDGETS_DECIMATION
+    )
 
+    for i in [0, 2]:
+        map_window(
+            func=average_samples,
+            in_stream=scaled_acc[i],
+            out_stream=averaged_acc[i],
+            window_size=PHIDGETS_DECIMATION,
+            step_size=PHIDGETS_DECIMATION
+        )
+
+    # 4. OBTAIN CORRESPONDING TIMESTAMP
     def get_timestamp(window):
         return window[-1]
 
@@ -124,15 +141,15 @@ def f(in_streams, out_streams):
         step_size=PHIDGETS_DECIMATION
     )
 
-    # zip
+    # 5. ZIP ACCELERATION AND TIMESTAMP STREAMS
     zip_stream(
         in_streams=averaged_acc + [acc_timestamp],
         out_stream=acc_merged
     )
 
-    # filter for timestamp delta below PICKER_INTERVAL
+    # 6. QUENCH SENSOR READING
     def timestamp_picker(v, state):
-        if v[3] - state > PICKER_INTERVAL: # spit output - False
+        if v[3] - state > PICKER_INTERVAL:  # generate output
             return False, v[3]
         else:
             return True, state
@@ -144,12 +161,13 @@ def f(in_streams, out_streams):
         state=0
     )
 
+    # 7. UNZIP STREAM - to pass streams to other processes
     unzip(
         in_stream=acc_picked,
         out_streams=out_streams
     )
 
-    # write to datastore - maybe use another process?
+    # TODO: Write to datastore - maybe use another process?
     # if self.datastore_file:
     #     if self.first_sample_timestamp_in_file == None:
     #         self.first_sample_timestamp_in_file = sample_timestamp
@@ -163,8 +181,6 @@ def f(in_streams, out_streams):
     #             logging.error('Error %s writing sample to file %s with timestamp %s', e, self.datastore_filename,
     #                           sample_timestamp)
 
-    # create datastore
-
     # if sample_timestamp - self.first_sample_timestamp_in_file >= self.file_store_interval:
     #     logging.info('File %s store interval elapsed with %s samples, rate %s samples/second', self.datastore_filename,
     #                  len(self.data_buffer), float(len(self.data_buffer)) / self.file_store_interval)
@@ -177,33 +193,29 @@ def f(in_streams, out_streams):
     #     self.time_start = None
 
 
-# Picker
 def g(in_streams, out_streams):
     """
+    Compute Function for Picker
     Parameters
     ----------
-    in_streams: list of Streams
-        single stream of (acc0, acc1, acc2, timestamp)
-    out_streams
-
-    Returns
-    -------
-
+    in_streams: list of input Streams passed from sensor reader process (f)
+        in_streams[0] - acceleration N
+        in_streams[1] - acceleration E
+        in_streams[2] - acceleration Z
+        in_streams[3] - timestamp
     """
 
-    # define Streams
+    # DECLARE STREAMS
+
     adjusted_acc = [Stream('adjusted_acc_{}'.format(i)) for i in range(len(in_streams) - 1)]
     adjusted_timestamp = Stream('adjusted_timestamp')
     merged_acc = Stream('acc_merged')
     filtered_acc = Stream('filtered_acc')
     quenched_acc = Stream('quenched_acc')
 
-    # subtract long term average for all accelerations
-    # def adjust_lta(window_arr):
-    #     timestamp = list(map(lambda x: x[-1], window_arr))[-1]
-    #     adjusted_window = [abs(window[-1] - sum(window)/len(window)) for window in zip(*map(lambda x: x[:-1], window_arr))]
-    #     return adjusted_window + [timestamp]
+    # DEFINE AGENTS
 
+    # 1. ADJUST LTA - subtract long-term-average from sample data
     def adjust_lta(window):
         return abs(window[-1] - sum(window)/len(window))
 
@@ -216,6 +228,7 @@ def g(in_streams, out_streams):
             step_size=1
         )
 
+    # 2. ADJUST TIMESTAMP - obtain timestamp corresponding to each window
     def adjust_timestamp(window):
         return window[-1]
 
@@ -227,13 +240,13 @@ def g(in_streams, out_streams):
         step_size=1
     )
 
-    # zip acc streams and timestamp stream
+    # 3. ZIP STREAM - zip acceleration and timestamp streams
     zip_stream(
         in_streams=adjusted_acc + [adjusted_timestamp],
         out_stream=merged_acc
     )
 
-    # filter out small magnitude i.e. under picker threshold
+    # 4. DETECT ANOMALY - filter out small magnitude to report only large acceleration
     def detect_anomaly(v):
         return any(map(lambda x: x > PICKER_THRESHOLD, v[:-1]))
 
@@ -243,42 +256,41 @@ def g(in_streams, out_streams):
         out_stream=filtered_acc
     )
 
-    # check if minimum_repick interval has passed
-    def check_repick_interval(v, state):
+    # 5. QUENCH PICKER
+    def quench_picker(v, state):
         timestamp = v[3]
         if timestamp - state < MINIMUM_REPICK_INTERVAL_SECONDS:
             return _no_value, state
         else:
-            print(timestamp)
             state = timestamp
             return v, state
 
     map_element(
-        func=check_repick_interval,
+        func=quench_picker,
         in_stream=filtered_acc,
         out_stream=quenched_acc,
         state=0
     )
 
-    # need to separate timestamp from stream
+    # 6. STREAM RESULTS TO FILE - for test purposes
     stream_to_file(quenched_acc, './phidget_data.txt')
 
 
 def read_timestamp_from_file(source):
+    """ Read timestamp from file - Test purpose only"""
     filename = 'timestamp.txt'
     with open(filename, 'r') as fpin:
         data = list(map(float, fpin))
         for i in range(len(data)):
             copy_data_to_source([data[i]], source)
-            time.sleep(0.001)
+            time.sleep(SLEEP_TIME_INTERVAL)
+    source_finished(source)
     return
 
 
 if __name__ == '__main__':
-    # 'e' for east, 'n' for north, 'z' for vertical
-    direction_list = ['n', 'e', 'z']
+    direction_list = ['n', 'e', 'z']  # 'e' for east, 'n' for north, 'z' for vertical
     direction_source_dict = {}
-
     # define function to read data from input file
     for direction in direction_list:
         def read_file_thread_target(source, file_suffix=direction):
@@ -287,7 +299,8 @@ if __name__ == '__main__':
                 data = list(map(float, fpin))
                 for i in range(len(data)):
                     copy_data_to_source([data[i]], source)
-                    time.sleep(0.001)
+                    time.sleep(SLEEP_TIME_INTERVAL)
+            source_finished(source)
             return
         direction_source_dict[direction] = read_file_thread_target
 
@@ -296,15 +309,12 @@ if __name__ == '__main__':
         'in_stream_names_types': [('in_{}'.format(direction), 'f') for direction in direction_list],
         'out_stream_names_types': [('out_{}'.format(direction), 'f') for direction in direction_list],
         'compute_func': f,
-        'sources':
-            {
-                'source_' + direction:
-                    {
-                        'type': 'f',
-                        'func': direction_source_dict[direction]
-                    }
-                for direction in direction_list
-            },
+        'sources': {
+            'source_' + direction: {
+                'type': 'f',
+                'func': direction_source_dict[direction]
+            } for direction in direction_list
+        },
         'actuators': {}
     }
     processes['sensor_reading']['in_stream_names_types'].append(('in_timestamp', 'f'))
@@ -315,14 +325,13 @@ if __name__ == '__main__':
     }
 
     # define the aggregation process
-    processes['picker'] = \
-        {
-            'in_stream_names_types': [('in_{}'.format(direction), 'f') for direction in direction_list],
-            'out_stream_names_types': [],
-            'compute_func': g,
-            'sources': {},
-            'actuators': {}
-        }
+    processes['picker'] = {
+        'in_stream_names_types': [('in_{}'.format(direction), 'f') for direction in direction_list],
+        'out_stream_names_types': [],
+        'compute_func': g,
+        'sources': {},
+        'actuators': {}
+    }
     processes['picker']['in_stream_names_types'].append(('in_timestamp', 'f'))
 
     # make connections between processes
