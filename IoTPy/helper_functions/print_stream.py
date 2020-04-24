@@ -1,6 +1,5 @@
 import sys
-import os
-sys.path.append(os.path.abspath("../agent_types"))
+sys.path.append("../agent_types")
 from sink import sink_element
 
 def print_stream(in_stream, name=None):

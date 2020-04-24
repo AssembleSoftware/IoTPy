@@ -5,23 +5,25 @@ This module tests element_agent.py
 import numpy as np
 
 import sys
-import os
-sys.path.append(os.path.abspath("../helper_functions"))
-sys.path.append(os.path.abspath("../core"))
-sys.path.append(os.path.abspath("../agent_types"))
+#import os
+sys.path.append("../helper_functions")
+sys.path.append("../core")
+sys.path.append("../agent_types")
 
 # agent and stream are in ../core
 from agent import Agent
-from stream import Stream, StreamArray, _no_value, _multivalue
-# recent_values and run are in ../helper_functions
+from stream import Stream, StreamArray, _no_value, _multivalue, run
+# recent_values are in ../helper_functions
 from recent_values import recent_values
-from run import run
+#from run import run
+from helper_control import _close
 # op is in ../agent_types
 from op import map_element, map_element_f
 from op import filter_element, filter_element_f
 from op import map_list, map_list_f
 from op import timed_window
-from basics import fmap_e, map_e
+from basics import fmap_e, map_e, sink_e, merge_e, merge_asynch
+from basics import merge_sink_e
 
 #------------------------------------------------------------------------------------------------
 #                                     A SIMPLE EXAMPLE TEST
@@ -732,10 +734,167 @@ def test_None_in_stream():
     run()
     assert (recent_values(y) == [0, None, 1, None, 2, 3])
     assert (recent_values(z) == [0, 1, 2, 3])
-            
-        
+
+def test_pass_parameter():
+    result = []
+    def f(v, state, result):
+        state += v
+        result.append(state)
+        return v, state
+    x = Stream('x')
+    y = Stream('y')
+    map_element(func=f, in_stream=x, out_stream=y, state=0, result=result)
+    x.extend(list(range(5)))
+    run()
+    assert result == [0, 1, 3, 6, 10]
+
+def count_pos_and_non_pos(count, lst):
+    """
+    Parameters
+    ----------
+    count : list
+       list with at least 2 elements
+    lst : list
+       The input list
+
+    Return
+    ------
+       count[0]: number of non-positive values
+          in lst
+       count[1]: number of positive values in
+          lst.
+
+    """
+    @sink_e
+    def f(v, count):
+        if v > 0: count[1] += 1
+        else: count[0] += 1
+    x = Stream('x')
+    f(x, count=count)
+    x.extend(lst)
+    run()
+
+def test_count_pos_and_non_pos():
+    count = [0, 0]
+    lst = [-2, -1, 0, 1, 2]
+    count_pos_and_non_pos(count, lst)
+    assert count == [3, 2]
+
+
+    
+import queue
+import threading
+    
+def test_thread_1():
+    def thread_target(q_in, q_out, finished):
+        @sink_e
+        def f(w): q_out.put(w*2)
+
+        x = Stream('x')
+        f(x)
+
+        while True:
+            v = q_in.get()
+            if v == finished:
+                break
+            x.append(v)
+            run()
+        return
+    
+    q_in = queue.Queue()
+    q_out = queue.Queue()
+    finished = 'finished'
+    thr = threading.Thread(target=thread_target, args=(q_in, q_out, finished))
+    thr.start()
+
+    # Put data into input queue
+    N = 5 
+    for i in range(N): q_in.put(i)
+    q_in.put(finished)
+    thr.join()
+
+    # Assert contents of the output queue.
+    output_list = []
+    while not q_out.empty():
+        output_list.append(q_out.get())
+    assert output_list == [i*2 for i in range(N)]
+    return
+
+
+def thread_target(q_in, q_out, streams, finished):
+    name_to_stream = {}
+    for s in streams:
+        name_to_stream[s.name] = s
+
+    while True:
+        v = q_in.get()
+        if v == finished:
+            q_out.put(finished)
+            break
+        s_name, value = v
+        s = name_to_stream[s_name]
+        s.append(value)
+        run()
+
+def test_thread_2():
+    @merge_sink_e
+    def f(list_of_elements, q_out):
+            q_out.put(sum(list_of_elements))
+
+    x = Stream('x')
+    y = Stream('y')
+
+    q_in = queue.Queue()
+    q_out = queue.Queue()
+    f([x, y], q_out=q_out)
+    streams = [x, y]
+    finished = _close
+    thr = threading.Thread(target=thread_target,
+                           args=(q_in, q_out, streams, finished))
+    thr.start()
+
+    # Put data into input queue
+    q_in.put(('x', 1))
+    q_in.put(('y', 100))
+    
+    q_in.put(finished)
+    
+    output = []
+    while True:
+        w = q_out.get()
+        if w == finished:
+            break
+        else:
+            output.append(w)
+    thr.join()
+
+    assert output == [101]
+
+def square_and_count_pos_and_non_pos(count, input_list):
+    @map_e
+    def f(v, count):
+        if v > 0: count[1] += 1
+        else: count[0] += 1
+        return v*v
+
+    x = Stream('x')
+    y = Stream('y')
+    f(in_stream=x, out_stream=y, count=count)
+    x.extend(input_list)
+    run()
+    return recent_values(y)
+
+def test_square_and_count_pos_and_non_pos():
+    count = [0, 0]
+    input_list = [1, -1, 2, 3, -4]
+    y_values = square_and_count_pos_and_non_pos(count, input_list)
+    run()
+    assert count == [2, 3]
+    assert y_values == [1, 1, 4, 9, 16]
+    
 
 def test_element():
+    test_square_and_count_pos_and_non_pos()
     test_1()
     test_2()
     test_3()
@@ -756,10 +915,15 @@ def test_element():
     test_multiple_relations_2()
     test_class()
     test_None_in_stream()
+    test_pass_parameter()
+    test_count_pos_and_non_pos()
+    test_thread_1()
+    test_thread_2()
     print ('TEST OF OP (ELEMENT) IS SUCCESSFUL')
     
 if __name__ == '__main__':
     test_element()
+
 
     
     

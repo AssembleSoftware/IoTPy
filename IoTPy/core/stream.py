@@ -3,30 +3,19 @@ Stream and Agent classes are the building blocks
 of PythonStreams.
 (Version 1.5 January, 2020. Created by: K. Mani Chandy)
 """
+# division is used in stream/value operations
 from __future__ import division
-import sys
-import os
-sys.path.append(os.path.abspath("../helper_functions"))
-sys.path.append(os.path.abspath("../agent_types"))
-
-
-from system_parameters import DEFAULT_NUM_IN_MEMORY
+# numpy used in StreamArray.
 import numpy as np
-from collections import namedtuple
-is_py2 = sys.version[0] == '2'
-if is_py2:
-    import Queue as queue
-else:
-    import queue as queue
-import logging.handlers
-import threading
+# system_parameters is in IoTPy/IoTPy/core
+from system_parameters import DEFAULT_NUM_IN_MEMORY
+# compute_engine is in IoTPy/IoTPy/core
 from compute_engine import ComputeEngine
-# helper_control is in ../helper_functions.
+# helper_control is in IoTPy/IoTPy/core
 from helper_control import TimeAndValue, _multivalue
 from helper_control import _no_value
 from helper_control import remove_novalue_and_open_multivalue
 from helper_control import remove_None
-# from merge import zip_map
 
 class Stream(object):
     """
@@ -946,5 +935,10 @@ class StreamArray(Stream):
     def __mul__(self, another_stream):
         def mul_pair(pair): return pair[0] * pair[1]
         return self.operator_overload(another_stream, func=mul_pair)
+
+
+#------------------------------------------------------------------------------
+def run(): Stream.scheduler.step()
+#------------------------------------------------------------------------------
 
         

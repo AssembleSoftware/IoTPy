@@ -1,21 +1,12 @@
 import threading
-import time
 import multiprocessing
 import sys
+# Check the version of Python
 is_py2 = sys.version[0] == '2'
 if is_py2:
     import Queue as queue
 else:
     import queue as queue
-#import Queue
-import sys
-import os
-sys.path.append(os.path.abspath("../helper_functions"))
-# helper_control is in ../helper_functions
-# max_wait_time is the maximum time that this thread waits to
-# get a new value from a source or other process, before giving
-# up and stopping the process.
-from system_parameters import max_wait_time
 
 class ComputeEngine(object):
     """
@@ -36,12 +27,14 @@ class ComputeEngine(object):
     ----------
     input_queue: multiprocessing.Queue
        Elements for input streams of this thread are put
-       in this queue.
+       in this queue. Each element of the queue is a 2-tuple:
+       (stream_name, data). 
     name_to_stream: dict
        key: stream name
        value: stream
        The values in name_to_stream are the in_streams of
-       compute_func. name_to_stream is set by multicore.
+       compute_func. name_to_stream is defined in multicore().
+       name_to_stream['s'] is the stream with name 's'.
     q_agents: multiprocessing.Queue()
        The queue of agents scheduled for execution.
     scheduled_agents: Set
@@ -56,7 +49,7 @@ class ComputeEngine(object):
        agents.
     stopped: Boolean
        True if and only if this computation is stopped.
-       This attribute can be set to True in
+       This attribute can be set to True only in the
        compute_engine.
 
     Notes
@@ -70,7 +63,8 @@ class ComputeEngine(object):
     gets a message from input_queue. A message is a 2-tuple:
     (stream_name, data). The thread appends data to the
     stream with the name stream_name. It gets the stream
-    from its name by looking up the dict self.name_to_stream.
+    from the stream's name by looking up the dict
+    self.name_to_stream.
     
     Incoming messages are "pickleable" provided that
     the data is "pickleable". The thread calls self.step()
@@ -81,7 +75,8 @@ class ComputeEngine(object):
     for execution. The function self.step() executes a loop
     to get the next agent from the queue and call its next()
     function. The loop terminates when the queue becomes
-    empty.
+    empty. At that point all agents are quiescent, waiting
+    for more input.
 
     When an agent that is executing its next() function
     extends a stream s, the stream puts an agent A in
@@ -92,8 +87,7 @@ class ComputeEngine(object):
 
     When self.step() terminates, the compute thread attempts
     to get more data from input_queue. The compute thread
-    terminates if no data is available in input_queue for
-    a specified time, max_wait_time.
+    terminates if no data is available in input_queue.
 
     """
     def __init__(self, process=None):
@@ -161,21 +155,35 @@ class ComputeEngine(object):
     def create_compute_thread(self):
         def target_of_compute_thread():
             while not self.stopped:
-                # Wait at most max_wait_time seconds to get the next
-                # message from self.input_queue. If the message is
-                # obtained then process it; else, stop this iteration
-                # and thread.
-                # max_wait_time is specified in system_parameters.
+
+                # With main_lock -------------------------------
                 self.main_lock.acquire()
+                # If the input queue is empty then set the queue
+                # status of this process to empty, i.e., 0.
                 if self.input_queue.empty():
                     self.queue_status[self.process_id] = 0
+                # If all the sources have finished and all the queues
+                # are empty then broadcast 'stop'. This broadcast
+                # message is received by this process as well.
+                # So, the input queue of this process will also contain
+                # the 'stop' message, and so this queue will not be empty.
+                # When a 'stop' message is received, this thread terminates.
                 if sum(self.source_status) + sum(self.queue_status) == 0:
+                    # Broadcast 'stop'
+                    # The stream name and stream element are both 'stop'.
                     self.process.broadcast('stop', 'stop')
                 self.main_lock.release()
+                # Released main_lock -------------------------------
+
                 try:
                     v = self.input_queue.get()
                 except:
+                    # Something unexpected happen. So, this thread terminates.
+                    # Also, tell other processes to terminate.
                     self.stopped = True
+                    # msg_to_all_other_processes() is like broadcast, except
+                    # that a process does not send a message to itself.
+                    self.process.msg_to_all_other_processes('stop', 'stop')
 
                 if not self.stopped:
                     # Succeeded in getting a message from input_queue.
@@ -184,15 +192,18 @@ class ComputeEngine(object):
                     # Get the specified stream name and its next element.
                     out_stream_name, new_data_for_stream = v
                     if out_stream_name == 'source_finished':
-                        # Then new_data_for_stream is the
-                        # (process name, source name) of the source
-                        # that has finished execution.
-                        # Check the termination condition to determine
-                        # if the entire computation has terminated.
-                        # Go to the beginning of the while loop.
+                        # A source has finished generating values. The
+                        # status of this source is set to finished, i.e. 0.
+                        # Execution returns to the beginning of the while loop
+                        # where the check for termination is carried out.
+                        # Termination is when all sources have terminated
+                        # and input queues of all processes are empty.
                         pass
                     elif out_stream_name == 'stop':
-                        # Stop this process.
+                        # This process may have broadcast 'stop' itself, and it
+                        # now receives its own 'stop' message. Or, some other
+                        # process broadcast ('stop', 'stop'). In either case, this
+                        # process receives a 'stop' message. So stop this process.
                         self.stopped = True
                     else:
                         # This message is to be appended to the specified
@@ -207,6 +218,7 @@ class ComputeEngine(object):
             # Exit loop, and terminate thread when self.stopped is
             # True. 
             return
+
         self.compute_thread = threading.Thread(
             target=target_of_compute_thread,
             name=self.process_name, args=())
@@ -239,6 +251,9 @@ class ComputeEngine(object):
 
     def join(self):
         self.compute_thread.join()
+
+#----------------------------------------------------------
+
 
 
         

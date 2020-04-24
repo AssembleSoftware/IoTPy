@@ -25,8 +25,10 @@ def check_processes_connections_format(processes, connections):
         process = processes[process_name]
         stream_name_set = set([]) # used to check stream name duplicates
         stream_name_type_list = process['in_stream_names_types'] + process['out_stream_names_types']
-        for stream in process['sources']: # to check for duplicate stream name for source as well
-            stream_name_type_list.append((stream, process['sources'][stream]['type']))
+        if 'sources' in process.keys():
+            # to check for duplicate stream name for source as well
+            for stream in process['sources']: 
+                stream_name_type_list.append((stream, process['sources'][stream]['type']))
         for stream_name_type in stream_name_type_list:
             # check stream_name_type format validity
             assert type(stream_name_type) == tuple, \
@@ -43,14 +45,17 @@ def check_processes_connections_format(processes, connections):
                 "process '{}' contains duplicate stream name '{}'".format(process_name, stream_name_type[0])
             stream_name_set.add(stream_name_type[0])
 
-        for source_name in process['sources']:
-            source = process['sources'][source_name]
-            # check that source has both 'type' and 'func'
-            assert 'type' in source and 'func' in source, \
-                "source '{}' of process '{}' does not contain 'type' or 'func'".format(source_name, process_name)
-            # check source type validity
-            assert source['type'] in type_code_set, \
-                "source '{}' of process  '{}' does not have a valid data type".format(source_name, process_name)
+        if 'sources' in process.keys():
+            for source_name in process['sources']:
+                source = process['sources'][source_name]
+                # check that source has both 'type' and 'func'
+                assert 'type' in source and 'func' in source, \
+                "source '{}' of process '{}' does not contain 'type' or 'func'".format(
+                    source_name, process_name)
+                # check source type validity
+                assert source['type'] in type_code_set, \
+                "source '{}' of process  '{}' does not have a valid data type".format(
+                    source_name, process_name)
 
         # need assertion for actuators
 
@@ -58,15 +63,16 @@ def check_processes_connections_format(processes, connections):
     for process_name in connections:
         for stream in connections[process_name]:
             for target_process_stream in connections[process_name][stream]:
-                assert type(target_process_stream) == tuple, \
-                    "connection for stream '{}' of process '{}' is not a tuple".format(stream, process_name)
+                assert (type(target_process_stream) == tuple or
+                        type(target_process_stream) == list), \
+                    "connection for stream '{}' of process '{}' is '{}' which is not a tuple or list".format(stream, process_name, target_process_stream)
                 assert len(target_process_stream) == 2, \
                     "connection for stream '{}' of process '{}' is ill-formatted".format(stream, process_name)
                 assert type(target_process_stream[0]) == str and type(target_process_stream[1]) == str, \
                     "connection for stream '{}' of process '{}' does not have str elements".format(stream, process_name)
 
 
-def check_connections_validity(processes, connections):
+def check_connections_validity(processes, connections, external_sources={}):
     """
     This function checks whether the connections between processes
     are complete and valid
@@ -91,16 +97,18 @@ def check_connections_validity(processes, connections):
         for stream in processes[process]['out_stream_names_types']:
             process_stream_dict[process]['out_stream'].append(stream[0])
             process_stream_type_dict[process][stream[0]] = stream[1]
-        for source in processes[process]['sources']:
-            process_stream_dict[process]['source'].append(source)
-            process_stream_type_dict[process][source] = processes[process]['sources'][source]['type']
+        if 'sources' in processes[process].keys():
+            for source in processes[process]['sources']:
+                process_stream_dict[process]['source'].append(source)
+                process_stream_type_dict[process][source] = processes[process]['sources'][source]['type']
 
     # check if all streams in connections are defined in processes
     for process in connections:
         for stream in connections[process]:
             # assert that streams in connections are defined in corresponding processes
-            assert stream in process_stream_dict[process]['out_stream'] or \
-                   stream in process_stream_dict[process]['source'], \
+            if not stream in external_sources:
+                assert stream in process_stream_dict[process]['out_stream'] or \
+                       stream in process_stream_dict[process]['source'], \
                 "stream '{}' from process '{}' is not defined in processes".format(stream, process)
 
             for target_process, target_stream in connections[process][stream]:
@@ -112,9 +120,9 @@ def check_connections_validity(processes, connections):
                     "process '{}' does not have in_stream '{}'".format(target_process, target_stream)
 
     # check if all streams in processes are connected in connections
-    for process in processes:
-        assert process in connections, \
-            "process {} is not in connections".format(process)
+    ## for process in processes:
+    ##     assert process in connections, \
+    ##         "process {} is not in connections".format(process)
         # check streams for sources
         for source_name in process_stream_dict[process]['source']:
             # source must be connected to at least one input stream of processes
@@ -135,9 +143,9 @@ def check_connections_validity(processes, connections):
                             "source '{}' is not connected to stream '{}'".format(source_name, target_stream)
 
         # check if output streams are stated in connections
-        for out_stream_name in process_stream_dict[process]['out_stream']:
-            assert out_stream_name in connections[process], \
-                "out_stream '{}' of process '{}' is not stated in connections".format(out_stream_name, process)
+        ## for out_stream_name in process_stream_dict[process]['out_stream']:
+        ##     assert out_stream_name in connections[process], \
+        ##         "out_stream '{}' of process '{}' is not stated in connections".format(out_stream_name, process)
 
         # check if input streams of processes are connected to output streams of other processes
         # assume that input stream must be connected to one output stream i.e. not multiple streams
@@ -154,11 +162,12 @@ def check_connections_validity(processes, connections):
 
     # check if the data types of connected streams match
     for process in connections:
-        for stream in connections[process]:
-            for target_process, target_stream in connections[process][stream]:
-                if stream in (process_stream_dict[process]['out_stream'] + process_stream_dict[process]['source']):
-                    assert process_stream_type_dict[process][stream] \
-                           == process_stream_type_dict[target_process][target_stream], \
-                        "data types of stream '{}' of '{}' and '{}' of '{}' do not match".format(stream, process,
-                                                                                                 target_stream,
-                                                                                                 target_process)
+        if process != 'external_sources':
+            for stream in connections[process]:
+                for target_process, target_stream in connections[process][stream]:
+                    if stream in (process_stream_dict[process]['out_stream'] +
+                                  process_stream_dict[process]['source']):
+                        assert process_stream_type_dict[process][stream] \
+                          == process_stream_type_dict[target_process][target_stream], \
+                          "data types of stream '{}' of '{}' and '{}' of '{}' do not match".format(
+                              stream, process, target_stream, target_process)

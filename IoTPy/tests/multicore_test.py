@@ -1,488 +1,268 @@
 """
-This module contains tests:
-
-* offset_estimation_test()
-which tests code from multicore.py in multiprocessing.
-
+This module makes processes for a multicore application.
+It uses multiprocessing.Array to enable multiple processes to
+share access to streams efficiently.
 """
-
 import sys
 import os
-import threading
-import random
+# Check whether the Python version is 2.x or 3.x
+# If it is 2.x import Queue. If 3.x then import queue.
+is_py2 = sys.version[0] == '2'
+if is_py2:
+    import Queue as queue
+else:
+    import queue as queue
+
 import multiprocessing
-import numpy as np
-sys.path.append(os.path.abspath("../concurrency"))
-sys.path.append(os.path.abspath("../core"))
-sys.path.append(os.path.abspath("../agent_types"))
-sys.path.append(os.path.abspath("../helper_functions"))
-sys.path.append(os.path.abspath("../../examples/timing"))
-
-"""
-This module contains tests:
-
-* offset_estimation_test()
-which tests code from multicore.py in multiprocessing.
-
-"""
-
-import sys
-import os
+# multiprocessing.Array provides shared memory that can
+# be shared across processes.
 import threading
-import random
-import multiprocessing
-import numpy as np
 import time
-import ntplib
-import logging
-
-sys.path.append(os.path.abspath("../core"))
 sys.path.append(os.path.abspath("../agent_types"))
+sys.path.append(os.path.abspath("../core"))
 sys.path.append(os.path.abspath("../helper_functions"))
-sys.path.append(os.path.abspath("../../examples/timing"))
 sys.path.append(os.path.abspath("../concurrency"))
 
-from multicore import *
-from merge import zip_stream
-from basics import map_e, map_l, map_w, merge_e
-from run import run
-from stream import StreamArray
+# sink, op are in the agent_types folder
+from sink import stream_to_queue, sink_list, sink_element
+from merge import zip_map
+from op import map_element, map_list
+# compute_engine, stream are in the core folder
+from compute_engine import ComputeEngine
+from stream import Stream
+# basics is in the helper_functions folder
+from basics import map_e, fmap_e, map_l, f_mul, sink_e, f_add, r_add
+from print_stream import print_stream
+# utils is in the current folder
+from utils import check_processes_connections_format, check_connections_validity
+from multicore import multicore, copy_data_to_stream, finished_source
+from multicore import make_multicore_processes, run_single_process_single_source
 
 
+def f(in_streams, out_streams, ADDEND):
+    out_streams[0] = f_add(in_streams[0], ADDEND)
 
-@map_e
-def double(v): return 2*v
+def g(in_streams, out_streams):
+    s = f_add(in_streams[0], 100)
+    print_stream(s, 's')
 
-@map_e
-def increment(v): return v+1
+def h(in_streams, out_streams):
+    pass
 
-@map_e
-def square(v): return v**2
-
-@map_e
-def identical(v): return v
-
-@map_e
-def multiply(v, multiplicand): return v*multiplicand
-
-@map_e
-def add(v, addend): return v+addend
-
-@map_e
-def multiply_and_add(element, multiplicand, addend):
-    return element*multiplicand + addend
-
-@map_l
-def filter_then_square(sequence, filter_threshold):
-    return [element**2 for element in sequence
-            if element < filter_threshold]
-
-@map_w
-def sum_window(window):
-    return sum(window)
-
-@merge_e
-def sum_numbers(numbers):
-    return sum(numbers)
 
 # Target of source thread.
-def source_thread_target(source):
-    num_steps=5
-    step_size=4
+def source_thread_target(proc, stream_name):
+    num_steps, step_size = 3, 3
     for i in range(num_steps):
         data = list(range(i*step_size, (i+1)*step_size))
-        copy_data_to_source(data, source)
+        copy_data_to_stream(data, proc, stream_name)
         time.sleep(0.001)
-    source_finished(source)
-    return
 
-def test_1_single_process():
-    """
-    test_1_single_process() and test_1() show how to convert a
-    single thread application into a multicore application.
-    
-    This is a single process example which is converted into a
-    multicore example in test_1(), see below. Read this function
-    while you read function test_1().
-
-    The partitioning to obtain multiple cores and threads is
-    done as follows.
-
-    (1) put_data_in_stream() is converted to a function which
-    is the target of a thread. In test_1() this function is
-    source_thread_target(proc, stream_name)
-
-    (2) double(x,y) is put in a separate process. The compute
-    function of this process is f(). Since the parameters
-    of compute_func are in_streams and out_streams, we get
-    f from double in the following way:
-    
-    def f(in_streams, out_streams):
-        double(in_stream=in_streams[0], out_stream=out_streams[0])
-    
-
-    (3) increment() and print_stream() are in a separate process.
-    The compute function of this process is g().
-
-    Run both test_1_single_process() and test_1() and look at
-    their identical outputs.
-
-    """
-
-    # ********************************************************
-    # We will put this function in its own thread in test_1()
-    def put_data_in_stream(stream):
-        num_steps=5
-        step_size=4
-        for i in range(num_steps):
-            data = list(range(i*step_size, (i+1)*step_size))
-            stream.extend(data)
-            run()
-        return
-
-    # ********************************************************
-    # We will put these lines in a separate process in test_1()
-    x = Stream('x')
-    y = Stream('y')
-    double(x, y)
-
-    # *********************************************************
-    # We will put these lines in a separate process in test_1().
-    s = Stream(name='s')
-    increment(y, s)
-    print_stream(s, name=s.name)
-
-    # *********************************************************
-    # This function is executed in a separate thread in test_1().
-    put_data_in_stream(x)
-    
-    
-#--------------------------------------------------------------------
-def test_1():
-    # Functions wrapped by agents
-    def f(in_streams, out_streams):
-        double(in_streams[0], out_streams[0])
-
-    def g(in_streams, out_streams):
-        s = Stream(name='s')
-        increment(in_streams[0], s)
-        print_stream(s, name=s.name)
-
-    # Specify processes and connections.
-    processes = \
-      {
-        'source_process':
-           {'in_stream_names_types': [('in', 'i')],
-            'out_stream_names_types': [('out', 'i')],
-            'compute_func': f,
-            'sources':
-              {'acceleration':
-                  {'type': 'i',
-                   'func': source_thread_target
-                  },
-               },
-            'actuators': {}
-           },
-        'aggregate_and_output_process':
-           {'in_stream_names_types': [('in', 'i')],
-            'out_stream_names_types': [],
-            'compute_func': g,
-            'sources': {},
-            'actuators': {}
-           }
-      }
-    
-    connections = \
-      {
-          'source_process' :
-            {
-                'out' : [('aggregate_and_output_process', 'in')],
-                'acceleration' : [('source_process', 'in')]
-            },
-           'aggregate_and_output_process':
-            {}
-      }
-
-    multicore(processes, connections)
-
-
-
-#--------------------------------------------------------------------
-def test_2():
-    
-    # Functions wrapped by agents
-    def f(in_streams, out_streams):
-        multiply_and_add(in_streams[0], out_streams[0],
-                         multiplicand=2, addend=1)
-
-    def g(in_streams, out_streams):
-        filter_then_square(in_streams[0], out_streams[0],
-                           filter_threshold=20)
-
-    def h(in_streams, out_streams):
-        s = Stream('s')
-        sum_window(in_streams[0], s, window_size=3, step_size=3)
-        print_stream(s, name=s.name)
-        
-
-    # Specify processes and connections.
-    processes = \
-      {
-        'source_process':
-           {'in_stream_names_types': [('in', 'i')],
-            'out_stream_names_types': [('out', 'i')],
-            'compute_func': f,
-            'sources':
-              {'acceleration':
-                  {'type': 'i',
-                   'func': source_thread_target
-                  },
-               },
-            'actuators': {}
-           },
-        'filter_and_square_process':
-           {'in_stream_names_types': [('in', 'i')],
-            'out_stream_names_types': [('filtered', 'i')],
-            'compute_func': g,
-            'sources': {},
-            'actuators': {}
-           },
-        'aggregate_and_output_process':
-           {'in_stream_names_types': [('in', 'i')],
-            'out_stream_names_types': [],
-            'compute_func': h,
-            'sources': {},
-            'actuators': {}
-           }
-      }
-    
-    connections = \
-      {
-          'source_process' :
-            {
-                'out' : [('filter_and_square_process', 'in')],
-                'acceleration' : [('source_process', 'in')]
-            },
-           'filter_and_square_process' :
-            {
-                'filtered' : [('aggregate_and_output_process', 'in')],
-            },
-           'aggregate_and_output_process':
-            {}
-      }
-
-    multicore(processes, connections)
-
-
-#--------------------------------------------------------------------
-def test_3():
-
-    # Functions wrapped by agents
-    def f(in_streams, out_streams):
-        multiply_and_add(in_streams[0], out_streams[0],
-                         multiplicand=2, addend=1)
-
-    def g(in_streams, out_streams):
-        t = Stream('t')
-        filter_then_square(in_streams[0], t,
-                           filter_threshold=20)
-        print_stream(t, name='p1')
-
-    def sums(in_streams, out_streams):
-        s = Stream('s')
-        sum_window(in_streams[0], s, window_size=3, step_size=3)
-        print_stream(s, name='           p2')
-
-    processes = \
-      {
-        'source_process':
-           {'in_stream_names_types': [('in', 'i')],
-            'out_stream_names_types': [('out', 'i')],
-            'compute_func': f,
-            'sources':
-              {'acceleration':
-                  {'type': 'i',
-                   'func': source_thread_target
-                  },
-               }
-           },
-        'process_1':
-           {'in_stream_names_types': [('in', 'i')],
-            'out_stream_names_types': [],
-            'compute_func': g,
-            'sources': {}
-           },
-        'process_2':
-           {'in_stream_names_types': [('in', 'i')],
-            'out_stream_names_types': [],
-            'compute_func': sums,
-            'sources': {}
-           }
-      }
-    
-    connections = \
-      {
-          'source_process' :
-            {
-                'out' : [('process_1', 'in'), ('process_2', 'in')],
-                'acceleration' : [('source_process', 'in')]
-            },
-          'process_1':
-            {
-            },
-          'process_2':
-            {
-            }
-      }
-
-    multicore(processes, connections)
-
-
-#--------------------------------------------------------------------
-def test_4():
-
-    # Functions wrapped by agents
-    def f(in_streams, out_streams):
-        identical(in_streams[0], out_streams[0])
-
-    def g(in_streams, out_streams):
-        multiply(in_streams[0], out_streams[0],
-                 multiplicand=2)
-
-    def h(in_streams, out_streams):
-        square(in_streams[0], out_streams[0])
-
-    def m(in_streams, out_streams):
-        s = Stream('s')
-        sum_numbers(in_streams, s)
-        print_stream(s, name='s')
-
-    processes = \
-      {
-        'source_process':
-           {'in_stream_names_types': [('in', 'i')],
-            'out_stream_names_types': [('out', 'i')],
-            'compute_func': f,
-            'sources':
-              {'acceleration':
-                  {'type': 'i',
-                   'func': source_thread_target
-                  },
-               }
-           },
-        'multiply_process':
-           {'in_stream_names_types': [('in', 'i')],
-            'out_stream_names_types': [('out', 'i')],
-            'compute_func': g,
-            'sources': {}
-           },
-        'square_process':
-           {'in_stream_names_types': [('in', 'i')],
-            'out_stream_names_types': [('out', 'i')],
-            'compute_func': h,
-            'sources': {}
-           },
-        'merge_process':
-           {'in_stream_names_types': [('in_multiply', 'i'),
-                                      ('in_square', 'i')],
-            'out_stream_names_types': [],
-            'compute_func': m,
-            'sources': {}
-           }
-      }
-    
-    connections = \
-      {
-          'source_process' :
-            {
-                'out' : [('multiply_process', 'in'), ('square_process', 'in')],
-                'acceleration' : [('source_process', 'in')]
-            },
-          'multiply_process':
-            {
-                'out' : [('merge_process', 'in_multiply')]
-            },
-          'square_process':
-            {
-                'out' : [('merge_process', 'in_square')]
-            },
-          'merge_process':
-            {
-            }
-      }
-
-    multicore(processes, connections)
-
-
-#--------------------------------------------------------------------
-def test_0():
-    # Example with a source thread and a single process.
-    def f(in_streams, out_streams):
-        x = Stream('x')
-        y = Stream('y')
-        double(in_streams[0], x)
-        increment(x, y)
-        print_stream(y, name=y.name)
-
-    # Specify processes and connections.
-    processes = \
-      {
-        'process':
-           {'in_stream_names_types': [('in', 'i')],
-            'out_stream_names_types': [],
-            'compute_func': f,
-            'sources':
-              {'acceleration':
-                  {'type': 'i',
-                   'func': source_thread_target
-                  },
-               },
-            'actuators': {}
-           }
-      }
-    
-    connections = \
-      {
-          'process' :
-            {
-                'acceleration' : [('process', 'in')]
-            }
-      }
-
-    multicore(processes, connections)
-
-
-#--------------------------------------------------------------------
+    finished_source(proc, stream_name)
+            
 def test_parameter(ADDEND_VALUE):
-    # Functions wrapped by agents
-    # Function f is used in get_source_data_and_compute_process
-    # ADDEND is a keyword arg of f.
-    # Note: ADDEND must be passed in the specification of
-    # the process. See the line:
-    # 'keyword_args' : {'ADDEND' :ADDEND_VALUE},
-    def f(in_streams, out_streams, ADDEND):
-        gg(in_streams[0], out_streams[0], ADD_VALUE=ADDEND)
-    # Function g is used in aggregate_and_output_process
-    # Function g has no arguments other than in_streams and out_streams.
-    # So we do not have to add 'keyword_args' : {}
-    # to the specification of the process.
-    def g(in_streams, out_streams):
-        s = Stream(name='s')
-        increment(in_stream=in_streams[0], out_stream=s)
-        print_stream(s, name=s.name)
+    #---------------------------------------------------------------------
+    # Specify process_specs and connections.
+    # This example has two processes:
+    # (1) p0 and
+    # (2) p1.
+    
+    # Specification of p0:
+    # (1) Inputs: It has a single input stream called 'in' which
+    # is of type int ('i').
+    # (2) Outputs: It has a single output stream called 'out'
+    # which is of type int ('i').
+    # (3) Computation: It creates a network of agents that carries
+    # out computation in the main thread by calling function f.
+    # (4) Keyword arguments: Function f has a keyword argument
+    # called ADDEND.
+    # (5) sources: This process has a single source called
+    # 'acceleration'. The source thread target is specified by
+    # the function source_thread_target. This function generates
+    # int ('i').
+    # (6) output_queues: This process has no output_queues.
+    
+    # Specification of p1:
+    # (1) Inputs: It has a single input stream called 'in' which
+    # is of type int ('i').
+    # (2) Outputs: It has no outputs.
+    # (3) Computation: It creates a network of agents that carries
+    # out computation in the main thread by calling function g.
+    # (4) Keyword arguments: Function g has no keyword argument
+    # (5) sources: This process has no sources
+    # (6) output_queues: This process has no output_queues.
 
+    # Connections between processes.
+    # (1) Output 'out' of 'p0' is connected to input 'in' of p1.
+    # (2) The source, 'acceleration', of 'p0' is connected to input
+    #     'in' of 'p1'.
+    
+    process_specs = \
+      {
+        'p0':
+           {'in_stream_names_types': [('in', 'i')],
+            'out_stream_names_types': [('out', 'i')],
+            'compute_func': f,
+            'keyword_args' : {'ADDEND' :ADDEND_VALUE},
+            'sources':
+              {'acceleration':
+                  {'type': 'i',
+                   'func': source_thread_target
+                  },
+               },
+            'output_queues': []
+           },
+        'p1':
+           {'in_stream_names_types': [('in', 'i')],
+            'out_stream_names_types': [],
+            'compute_func': g,
+            'keyword_args' : {},
+            'sources': {},
+            'output_queues': []
+           }
+      }
+
+    connect_streams = [['p0', 'out', 'p1', 'in'],
+                       ['p0', 'acceleration', 'p0', 'in']]
+
+    publishers=[('p0', 'out', 'publication')]
+
+    # Create and run multiple processes in a multicore machine.
+    multicore(process_specs, connect_streams)
+
+
+def test_single_process_single_source():
     # Target of source thread.
-    def source_thread_target(source):
-        num_steps=2
-        step_size=4
+    def source_func(proc, stream_name):
+        num_steps, step_size = 3, 4
         for i in range(num_steps):
             data = list(range(i*step_size, (i+1)*step_size))
-            copy_data_to_source(data, source)
+            copy_data_to_stream(data, proc, stream_name)
             time.sleep(0.001)
-        source_finished(source)
-        return
+        finished_source(proc, stream_name)
+    def compute_func(in_streams, out_streams):
+        print_stream(in_streams[0], 'in_stream')
+
+    run_single_process_single_source(source_func, compute_func)
+
+#-------------------------------------------------------------
+def test_source_process(ADDEND_VALUE):
+    """
+    In this example, a process, called a 'source process' serves
+    no function other than to serve as a source of data for a
+    stream. This example illustrates integration of
+    user (non-IoTPy) code with IoTPy code. The non-IoTPy code puts
+    data into a stream in a process which serves as a 'source process.'
+    The non-IoTPy code can put data continuously into the IoTPy
+    processes.
+    """
 
     #---------------------------------------------------------------------
+    # Specify processes and connections.
+    # This example has 3 processes called: 'p0', 'p1', 'p2'
+    
+    # Specification of p0:
+    # (1) Inputs: It has a single input stream called 'in' which
+    # is of type int ('i').
+    # (2) Outputs: It has a single output stream called 'out'
+    # which is of type int ('i').
+    # (3) Computation: f ---It creates a network of agents that carries
+    # out computation in the main thread by calling function f.
+    # (4) Keyword arguments: Function f has a keyword argument
+    # called ADDEND. This argument must be a constant.
+    # (5) sources: This process no sources
+    # (6) output_queues: This process has no output_queues.
+    
+    # Specification of p1:
+    # (1) Inputs: It has a single input stream called 'in' which
+    # is of type int ('i').
+    # (2) Outputs: It has no outputs.
+    # (3) Computation: g --- It creates a network of agents that carries
+    # out computation in the main thread by calling function g.
+    # (4) Keyword arguments: Function g has no keyword argument
+    # (5) sources: This process has no sources
+    # (6) output_queues: This process has no output_queues.
+    
+    # Specification of p2:
+    # (1) Inputs: It no inputs.
+    # (2) Outputs: It has no outputs.
+    # (3) Computation: h --- This is a dummy function, pass.
+    # (4) Keyword arguments: Function h has no keyword arguments.
+    # (5) sources: This process has a single source called
+    # 'acceleration'. This function generates int ('i').
+    # The data for this source is provided by the external
+    # (possibly non-IoTPy) code. So, the func for this source is None.
+    # (6) output_queues: This process has no output_queues.
+
+    # Connections between processes.
+    # (1) Output 'out' of 'p0' is connected to input 'in' of p1.
+    # (2) The source, 'acceleration', of 'p2' is connected to
+    # input 'in' of 'p1'.
+    
+    process_specs = \
+      {
+        'p0':
+           {'in_stream_names_types': [('in', 'i')],
+            'out_stream_names_types': [('out', 'i')],
+            'compute_func': f,
+            'args' : [ADDEND_VALUE],
+           },
+        'p1':
+           {'in_stream_names_types': [('in', 'i')],
+            'out_stream_names_types': [],
+            'compute_func': g,
+           },
+        'p2':
+           {'in_stream_names_types': [],
+            'out_stream_names_types': [],
+            'compute_func': h,
+            'sources':
+              {'acceleration':
+                  {'type': 'i',
+                   'func': None,
+                  },
+               },
+           }
+      }
+
+    connect_streams = \
+      [['p0', 'out', 'p1', 'in'],
+       ['p2', 'acceleration', 'p0', 'in']
+      ]
+
+    #--------------------------------------------------------------------
+    # Create and run multiple processes in a multicore machine.
+    process_list, process_managers = make_multicore_processes(
+        process_specs, connect_streams)
+
+    # Start all processes (including possibly non-IoTPy
+    # processes).
+    for process in process_list: process.start()
+
+    # This section of code is arbitrary non-IoTPy code.
+    # This code puts data into streams in IoTPy code
+    # executing in other processes.
+    #
+    # copy_data_to_stream puts the specified data,
+    # list(range(10)), into the stream with
+    # the specified stream_name ('acceleration')
+    # in the process with the specified name ('p2').
+    copy_data_to_stream(
+        data=list(range(10)), proc=process_managers['p2'],
+        stream_name='acceleration')
+
+    # finished_source indicates that this source is finished.
+    # No more data will be sent on the stream called stream_name
+    # 'acceleration' in the process with the specified name 'p2'.
+    finished_source(proc=process_managers['p2'], stream_name='acceleration')
+
+    # Join and terminate processes.
+    for process in process_list: process.join()
+    for process in process_list: process.terminate()
+
+#-------------------------------------------------------------
+def test_parameter_direct_source(ADDEND_VALUE):
+
     # Specify processes and connections.
     # This example has two processes:
     # (1) get_source_data_and_compute_process and
@@ -501,7 +281,7 @@ def test_parameter(ADDEND_VALUE):
     # 'acceleration'. The source thread target is specified by
     # the function source_thread_target. This function generates
     # int ('i').
-    # (6) actuators: This process has no actuators.
+    # (6) output_queues: This process has no output_queues.
     
     # Specification of aggregate_and_output_process:
     # (1) Inputs: It has a single input stream called 'in' which
@@ -511,7 +291,7 @@ def test_parameter(ADDEND_VALUE):
     # out computation in the main thread by calling function g.
     # (4) Keyword arguments: Function g has no keyword argument
     # (5) sources: This process has no sources
-    # (6) actuators: This process has no actuators.
+    # (6) output_queues: This process has no output_queues.
 
     # Connections between processes.
     # (1) Output 'out' of 'get_source_data_and_compute_process' is
@@ -519,9 +299,9 @@ def test_parameter(ADDEND_VALUE):
     # (2) The source, 'acceleration', of 'get_source_data_and_compute_process'
     # is connected to input 'in' of 'get_source_data_and_compute_process'.
     
-    processes = \
+    process_specs = \
       {
-        'get_source_data_and_compute_process':
+        'p0':
            {'in_stream_names_types': [('in', 'i')],
             'out_stream_names_types': [('out', 'i')],
             'compute_func': f,
@@ -529,270 +309,542 @@ def test_parameter(ADDEND_VALUE):
             'sources':
               {'acceleration':
                   {'type': 'i',
-                   'func': source_thread_target
+                   'func': None,
                   },
                },
-            'actuators': {}
            },
-        'aggregate_and_output_process':
+        'p1':
+           {'in_stream_names_types': [('in', 'i')],
+            'out_stream_names_types': [],
+            'compute_func': g,
+           }
+      }
+
+    connect_streams = \
+      [['p0', 'out', 'p1', 'in'],
+       ['p0', 'acceleration', 'p0', 'in']
+      ]
+
+    #--------------------------------------------------------------------
+    # Create and run multiple processes in a multicore machine.
+    process_list, process_managers = make_multicore_processes(process_specs, connect_streams)
+
+    # Start all processes (including possibly non-IoTPy processes).
+    for process in process_list: process.start()
+
+    # This section of code is arbitrary non-IoTPy code.
+    # This code puts data into streams in IoTPy code executing in other processes.
+    #
+    # copy_data_to_stream puts the specified data, list(range(10)), into the stream with
+    # the specified stream_name ('acceleration') in the process with the specified name ('p2').
+    copy_data_to_stream(
+        data=list(range(10)), proc=process_managers['p0'], stream_name='acceleration')
+
+    # finished_source indicates that this source is finished. No more data will be sent on the
+    # stream called stream_name ('acceleration') in the process with the specified name ('p2').
+    finished_source(proc=process_managers['p0'], stream_name='acceleration')
+
+    # Join and terminate processes.
+    for process in process_list: process.join()
+    for process in process_list: process.terminate()
+
+#-------------------------------------------------------------
+def test_parameter_result():
+    """
+    This example illustrates how you can get results from IoTPy processes when the
+    processes terminate. The results are stored in a buffer (a multiprocessing.Array)
+    which your non-IoTPy code can read. You can insert data into the IoTPy processes
+    continuously or before the processes are started.
+
+    In this example output_buffer[j] = 0 + 1 + 2 + ... + j
+
+    """
+    # The results of the parallel computation are stored in output_buffer.
+    output_buffer = multiprocessing.Array('i', 20)
+    # The results are in output_buffer[:output_buffer_ptr]
+    output_buffer_ptr = multiprocessing.Value('i', 0)
+
+    # In this example v represents an element of an input stream.
+    # sum is the sum of all the stream-element values received
+    # by the agent. The state of the agent is sum.
+    # output_buffer and output_buffer_ptr are keyword arguments.
+    @map_e
+    def gg(v, sum, output_buffer, output_buffer_ptr):
+        sum += v
+        output_buffer[output_buffer_ptr.value] = sum
+        output_buffer_ptr.value +=1
+        return sum, sum
+
+    def f(in_streams, out_streams, output_buffer, output_buffer_ptr):
+        gg(in_streams[0], out_streams[0], state=0,
+           output_buffer=output_buffer, output_buffer_ptr=output_buffer_ptr)
+    
+
+    #---------------------------------------------------------------------
+    # Specify process_specs and connections.
+    # This example has two processes called 'p0' and 'p1'
+    
+    # Specification of p0:
+    # (1) Inputs: It has a single input stream called 'in' which
+    # is of type int ('i').
+    # (2) Outputs: It has a single output stream called 'out'
+    # which is of type int ('i').
+    # (3) Computation: It creates a network of agents that carries
+    # out computation in the main thread by calling function f.
+    # (4) Keyword arguments: Function f has two keyword arguments
+    # output_buffer and output_buffer_ptr.
+    # (5) sources: This process has a single source called
+    # 'acceleration'. This function generates int ('i'). The values
+    # in the source are provided by code outside IoTPy. You put
+    # values using copy_data_to_stream().
+    # (6) output_queues: This process has no output_queues.
+    
+    # Specification of p1:
+    # (1) Inputs: It has a single input stream called 'in' which
+    # is of type int ('i').
+    # (2) Outputs: It has no outputs.
+    # (3) Computation: It creates a network of agents that carries
+    # out computation in the main thread by calling function g.
+    # (4) Keyword arguments: Function g has no keyword argument
+    # (5) sources: This process has a single source called
+    # 'acceleration'. This function generates int ('i'). The values
+    # in the source are provided by code outside IoTPy. You put
+    # values using copy_data_to_stream().
+    # (6) output_queues: This process has no output_queues.
+
+    # Connections between processes.
+    # (1) Output 'acceleration' (the source) of 'p0' is connected to input 'in'
+    #     of 'p0' itself.
+    # (2) Output 'out' of 'p0' is connected to input 'in' of p1.
+
+    process_specs = \
+      {
+        'p0':
+           {'in_stream_names_types': [('in', 'i')],
+            'out_stream_names_types': [('out', 'i')],
+            'compute_func': f,
+            'keyword_args' : {'output_buffer' : output_buffer,
+                              'output_buffer_ptr' : output_buffer_ptr},
+            'sources':
+              {'acceleration':
+                  {'type': 'i',
+                   'func': None,
+                  },
+               },
+           },
+        'p1':
+           {'in_stream_names_types': [('in', 'i')],
+            'out_stream_names_types': [],
+            'compute_func': g,
+           }
+      }
+
+    connect_streams = \
+      [['p0', 'out', 'p1', 'in'],
+       ['p0', 'acceleration', 'p0', 'in']
+      ]
+
+    #--------------------------------------------------------------------
+    # Create and run multiple processes in a multicore machine.
+    process_list, process_managers = make_multicore_processes(process_specs, connect_streams)
+
+    # Start all processes (including possibly non-IoTPy processes).
+    for process in process_list: process.start()
+
+    # This section of code is arbitrary non-IoTPy code.
+    # This code puts data into streams in IoTPy code executing in other processes.
+    #
+    # copy_data_to_stream puts the specified data, list(range(10)), into the stream with
+    # the specified stream_name ('acceleration') in the process with the specified name ('p2').
+    copy_data_to_stream(
+        data=list(range(10)), proc=process_managers['p0'], stream_name='acceleration')
+
+    # finished_source indicates that this source is finished. No more data will be sent on the
+    # stream called stream_name ('acceleration') in the process with the specified name ('p2').
+    finished_source(process_managers['p0'], 'acceleration')
+
+    # Join and terminate processes.
+    for process in process_list: process.join()
+    for process in process_list: process.terminate()
+
+    # Verify that output_buffer can be read by the parent process.
+    print ('output_buffer is ', output_buffer[:output_buffer_ptr.value])
+
+#-------------------------------------------------------------
+def test_parameter_queue():
+    """
+    This example illustrates how IoTPy processes can continuously put data into a queue
+    that non-IoTPy code executing in another process can read.
+
+    """
+    q = multiprocessing.Queue()
+    # If the input stream is x then this agent puts
+    # x[0] + ... x[n] into the queue q, for n = 0, 1, 2, ..
+    @map_e
+    def gg(v, sum, q):
+        sum += v
+        q.put(sum)
+        return sum, sum
+
+    @map_e
+    def increment(v): return v + 10
+
+    # Functions wrapped by agents
+    # Function f is used in p0
+    # q is a keyword arg of f.
+    # Note: q must be passed in the specification of
+    # the process. See the line:
+    # 'keyword_args' : {'q' : q},
+    def f(in_streams, out_streams, q):
+        gg(in_streams[0], out_streams[0], state=0, q=q)
+    
+    #---------------------------------------------------------------------
+    # Specify process_specs and connections.
+    # This example has two processes called 'p0' and 'p1'.
+    
+    # Specification of p0:
+    # (1) Inputs: It has a single input stream called 'in' which
+    # is of type int ('i').
+    # (2) Outputs: It has a single output stream called 'out'
+    # which is of type int ('i').
+    # (3) Computation: It creates a network of agents that carries
+    # out computation in the main thread by calling function f.
+    # (4) Keyword arguments: Function f has a keyword argument
+    # called 'q'. q is the queue that non-IoTPy gets data from.
+    # (5) sources: This process has a single source.
+    # (6) output_queues: This process has no output_queues.
+    
+    # Specification of aggregate_and_output_process:
+    # (1) Inputs: It has a single input stream called 'in' which
+    # is of type int ('i').
+    # (2) Outputs: It has no outputs.
+    # (3) Computation: It creates a network of agents that carries
+    # out computation in the main thread by calling function g.
+    # (4) Keyword arguments: Function g has no keyword argument
+    # (5) sources: This process has no sources
+    # (6) output_queues: This process has no output_queues.
+
+    # Connections between processes.
+    # (1) Output 'out' of 'get_source_data_and_compute_process' is
+    # connected to input 'in' of aggregate_and_output_process.
+    # (2) The source, 'acceleration', of 'get_source_data_and_compute_process'
+    # is connected to input 'in' of 'get_source_data_and_compute_process'.
+    
+
+    process_specs = \
+      {
+        'p0':
+           {'in_stream_names_types': [('in', 'i')],
+            'out_stream_names_types': [('out', 'i')],
+            'compute_func': f,
+            'args' : [q],
+            'sources':
+              {'acceleration':
+                  {'type': 'i',
+                   'func': None,
+                  },
+               },
+           },
+        'p1':
            {'in_stream_names_types': [('in', 'i')],
             'out_stream_names_types': [],
             'compute_func': g,
             'keyword_args' : {},
-            'sources': {},
-            'actuators': {}
            }
       }
+
+    connect_streams = \
+      [['p0', 'out', 'p1', 'in'],
+       ['p0', 'acceleration', 'p0', 'in']
+      ]
     
-    connections = \
+        
+    process_list, process_managers = make_multicore_processes(process_specs, connect_streams)
+
+    # Start all processes (including possibly non-IoTPy processes).
+    for process in process_list: process.start()
+    # This section of code is arbitrary non-IoTPy code.
+    # This code puts data into streams in IoTPy code executing in other processes.
+    #
+    # copy_data_to_stream puts the specified data, list(range(10)), into the stream with
+    # the specified stream_name ('acceleration') in the process with the specified name ('p2').
+    copy_data_to_stream(
+        data=list(range(10)), proc=process_managers['p0'], stream_name='acceleration')
+
+    # finished_source indicates that this source is finished. No more data will be sent on the
+    # stream called stream_name ('acceleration') in the process with the specified name ('p2').
+    finished_source(process_managers['p0'], 'acceleration')
+    for process in process_list: process.join()
+    for process in process_list: process.terminate()
+
+    # Verify that the parent process can obtain data from q.
+    print ('The elements of the queue are:')
+    while not q.empty():
+        print (q.get())
+
+    print ('j-th get from queue is 0 + 1 + 2 + ... + j')
+    print ('s[j] = 0 + 1 + 2 + ... + j + 100')
+
+def test_echo():
+    """
+    This example illustrates a circular flow structure of
+    streams between processes. Process p0 feeds process p1,
+    and p1 feeds p0. This example shows a process (p0) with
+    2 input streams.
+
+    The example is from making an echo to a sound, and then
+    generating the heard sound which is the made sound plus
+    the echo. See IoTPy/examples/acoustics. The key point
+    of the example is to show how processes are connected;
+    the acoustics part is irrelevant.
+
+    """
+    # This is the delay from when the made sound hits a
+    # reflecting surface.
+    delay = 4
+    # This is the attenuation of the reflected wave.
+    attenuation = 0.5
+    # The results are put in this queue.
+    q = multiprocessing.Queue()
+
+    def f(in_streams, out_streams, delay):
+        in_streams[1].extend([0] * delay)
+        zip_map(sum, in_streams, out_streams[0])
+
+    def g(in_streams, out_streams, attenuation, q):
+        def gg(v):
+            q.put(v)
+            return v*attenuation
+        map_element(
+            gg, in_streams[0], out_streams[0])
+
+    process_specs = \
       {
-          'get_source_data_and_compute_process' :
-            {
-                'out' : [('aggregate_and_output_process', 'in')],
-                'acceleration' : [('get_source_data_and_compute_process', 'in')]
-            },
-           'aggregate_and_output_process':
-            {}
-      }
-
-    multicore(processes, connections)
-
-
-#--------------------------------------------------------------------
-def test_local_source():
-    # Example with a local source thread and a single process.
-    def f(in_streams, out_streams):
-        x = Stream('x')
-        y = Stream('y')
-        double(in_streams[0], x)
-        increment(x, y)
-        print_stream(y, name=y.name)
-
-    # Specify processes and connections.
-    processes = \
-      {
-        'process':
-           {'in_stream_names_types': [('in', 'x')],
-            'out_stream_names_types': [],
+        'p0':
+           {'in_stream_names_types': [('sound', 'f'), ('echo', 'f')],
+            'out_stream_names_types': [('sound_heard', 'f')],
             'compute_func': f,
+            'keyword_args' : {'delay' : delay},
             'sources':
-              {'acceleration':
-                  {'type': 'x',
-                   'func': source_thread_target
-                  },
-               },
-            'actuators': {}
-           }
-      }
-    
-    connections = \
-      {
-          'process' :
-            {
-                'acceleration' : [('process', 'in')]
-            }
-      }
-
-    multicore(processes, connections)
-
-
-#------------------------------------------------
-# An ntp manager class
-#------------------------------------------------
-class ntp_mgr(object):
-    def __init__(self, ntp_server):
-        # ntp_server is a string such as "0.us.pool.ntp.org"
-        self.ntp_server = ntp_server
-        self.ntp_client = ntplib.NTPClient()
-    def get_offset(self):
-        try:
-            response = self.ntp_client.request(self.ntp_server, version=3)
-            return response.offset
-        except:
-            print ('no response from ntp client')
-
-#------------------------------------------------
-# Test of ntp running in its own thread.
-# Usually, do not run ntp in a separate thread.
-#------------------------------------------------
-def test_ntp_1():
-    ntp_obj = ntp_mgr("0.us.pool.ntp.org")
-    v = ntp_obj.get_offset()
-    def source_thread_target(source):
-        num_steps=3
-        for i in range(num_steps):
-            v = ntp_obj.get_offset()
-            copy_data_to_source([v], source)
-            time.sleep(0.01)
-        source_finished(source)
-    def compute_func(in_streams, out_streams):
-        print_stream(in_streams[0])
-
-    # Specify processes and connections.
-    processes = \
-      {
-        'process':
-           {'in_stream_names_types': [('in', 'f')],
-            'out_stream_names_types': [],
-            'compute_func': compute_func,
-            'sources':
-              {'ntp_times':
+              {'sound_made':
                   {'type': 'f',
-                   'func': source_thread_target
+                   'func': None,
                   },
                },
-            'actuators': {}
+           },
+        'p1':
+           {'in_stream_names_types': [('sound_heard', 'f')],
+            'out_stream_names_types': [('echo', 'f')],
+            'compute_func': g,
+            'args': [attenuation, q],
            }
       }
-    
-    connections = \
+
+    connect_streams = [
+        ['p0', 'sound_made', 'p0', 'sound'],
+        ['p0', 'sound_heard', 'p1', 'sound_heard'],
+        ['p1', 'echo', 'p0', 'echo']]
+        
+    process_list, process_managers = make_multicore_processes(process_specs, connect_streams)
+
+    # Start all processes (including possibly non-IoTPy processes).
+    for process in process_list: process.start()
+    # This section of code is arbitrary non-IoTPy code.
+    # This code puts data into streams in IoTPy code executing in other processes.
+    #
+    # copy_data_to_stream puts the specified data, list(range(10)), into the stream with
+    # the specified stream_name ('acceleration') in the process with the specified name ('p2').
+    copy_data_to_stream(
+        data=list(range(10)), proc=process_managers['p0'], stream_name='sound_made')
+    copy_data_to_stream(
+        data=([0]*10), proc=process_managers['p0'], stream_name='sound_made')
+
+    # finished_source indicates that this source is finished. No more data will be sent on the
+    # stream called stream_name ('acceleration') in the process with the specified name ('p2').
+    finished_source(process_managers['p0'], 'sound_made')
+    for process in process_list: process.join()
+    for process in process_list: process.terminate()
+
+    # Get the result from the queue.
+    print ('The elements of the queue are:')
+    while not q.empty():
+        print (q.get())
+
+
+def multicore_example(DATA, ADDEND, MULTIPLICAND, EXPONENT):
+    """
+    This example illustrates integrating processes running non-IoTPy
+    code with processes running IoTPy. The example shows how
+    results generated by IoTPy processes are obtained continuously
+    by non-IoTPy processes through queues. The example also shows
+    how results computed by IoTPy processes are returned to
+    the non-IoTPy calling process when the IoTPy processes terminate
+
+    In this simple example,
+    (s[j]+ADDEND)*MULTIPLICAND is the j-th value put in the queue, and
+    (s[j]+ADDEND)**EXPONENT is the j-th element of the buffer returned
+    by the multiprocess computation.
+
+    """
+    # Values generated continuously by the IoTPy process are read by
+    # the calling non-IoTPy process using this queue.
+    q = multiprocessing.Queue()
+
+    # The results of the parallel computation are stored in buffer.
+    buffer = multiprocessing.Array('i', 10)
+    # The results are in buffer[:ptr].
+    # The values in buffer[ptr:] are arbitrary
+    ptr = multiprocessing.Value('i', 0)
+
+    # The computational function for process p0.
+    # Arguments are: in_streams, out_streams, and additional
+    # arguments. Here ADDEND is an additional argument.
+    def f(in_streams, out_streams, ADDEND):
+        map_element(lambda a: a+ADDEND, in_streams[0], out_streams[0])
+        print_stream(out_streams[0], 'out_streams[0]')
+
+    # The computational function for process p1
+    def g(in_streams, out_streams, MULTIPLICAND, EXPONENT, q, buffer, ptr):
+        @sink_e
+        def h(v):
+            q.put(v*MULTIPLICAND)
+            buffer[ptr.value] = v**EXPONENT
+            ptr.value += 1
+        h(in_streams[0])
+
+    process_specs = \
       {
-          'process' :
-            {
-                'ntp_times' : [('process', 'in')]
-            }
+        'p0':
+           {'in_stream_names_types': [('in', 'i')],
+            'out_stream_names_types': [('out', 'i')],
+            'compute_func': f,
+            'args': [ADDEND],
+            'sources': {'data': {'type':'i',  'func':None} }
+           },
+        'p1':
+           {'in_stream_names_types': [('in', 'i')],
+            'out_stream_names_types': [],
+            'compute_func': g,
+            'args' : [MULTIPLICAND, EXPONENT,
+                                 q, buffer, ptr],
+            'output_queues' : [q]
+           }
       }
 
-    multicore(processes, connections)
+    connect_streams = [
+        ['p0', 'data', 'p0', 'in'],
+        ['p0', 'out', 'p1', 'in']]
 
-#------------------------------------------------
-# Test of ntp running in its own thread using
-# run_single_process_single_source() instead of
-# explicitly writing processes and connections.
-#------------------------------------------------
-def test_ntp_2():
-    ntp_obj = ntp_mgr("0.us.pool.ntp.org")
-    v = ntp_obj.get_offset()
-    def source_thread_target(source):
-        num_steps=3
-        for i in range(num_steps):
-            v = ntp_obj.get_offset()
-            copy_data_to_source([v], source)
-            time.sleep(0.01)
-        source_finished(source)
-    def compute_func(in_streams, out_streams):
-        print_stream(in_streams[0])
-    run_single_process_single_source(source_thread_target, compute_func)
+    # Get list of processes and process managers
+    process_list, process_managers = make_multicore_processes(process_specs, connect_streams)
 
-def test_ntp_3():
-    def source_thread_target(source, ntp_server):
-        num_steps=3
-        for i in range(num_steps):
-            response = ntp_client.request(ntp_server, version=3)
-            v = response.offset
-            copy_data_to_source([v], source)
-            time.sleep(0.01)
-        source_finished(source)
-    def compute_func(in_streams, out_streams):
-        print_stream(in_streams[0])
-    run_single_process_single_source(source_thread_target, compute_func,
-                                     ntp_server="0.us.pool.ntp.org")
-    
+    # Start all processes (including possibly non-IoTPy processes).
+    for process in process_list: process.start()
+        
+    # This section of code is arbitrary non-IoTPy code.
+    # This code puts data into streams in IoTPy code executing in other processes.
+    # copy_data_to_stream puts the specified data, DATA, into the stream with
+    # the specified stream_name ('data') in the process with the specified name ('p0').
+    copy_data_to_stream(
+        DATA, proc=process_managers['p0'], stream_name='data')
 
-#------------------------------------------------------------------------
+    # finished_source indicates that this source is finished. No more data will be sent on the
+    # stream called stream_name ('data') in the process with the specified name ('p0').
+    finished_source(process_managers['p0'], 'data')
+    finished_getting_output = False
+    while not finished_getting_output:
+        element_from_queue = q.get()
+        print ('element_from_queue ', element_from_queue)
+        if element_from_queue == 'finis':
+            finished_getting_output = True
+
+    # Join and terminate all processes that were created.
+    for process in process_list: process.join()
+    for process in process_list: process.terminate()
+
+    # Get the result from the queue.
+    print ('The elements of the queue are:')
+    while not q.empty():
+        print (q.get())
+
+    # Get the results returned in the buffer.
+    print ('buffer is ', buffer[:ptr.value])
+        
+        
 if __name__ == '__main__':
-    print ('starting test_0')
-    print ('example of a single process with a source thread')
-    print ('y[j] = 2*j + 1')
+    print('')
+    print ('--------------------------------------')
+    print ('starting test_parameter')
     print ('')
-    test_0()
-    print ('')
-    print ('')
-    print ('--------------------------------')
-    print ('starting test_parameter(500)')
-    print ('example of a single process with a source thread')
-    print ("and a parameter. See 'keyword_args' : {'ADDEND' :ADDEND_VALUE}")
-    print ('s[j] = ADDEND + 1')
+    print ('Output printed are values of stream s. See function g')
+    print ('s[j] = 500 + j + 100, because the ADDEND is 500 and')
+    print ('increment adds 1 + 100')
     print ('')
     test_parameter(500)
+    print('')
+    print ('--------------------------------------')
+    print ('starting test_source_process')
     print ('')
+    print ('Output is values of stream s.')
+    print ('s[j] = 600 + j')
+    print ('because the ADDEND is 500 and ')
+    print ('increment adds 1 + 100')
     print ('')
-    print ('--------------------------------')
-    print ('starting test_1')
-    print ('s[j] = 2*j + 1')
+    test_source_process(ADDEND_VALUE=500)
+    print('')
+    print ('--------------------------------------')
+    print ('starting test_single_process_single_source')
     print ('')
-    test_1()
+    print ('Output printed are values of in_stream ')
+    print ('These values are range(3*4) because num_steps=3, step_size=4')
     print ('')
+    test_single_process_single_source()
+    print('')
+    print ('--------------------------------------')
+    print ('starting test_parameter_result')
     print ('')
-    print ('--------------------------------')
+    print ('Output stream s and output_buffer.')
+    print ('output_buffer is [0, 1, 3, 6, 10, .., 45]')
+    print ('s[j] = output_buffer[j] + 100')
     print ('')
+    test_parameter_result()
+    print('')
+    print('')
+    print('')
+    print ('--------------------------------------')
+    print ('starting test_parameter_queue')
     print ('')
-    print ('start test_1_single_process')
-    print ('Output of test_1_single process() is identical:')
-    print ('to output of test_1()')
-    print ('s[j] = 2*j + 1')
+    print ('Output is values of stream s.')
+    print ('And prints contents of queue')
     print ('')
-    test_1_single_process()
+    test_parameter_queue()
+    print('')
+    print('')
+    print ('--------------------------------------')
+    print ('starting test_parameter_direct_source')
     print ('')
+    print ('Output is stream s.')
+    print ('s[j] = 600 + j')
     print ('')
-    print ('--------------------------------')
+    test_parameter_direct_source(500)
+    print('')
+    print('')
+    print ('--------------------------------------')
+    print ('starting test_echo')
     print ('')
+    print ('For j in 0, 1, 2, 3 : q[j] = j')
+    print ('For 3 < j < 10: q[j] = j + q[j-4]*0.5')
+    print ('For 10 <= j : q[j] = q[j-4]*0.5')
+    print('')
+    test_echo()
+    print('')
+    print ('--------------------------------------')
+    print ('starting multicore_example')
     print ('')
-    print ('starting test_2')
-    print ('Output of source_process is: ')
-    print ('[1, 3, 5, 7, 9, 11, .... ,39 ]')
+    print ('q[j] = (j+ADDEND)*MULTIPLICAND')
+    print ('buffer[j] = (j+ADDEND)**EXPONENT')
+    print ('ADDEND=100, MULTIPLICAND=10, EXPONENT=2')
+    print ('And prints contents of queue')
     print ('')
-    print ('Output of filter_and_square_process is:')
-    print ('[1, 9, 25, 49, 81, 121, 169, 225, 289, 361]')
-    print ('')
-    print('s: Output of aggregate_and_output_process is:')
-    print('[1+9+25, 49+81+121, 169+225+289] which is:')
-    print ('[35, 251, 683]')
-    print ('')    
-    test_2()
-    print ('')
-    print ('')
-    print ('--------------------------------')
-    print ('')
-    print ('')
-    print ('starting test_3')
-    print ('')
-    print ('p1 is [1, 9, 25, 49, 81,...., 361]')
-    print ('')
-    print ('p2 is [1+3+5, 7+9+11, 13+15+17, ..]')
-    print ('')
-    test_3()
-    print ('')
-    print ('')
-    print ('--------------------------------')
-    print ('')
-    print ('')
-    print ('starting test_4')
-    print ('')
-    print ('Output of source process is:')
-    print ('[0, 1, 2, 3, ...., 19]')
-    print ('')
-    print ('Output of multiply process is source*2:')
-    print ('[0, 2, 4, 6, .... 38]')
-    print ('')
-    print ('Output of square process is source**2:')
-    print ('[0, 1, 4, 9, ... 361]')
-    print ('')
-    print ('s: Output of aggregate process is:')
-    print ('[0+0, 2+1, 4+4, 6+9, ..., 38+361]')
-    test_4()
-    print ('')
-    print ('')
-    print ('--------------------------------')
-    print ('starting test_ntp_1')
-    print ('output is sequence of ntp offsets which is the')
-    print ('difference between the clock on this computer and ntp')
-    test_ntp_1()
-    print ('')
-    print ('')
-    print ('--------------------------------')
-    print ('starting test_ntp_2')
-    print ('output is sequence of ntp offsets')
-    test_ntp_2()
-    print ('')
-    print ('')
-    print ('--------------------------------')
-    print ('starting test_local_source')
-    print ('output is same as for test_0')
-    test_local_source()
-    print ('')
-    print ('')
-    print ('--------------------------------')
-    
-
+    multicore_example(DATA=list(range(3)), ADDEND=100, MULTIPLICAND=300, EXPONENT=2)
     

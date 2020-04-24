@@ -23,13 +23,12 @@ In addition functions that return streams are:
 """
 
 import sys
-import os
-sys.path.append(os.path.abspath("../core"))
-sys.path.append(os.path.abspath("../helper_functions"))
-
-from stream import Stream, StreamArray, _multivalue
+sys.path.append("../core")
+# Stream, StreamArray, Agent, helper_control are in IoTPy/IoTPy/Core.
+from stream import Stream, StreamArray
 from agent import Agent
-from stream import Stream, _multivalue
+from helper_control import _multivalue
+# check_agent_parameter_types is in this folder.
 from check_agent_parameter_types import *
 
 def make_out_stream(in_stream):

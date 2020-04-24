@@ -12,18 +12,7 @@ and next() is that transition operates on lists whereas
 next() operates on streams.
 
 """
-import sys
-import os
-sys.path.append(os.path.abspath("../helper_functions"))
-
-#from stream import Stream, StreamArray
 from collections import namedtuple
-import numpy as np
-
-# EPSILON is a small number used to prevent division by 0
-# and other numerical problems
-from system_parameters import EPSILON
-from run import run
 
 """
 Named_Tuple
@@ -332,47 +321,6 @@ class BasicAgent(Agent):
             call_streams=call_streams)
         self.next = next
         return
-
-#------------------------------------------------------------------------------------------
-# SIMPLE TEST. See IoTPy/IoTPy/tests for extensive tests.
-#------------------------------------------------------------------------------------------
-
-def test():
-    from stream import Stream, StreamArray
-
-    def copy(list_of_in_lists, state):
-        return ([in_list.list[in_list.start:in_list.stop] for in_list in list_of_in_lists],
-                state, [in_list.stop for in_list in list_of_in_lists])
-
-    input_stream_0 = Stream('input_stream_0', num_in_memory=32)
-    input_stream_1 = Stream('input_stream_1', num_in_memory=32 )
-    output_stream_0 = Stream('output_stream_0', num_in_memory=32)
-    output_stream_1 = Stream('output_stream_1', num_in_memory=32)
-    A = Agent(in_streams=[input_stream_0, input_stream_1 ],
-              out_streams=[output_stream_0, output_stream_1],
-              transition=copy,
-              name='A')
-    
-    input_stream_0.extend(list(range(10)))
-    run()
-    assert(output_stream_0.stop == 10)
-    assert(output_stream_1.stop == 0)
-    assert(output_stream_0.recent[:10] == list(range(10)))
-    assert(input_stream_0.start == {A:10})
-    assert(input_stream_1.start == {A:0})
-
-    input_stream_1.extend(list(range(10, 25, 1)))
-    run()
-    assert(output_stream_0.stop == 10)
-    assert(output_stream_1.stop == 15)
-    assert(output_stream_0.recent[:10] == list(range(10)))
-    assert(output_stream_1.recent[:15] == list(range(10, 25, 1)))
-    assert(input_stream_0.start == {A:10})
-    assert(input_stream_1.start == {A:15})
-
-if __name__ == '__main__':
-    test()
-    
         
         
     

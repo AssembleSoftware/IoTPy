@@ -1,13 +1,13 @@
 import sys
-import os
-sys.path.append(os.path.abspath("../core"))
-sys.path.append(os.path.abspath("../helper_functions"))
-
+sys.path.append("../core")
+sys.path.append("../helper_functions")
+# agent, stream are in ../core
 from agent import Agent, InList
 from stream import Stream, StreamArray
 from stream import _no_value, _multivalue
-from check_agent_parameter_types import *
+# recent_values is in ../helper_functions
 from recent_values import recent_values
+from check_agent_parameter_types import *
 
 """
 Functions in this module:

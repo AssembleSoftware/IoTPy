@@ -77,11 +77,9 @@ Merge functions:
    
 """
 import sys
-import os
-sys.path.append(os.path.abspath("../core"))
-sys.path.append(os.path.abspath("../helper_functions"))
+sys.path.append("../core")
 from check_agent_parameter_types import *
-
+# agent and stream are in ../core
 from agent import Agent, InList
 from stream import Stream, _no_value
 

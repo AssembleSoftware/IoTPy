@@ -20,19 +20,17 @@ specified in *args or **kwargs, respectively.
 These arguments may include streams and agents.
 
 """
-import numpy as np
 import sys
-import os
-sys.path.append(os.path.abspath("../core"))
-sys.path.append(os.path.abspath("../helper_functions"))
-sys.path.append(os.path.abspath("/agent_types"))
+sys.path.append("../core")
+sys.path.append("../helper_functions")
+sys.path.append("../agent_types")
+# agent, stream are in ../core
 from agent import Agent, InList
 from stream import Stream, StreamArray
+# helper_control, recent_values are in ../helper_functions
 from helper_control import _no_value, _multivalue
-from check_agent_parameter_types import *
 from recent_values import recent_values
-from run import run
-
+from check_agent_parameter_types import *
 
 def iot(func, in_stream, *args, **kwargs):
     """
@@ -169,148 +167,3 @@ def iot_merge(func, in_streams, *args, **kwargs):
     # Create agent
     # This agent has no output streams, and so out_streams is [].
     return Agent(in_streams, [], transition)
-
-
-
-#---------------------------------------------------------------------------
-#     TESTS
-#---------------------------------------------------------------------------
-
-def test_iot():
-    x = StreamArray(dtype=int)
-    y = StreamArray(dtype=int)
-    z = StreamArray(dtype=int)
-    u = StreamArray(dtype=int)
-    v = StreamArray(dtype=int)
-    
-    def f(A, y, z):
-        """
-        Function wrapped by an iot agent. The first parameter
-        'A' is an array obtained from the input stream of the
-        agent. The other parameters, y and z, are positional
-        arguments (*args) of the function.
-
-        The function returns a pointer into the input stream.
-        In this example, each call to the function processes
-        the entire input array 'A' and so the function returns
-        len(A).
-
-        """
-        y.extend(2*A)
-        z.extend(3*A)
-        # Return a pointer into the input array.
-        return len(A)
-
-    def g(A, u, v):
-        """
-        Parameters are similar to f.
-
-        """
-        u.extend(A+A)
-        v.extend(A**2)
-        return len(A)
-
-    # Create agents that wrap functions f and g.
-    iot(f, x, y, z)
-    iot(g, x, u, v)
-
-    # Extend stream x with an array
-    x.extend(np.arange(5, dtype=int))
-    run()
-    assert np.array_equal(recent_values(y), 2*np.arange(5, dtype=int))
-    assert np.array_equal(recent_values(z), 3*np.arange(5, dtype=int))
-    assert np.array_equal(recent_values(u), 2*np.arange(5, dtype=int))
-    assert np.array_equal(recent_values(v), np.arange(5, dtype=int)**2)
-
-    # Extend stream x with another array
-    x.extend(np.arange(5, 10, dtype=int))
-    run()
-    assert np.array_equal(recent_values(y), 2*np.arange(10, dtype=int))
-    assert np.array_equal(recent_values(z), 3*np.arange(10, dtype=int))
-    assert np.array_equal(recent_values(u), 2*np.arange(10, dtype=int))
-    assert np.array_equal(recent_values(v), np.arange(10, dtype=int)**2)
-
-def test_iot_merge():
-    x = StreamArray(dtype=float)
-    y = StreamArray(dtype=float)
-    z = StreamArray(dimension=2, dtype=float)
-    
-    def f(A_list, z):
-        """
-        f is the function wrapped by an iot_merge agent.
-        A_list is a list of arrays. A_list[j] is the input array obtained
-        from the j-th input stream of the agent that wraps f.
-        z is the positional argument of f. z is an output stream that is
-        extended by f.
-
-        The agent completes reading n_rows elements of each array in
-        A_list where n_rows is the number of elements in the smallest
-        array. So, the function returns n_rows.
-
-        """
-        n_rows = min([len(A) for A in A_list])
-        n_cols = len(A_list)
-        out = np.column_stack((A_list[0][:n_rows], A_list[1][:n_rows]))
-        z.extend(out)
-        return [n_rows for A in A_list]
-
-    # Create the agent by wrapping function f.
-    # A_list has two arrays from streams x and y.
-    # z is a keyword argument for f.
-    iot_merge(f, [x, y], z=z)
-    # Extend stream x with [0, 1, 2, 3, 4]
-    x.extend(np.arange(5, dtype=float))
-    run()
-    assert np.array_equal(recent_values(x), np.array(np.arange(5, dtype=float)))
-    assert np.array_equal(recent_values(x), np.array([0., 1., 2., 3., 4.]))
-    assert np.array_equal(recent_values(y), np.zeros(shape=(0,), dtype=float))
-    assert np.array_equal(recent_values(z), np.zeros(shape=(0, 2), dtype=float))
-    y.extend(np.arange(100, 107, dtype=float))
-    run()
-    assert np.array_equal(recent_values(x), np.array([0., 1., 2., 3., 4.]))
-    assert np.array_equal(recent_values(y), np.array([100., 101., 102., 103., 104., 105., 106.]))
-    assert np.array_equal(
-        recent_values(z), np.array(
-            [[  0., 100.], [  1., 101.], [  2., 102.], [  3., 103.], [  4., 104.]]))
-
-    
-class sliding_window_test(object):
-    def __init__(self, func, in_stream, out_stream, window_size, step_size):
-        self.func = func
-        self.in_stream = in_stream
-        self.out_stream = out_stream
-        self.window_size = window_size
-        self.step_size = step_size
-        iot(func=self.extend, in_stream=self.in_stream)
-    def extend(self, A):
-        if len(A) < self.window_size:
-            return 0
-        else:
-            num_steps = int(1+(len(A) - self.window_size)//self.step_size)
-            self.output = np.zeros(num_steps)
-            for i in range(num_steps):
-                window = A[i*self.step_size : i*self.step_size+self.window_size]
-                self.output[i] = self.func(window)
-            self.out_stream.extend(self.output)
-            return num_steps*self.step_size
-def test_iot_class():
-    x = StreamArray(dtype=int)
-    y = StreamArray(dtype=float)
-    sw = sliding_window_test(
-        func=np.sum, in_stream=x, out_stream=y, window_size=5, step_size=2)
-    x.extend(np.arange(10, dtype=int))
-    run()
-    assert np.array_equal(recent_values(y), np.array([10., 20., 30.]))
-    x.extend(np.arange(10, 20, dtype=int))
-    run()
-    assert np.array_equal(recent_values(y), np.array([10., 20., 30.,
-                                                      40., 50., 60.,
-                                                      70., 80.]))
-
-if __name__ == '__main__':
-    test_iot()
-    test_iot_merge()
-    test_iot_class()
-    
-    
-    

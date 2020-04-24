@@ -1,21 +1,22 @@
 import sys
-import os
+#import os
 #sys.path.append(os.path.abspath("../"))
-sys.path.append(os.path.abspath("../core"))
-sys.path.append(os.path.abspath("../agent_types"))
-sys.path.append(os.path.abspath("../helper_functions"))
+sys.path.append("../core")
+sys.path.append("../agent_types")
+sys.path.append("../helper_functions")
 
 from agent import Agent
-from stream import Stream, StreamArray
+from stream import Stream, StreamArray, run
 from stream import _no_value, _multivalue
 from check_agent_parameter_types import *
 from recent_values import recent_values
-from run import run
+#from run import run
 from op import *
 from merge import merge_window, merge_window_f
 from split import split_window
 from multi import multi_window, multi_window_f
 from sink import sink_window
+from basics import map_w
 
 import numpy as np
 
@@ -478,8 +479,20 @@ def test_halt_agent():
     x.extend(list(range(10,15)))
     run()
     assert recent_values(y) == [1, 5, 9]
+
+def test_decorator():
+    @map_w
+    def sliding_window_mean(lst):
+        return np.mean(lst)
+    x = Stream()
+    y = Stream()
+    sliding_window_mean(in_stream=x, out_stream=y, window_size=4, step_size=4)
+    x.extend(list(range(20)))
+    run()
+    print (recent_values(y))
     
 
 if __name__ == '__main__':
     test_halt_agent()
     test_window_agents()
+    test_decorator()

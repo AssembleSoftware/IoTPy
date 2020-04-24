@@ -15,7 +15,7 @@ import sys
 import os
 sys.path.append(os.path.abspath("../core"))
 sys.path.append(os.path.abspath("../helper_functions"))
-sys.path.append(os.path.abspath("/agent_types"))
+sys.path.append(os.path.abspath("../agent_types"))
 # agent, stream are in ../core
 from agent import Agent, InList
 from stream import Stream, StreamArray

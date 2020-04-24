@@ -21,17 +21,10 @@ specifying connections between output streams of processes in the VM
 to input streams of processes in the same VM.
 """
 
-## import sys
-## import os
-#sys.path.append(os.path.abspath("../multiprocessing"))
-## sys.path.append(os.path.abspath("../core"))
-## sys.path.append(os.path.abspath("../agent_types"))
-## sys.path.append(os.path.abspath("../helper_functions"))
-## sys.path.append(os.path.abspath("../../examples/timing"))
-from multicore import Multiprocess
+from multicore import Proc
 import time
 
-class VM(Multiprocess):
+class VM(Proc):
     """
     Class for creating and executing a virtual machine that
     communicates with other virtual machines using message passing.

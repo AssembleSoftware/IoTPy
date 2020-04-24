@@ -39,11 +39,10 @@ stream will be [10, 11, ..., 19].
 import sys
 import os
 import random
-sys.path.append(os.path.abspath("../multiprocessing"))
-sys.path.append(os.path.abspath("../agent_types"))
+sys.path.append("../concurrency")
+sys.path.append("../agent_types")
 
-from multicore import shared_memory_process, Multiprocess
-from distributed import distributed_process
+from pubsub import distributed_process
 from VM import VM
 from op import map_element
 from source import source_func_to_stream, source_list_to_stream
@@ -92,11 +91,11 @@ def two_process_publisher():
 # ----------------------------------------------------------------
 
 def two_process_publisher_test():
-    print
-    print 'Starting two_process_publisher_test()'
+    print('')
+    print ('Starting two_process_publisher_test()')
     two_process_publisher()
-    print 'Finished two_process_publisher_test()'
-    print
+    print ('Finished two_process_publisher_test()')
+    print ('')
 
 
 if __name__ == '__main__':

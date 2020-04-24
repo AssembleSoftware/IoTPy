@@ -1,24 +1,21 @@
 """ 
 This module tests list_agent.py
 """
-
 import sys
-import os
-sys.path.append(os.path.abspath("../"))
-sys.path.append(os.path.abspath("../core"))
-sys.path.append(os.path.abspath("../agent_types"))
-sys.path.append(os.path.abspath("../helper_functions"))
+sys.path.append("../core")
+sys.path.append("../agent_types")
+sys.path.append("../helper_functions")
 
 import numpy as np
 # agent, stream are in ../core
 from agent import Agent
-from stream import Stream, StreamArray
+from stream import Stream, StreamArray, run
 from stream import _no_value, _multivalue
 # check_agent_parameter_types is in ../helper_functions
 from check_agent_parameter_types import *
-# recent_values, run are in ../helper_functions
+# recent_values  are in ../helper_functions
 from recent_values import recent_values
-from run import run
+#from run import run
 # sink, multi, op, split, merge are in ../agent_types
 from sink import sink_list, sink_list_f
 from multi import *

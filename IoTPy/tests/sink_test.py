@@ -14,7 +14,6 @@ from sink import *
 from Buffer import Buffer
 
 
-
 def test_sink():
     import numpy as np
     scheduler = Stream.scheduler
@@ -389,7 +388,38 @@ def test_sink():
     Stream.scheduler.step()
     assert print_list == list(range(10))
     print ('TEST OF SINK IS SUCCESSFUL')
-    
+
+def test_sink_conditional():
+    import random
+    s = Stream('s')
+    def f(v):
+        if v > 0.3:
+            print ('True: v is ', v)
+            return True
+        else:
+            print ('False: v is ', v)
+            return False
+    sink_conditional(func=f, in_stream=s)
+    for i in range(20):
+        s.append(random.random())
+    Stream.scheduler.step()
+
+
+def test_sink_conditional():
+    import random
+    s = Stream('s')
+    def f(v):
+        if v > 0.3:
+            print ('True: v is ', v)
+            return True
+        else:
+            print ('False: v is ', v)
+            return False
+    sink_conditional(func=f, in_stream=s)
+    for i in range(20):
+        s.append(random.random())
+    Stream.scheduler.step()
     
 if __name__ == '__main__':
     test_sink()
+    #test_sink_conditional()

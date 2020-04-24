@@ -36,6 +36,7 @@ Sink functions:
    4. stream_to_queue: has arguments function, input stream, queue,
       and state. It applies the function to each element of the input
       stream and puts the result of the function call on the queue.
+   5. sink_conditional
 
 Agents:
    1. sink_element is the agent used by sink.
@@ -46,16 +47,16 @@ sink uses sink_element
 
 """
 import sys
-import os
-sys.path.append(os.path.abspath("../core"))
-sys.path.append(os.path.abspath("../helper_functions"))
-
+sys.path.append("../core")
+sys.path.append("../helper_functions")
+# agent, stream are ../core
 from agent import Agent, InList
 from stream import Stream, StreamArray
+# helper_control, recent_values are in ../helper_functions
 from helper_control import _no_value, _multivalue
-from check_agent_parameter_types import *
 from recent_values import recent_values
-#from Buffer import Buffer
+from check_agent_parameter_types import *
+
 
 # json is used in stream_to_json
 import json
@@ -115,6 +116,79 @@ def sink_element(
 
     # Create agent
     return Agent([in_stream], [], transition, state, call_streams, name)
+
+#-----------------------------------------------------------------------
+def sink_conditional(
+        func, in_stream, state=None, call_streams=None, name=None,
+        *args, **kwargs):
+    """
+    This agent applies func to its single input stream. It has no output streams.
+
+    Parameters
+    ----------
+        func: function
+           function from an element of the in_stream and args and kwargs
+           The function returns a boolean. If the return value is True then the
+           agent moves on to the next element in the stream. If the return value
+           is False then the agent remains at the same element of the stream, and
+           waits to be woken up again. Usually, the waking up is done with a call
+           stream.
+        in_stream: Stream
+           The single input stream of this agent
+        state: object 
+           The state of the agent could be None.
+           If the state is not None then func must return a 2-tuple, a boolean and
+           a state.
+        call_streams: list of Stream
+           The list of call_streams. A new value in any stream in this
+           list causes a state transition of this agent.
+        name: Str
+           Name of the agent created by this function.
+    Returns
+    -------
+        Agent.
+         The agent created by this function.
+
+    """
+    check_sink_agent_arguments(func, in_stream, call_streams, name)
+    #check_num_args_in_func(state, name, func, args, kwargs)
+
+    # The transition function for this agent.
+    def transition(in_lists, state):
+        num_in_streams = 1
+        check_in_lists_type(name, in_lists, num_in_streams)
+        in_list = in_lists[0]
+        input_list = in_list.list[in_list.start:in_list.stop]
+        # If the new input data is empty then return an empty list for
+        # the single output stream, and leave the state and the starting
+        # point for the single input stream unchanged.
+        if input_list is None or len(input_list) == 0:
+            return ([], state, [in_list.start])
+        if state is None:
+            # num_succeeded is the number of elements in input_list that
+            # have been processed successfully
+            num_succeeded = 0
+            for element in input_list:
+                # success is a boolean which indicates whether func
+                # succeeded in processing element
+                success = func(element, *args, **kwargs)
+                if success:
+                    num_succeeded += 1
+                else:
+                    return ([], state, [in_list.start+num_succeeded])
+        else:
+            for element in input_list:
+                success, state = func(element, state, *args, **kwargs)
+                if success:
+                    num_succeeded += 1
+                else:
+                    return ([], state, [in_list.start+num_succeeded])
+        return ([], state, [in_list.start+len(input_list)])
+    # Finished transition
+
+    # Create agent
+    return Agent([in_stream], [], transition, state, call_streams, name)
+
 
 #-----------------------------------------------------------------------
 def signal_sink(

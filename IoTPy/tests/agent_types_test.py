@@ -7,6 +7,7 @@ from multi_test import test_multi
 from sink_test import test_sink
 from source_test import test_source
 from shared_variables_test import test_shared_variables
+from basics_test import test_basics
 def test():
     test_element()
     test_list()
@@ -16,8 +17,7 @@ def test():
     test_multi()
     test_shared_variables()
     test_sink()
-    test_source()
-
+    test_basics()
 
 if __name__ == '__main__':
     test()
