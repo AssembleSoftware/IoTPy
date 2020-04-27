@@ -3,19 +3,17 @@ This module has examples of @map_e and @fmap_e
 
 """
 import sys
-import os
-sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
-sys.path.append(os.path.abspath("../../IoTPy/core"))
-sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
+sys.path.append("../../IoTPy/core")
+sys.path.append("../../IoTPy/agent_types")
+sys.path.append("../../IoTPy/helper_functions")
 
-# stream is in ../../IoTPy/core
-from stream import Stream, _no_value, _multivalue
-# helper_control, recent_values, run, basics are in
-# ../../IoTPy/helper_functions
-from recent_values import recent_values
+# stream, helper_control are in IoTPy/IoTPy/core
+from stream import Stream, _no_value, _multivalue, run
 from helper_control import _no_value, _multivalue
-from run import run
+# basics in in IoTPy/IoTPy/agent_types
 from basics import map_e, fmap_e, map_w, fmap_w
+# recent_values is in IoTPy/IoTPy/helper_functions
+from recent_values import recent_values
 
 def examples():
     #-----------------------------------------------
@@ -30,7 +28,7 @@ def examples():
     t = sum_window(r, window_size=2, step_size=2)
     total_window(in_stream=r, out_stream=s, window_size=2, step_size=2)
     
-    r.extend(range(10))
+    r.extend(list(range(10)))
     run()
     assert recent_values(t) == [1, 5, 9, 13, 17]
     assert recent_values(t) == recent_values(s)
@@ -42,7 +40,7 @@ def examples():
 
     s = Stream()
     t = sum_add(s, window_size=2, step_size=2, addend=10)
-    s.extend(range(10))
+    s.extend(list(range(10)))
     Stream.scheduler.step()
     assert recent_values(t) == [11, 15, 19, 23, 27]
 
@@ -53,7 +51,7 @@ def examples():
     s = Stream()
     t = Stream()
     sum_add_relation(s, t, window_size=2, step_size=2, addend=10)
-    s.extend(range(10))
+    s.extend(list(range(10)))
     Stream.scheduler.step()
     assert recent_values(t) == [11, 15, 19, 23, 27]
 
@@ -66,7 +64,7 @@ def examples():
 
     s = Stream()
     t = h(s, window_size=2, step_size=2, state= 0, addend=10)
-    s.extend(range(10))
+    s.extend(list(range(10)))
     run()
     assert recent_values(t) == [11, 16, 21, 26, 31]
 
@@ -84,7 +82,7 @@ def examples():
 
     s = Stream()
     t = h(s, window_size=4, step_size=4, state=(0,0.0))
-    s.extend(range(20))
+    s.extend(list(range(20)))
     run()
     assert recent_values(t) == [3.0, 5.0, 7.0, 9.0, 11.0]    
     return

@@ -23,20 +23,21 @@ output stream. When a value v is appended to the input stream, the
 agent appends func(v) to the output stream.
 
 """
-
 import sys
-import os
-sys.path.append(os.path.abspath("../../IoTPy/"))
-sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
-sys.path.append(os.path.abspath("../../IoTPy/core"))
-sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
+sys.path.append("../../IoTPy/")
+sys.path.append("../../IoTPy/core")
+sys.path.append("../../IoTPy/agent_types")
+sys.path.append("../../IoTPy/helper_functions")
 
-from agent import Agent
-from stream import Stream, StreamArray
+# stream is in IoTPy/IoTPy/core/
+from stream import Stream
 from stream import _no_value, _multivalue
+# op is in IoTPy/IoTPy/agent_types/
+from op import map_element
+# check_agent_parameter_types is in IoTPy/IoTPy/agent_types/
+# recent_values, print_stream are in IoTPy/IoTPy/agent_types/
 from check_agent_parameter_types import *
 from recent_values import recent_values
-from op import map_element
 from print_stream import print_stream
 
 # In the following, x and y are streams that must be declared
@@ -259,7 +260,7 @@ class my_dict(object):
                 if key in self.current_dict:
                     return (key, self.get_value(key))
                 else:
-                    print 'Key', key, 'is not in the dictionary'
+                    print ('Key', key, 'is not in the dictionary')
                     return _no_value
 
 example_object = my_dict()
