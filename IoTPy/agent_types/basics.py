@@ -406,7 +406,13 @@ def sieve(in_stream, primes):
 def make_echo(spoken, D, A):
     echo = Stream(name='echo', initial_value=[0]*D)
     heard = spoken + echo
-    r_mul(in_stream=heard, out_stream=echo, arg=A)
+    map_element(func=lambda v: v*A, in_stream=heard, out_stream=echo)
+    return heard
+
+def make_echo_1(spoken, D, A):
+    echo = Stream('echo')
+    heard = spoken + echo
+    prepend([0]*D, in_stream=f_mul(heard, A), out_stream=echo)
     return heard
 
 @sink_e
@@ -666,6 +672,14 @@ def test_echo():
     assert recent_values(heard) == [
         64.0, 64.0, 48.0, 32.0, 20.0, 12.0, 7.0, 3.5, 1.75, 0.875, 0.4375]
 
+def test_echo_1():
+    spoken = Stream('spoken')
+    heard = make_echo_1(spoken, D=1, A=0.5)
+    spoken.extend([64, 32, 16, 8, 4, 2, 1, 0, 0, 0, 0])
+    run()
+    assert recent_values(heard) == [
+        64.0, 64.0, 48.0, 32.0, 20.0, 12.0, 7.0, 3.5, 1.75, 0.875, 0.4375]
+
 def echo_output(input_sound, D, A):
     spoken = Stream('spoken')
     heard = make_echo(spoken, D, A)
@@ -915,6 +929,7 @@ if __name__ == '__main__':
     test_prepend()
     test_filter_min()
     test_echo()
+    test_echo_1()
     test_echo_output()
     test_sink()
     test_source_file('test_source_file_name.txt')

@@ -9,7 +9,7 @@ from stream import Stream, StreamArray, _multivalue, run
 from helper_control import _no_value, _multivalue
 # recent_values,  is in ../helper_functions
 from recent_values import recent_values
-# op, merge, split, multi, sink are in ../agent_types
+# op, merge, split, multi, sink, basics are in ../agent_types
 from op import map_element, map_element_f
 from op import filter_element, filter_element_f
 from op import map_list, map_list_f, timed_window
@@ -531,8 +531,38 @@ def test_merge_1():
     run()
     assert(recent_values(z) == [0, 2, 4, 6, 8])
 
+def test_add_three_streams():
+    x = Stream('x')
+    y = Stream('y')
+    z = x + y
+    w = x + y + z
+
+    DATA = list(range(5))
+    x.extend(DATA)
+    y.extend(DATA)
+    run()
+    assert recent_values(z) == [2*v for v in DATA]
+    assert recent_values(w) == [4*v for v in DATA]
+
+
+def test_operators_on_three_streams():
+    x = Stream('x')
+    y = Stream('y')
+    z = x + y
+    w = x - y + z
+
+    DATA = list(range(5))
+    x.extend(DATA)
+    y.extend(DATA)
+    run()
+    assert recent_values(z) == [2*v for v in DATA]
+    assert recent_values(w) == [2*v for v in DATA]
+
+
 #-----------------------------------------------------
 def test_basics():
+    test_add_three_streams()
+    test_operators_on_three_streams()
     test_map_with_keyword_arg()
     test_map_with_keyword_arg_modified()
     test_map_with_keyword_arg_queue()
