@@ -10,13 +10,13 @@ sys.path.append("../helper_functions")
 sys.path.append("../core")
 sys.path.append("../agent_types")
 
-# agent and stream are in ../core
+# agent and stream and helper_control are in ../core
 from agent import Agent
 from stream import Stream, StreamArray, _no_value, _multivalue, run
+from helper_control import _close
 # recent_values are in ../helper_functions
 from recent_values import recent_values
-#from run import run
-from helper_control import _close
+from print_stream import print_stream
 # op is in ../agent_types
 from op import map_element, map_element_f
 from op import filter_element, filter_element_f
@@ -34,8 +34,6 @@ from basics import merge_sink_e
 # The seven steps in this test may occur in different orders
 # in the later tests.
 def test_example_1():
-    # Get scheduler
-    scheduler = Stream.scheduler
     # Specify streams
     x = Stream('x')
     y = Stream('y')
@@ -69,8 +67,6 @@ def test_example_1():
     assert recent_values(y) == [0, 2, 4, 20, 40, 60, 0, -20]
 
 def test_example_2():
-    # Get scheduler
-    scheduler = Stream.scheduler
     # Specify streams
     x = Stream('x')
     y = Stream('y')
@@ -88,8 +84,6 @@ def test_example_2():
     assert recent_values(y) == [0, 1, 2]
 
 def test_example_3():
-    # Get scheduler
-    scheduler = Stream.scheduler
     # Specify streams
     x = Stream('x')
     y = Stream('y')
@@ -129,9 +123,8 @@ def test_example_3():
     
 
 def test_example_4():
-    # Get scheduler
-    scheduler = Stream.scheduler
-
+    # Illustrates a cycle of agents and also shows use
+    # of a class within a wrapper.
     # Specify network: streams, functions, agents
     # (a) Specify streams
     x = Stream('x')
@@ -179,6 +172,50 @@ def test_example_4():
     assert recent_values(x) == \
       [1, 1, 2, 3, 5, 8, 13, 21, 34]
 
+def test_example_5():
+    # Fibonacci
+    # Illustrates use of a dict to save state.
+    # Specify network: streams, functions, agents
+    # (a) Specify streams
+    x = Stream('x')
+    y = Stream('y')
+    s = {'a':0, 'b':1}
+    # (b) Specify encapsulated functions (if any)
+    def f(v, s):
+        final, prefinal = s['a'], s['b']
+        post_final = final + prefinal
+        # In the next state:
+        # prefinal becomes final
+        # final becomes next_output
+        s['a'], s['b'] = post_final, final
+        return final
+    map_element(f, x, y, s=s)
+    x.extend(list(range(10)))
+    run()
+    assert recent_values(y) == [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
+    
+def test_example_6():
+    import numpy as np
+    # Fibonacci
+    # Illustrates use of a dict to save state.
+    # Specify network: streams, functions, agents
+    # (a) Specify streams
+    x = Stream('x')
+    y = Stream('y')
+    s = {'final':0, 'prefinal': 1}
+    # (b) Specify encapsulated functions (if any)
+    def f(v, s):
+        post_final = s['final'] + s['prefinal']
+        # In the next state:
+        # prefinal becomes final
+        # final becomes next_output
+        s['prefinal'] = s['final']
+        s['final'] = post_final
+        return s['prefinal']
+    map_element(f, x, y, s=s)
+    x.extend(list(range(10)))
+    run()
+    assert recent_values(y) == [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
 
 def test_1():
     # From map_element_examples
@@ -439,12 +476,9 @@ def test_element_simple():
     x.extend(list(range(3)))
     x0.extend([0, 1, 3, 3, 6, 8])
     n.append(0)
-    
-    # STEP 5: GET SCHEDULER
-    scheduler = Stream.scheduler
 
     # STEP 6: EXECUTE A STEP OF THE SCHEDULER
-    scheduler.step()
+    run()
 
     # STEP 7: LOOK AT OUTPUT STREAMS
     assert recent_values(x) == [0, 1, 2]
@@ -903,6 +937,8 @@ def test_element():
     test_example_2()
     test_example_3()
     test_example_4()
+    test_example_5()
+    test_example_6()
     test_element_simple()
     test_timed_window()
     test_map_list()

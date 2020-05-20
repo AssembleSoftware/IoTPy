@@ -16,15 +16,16 @@ import os
 sys.path.append(os.path.abspath("../core"))
 sys.path.append(os.path.abspath("../helper_functions"))
 sys.path.append(os.path.abspath("../agent_types"))
-# agent, stream are in ../core
+
+# agent, stream, helper_control are in IoTPy/IoTPy/core
 from agent import Agent, InList
-from stream import Stream, StreamArray
-# helper_control, check_agent_parameter_types, recent_values
-# and run are in ../helper_functions
+from stream import Stream, StreamArray, run
+# check_agent_parameter_types, recent_values
+# are in IoTPy/IoTPy/helper_functions
 from helper_control import _no_value, _multivalue
 from check_agent_parameter_types import *
 from recent_values import recent_values
-from run import run
+# iot is IoTPy/IoTPy/agent_types
 from iot import iot, iot_merge
 
 #---------------------------------------------------------------------------
@@ -56,8 +57,12 @@ def test_simple():
 
         Returns
         -------
+        An iot function returns the number of items that it has
+        read in its single input stream.
         The function returns len(list_of_numbers) because the
-        agent has finished processing the entire list of numbers.
+        agent has finished processing the entire input.
+        Note that this function uses a stream, s, whereas the other
+        agents wrap functions that do not use streams.
 
         """
         output_list = [2*number for number in list_of_numbers]
