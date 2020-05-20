@@ -24,7 +24,7 @@ def check_processes_connections_format(processes, connections):
     for process_name in processes:
         process = processes[process_name]
         stream_name_set = set([]) # used to check stream name duplicates
-        stream_name_type_list = process['in_stream_names_types'] + process['out_stream_names_types']
+        stream_name_type_list = process['inputs'] + process['outputs']
         if 'sources' in process.keys():
             # to check for duplicate stream name for source as well
             for stream in process['sources']: 
@@ -91,10 +91,10 @@ def check_connections_validity(processes, connections, external_sources={}):
     for process in processes:
         process_stream_dict[process] = {'in_stream': [], 'out_stream': [], 'source': []} # list of stream names
         process_stream_type_dict[process] = {} # dictionary to track data types of each stream
-        for stream in processes[process]['in_stream_names_types']:
+        for stream in processes[process]['inputs']:
             process_stream_dict[process]['in_stream'].append(stream[0])
             process_stream_type_dict[process][stream[0]] = stream[1]
-        for stream in processes[process]['out_stream_names_types']:
+        for stream in processes[process]['outputs']:
             process_stream_dict[process]['out_stream'].append(stream[0])
             process_stream_type_dict[process][stream[0]] = stream[1]
         if 'sources' in processes[process].keys():

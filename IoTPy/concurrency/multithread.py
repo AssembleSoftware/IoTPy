@@ -4,9 +4,6 @@ This module has targets for threads in a multithreaded application.
 """
 import sys
 
-#import threading
-import time
-
 sys.path.append("../core")
 from stream import run
 
