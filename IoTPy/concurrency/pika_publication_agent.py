@@ -3,17 +3,9 @@ import pika
 import sys
 import json
 
-sys.path.append('../core')
 sys.path.append('../agent_types')
-sys.path.append('../helper_functions')
-
-# stream is in core
-#from stream import Stream, run
 # sink is in agent_types
 from sink import sink_list
-# print_stream is in helper_functions
-#from print_stream import print_stream
-#from recent_values import recent_values
 
 class PikaPublisher(object):
     def __init__(self, routing_key, exchange='publications', host='localhost'):
