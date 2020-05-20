@@ -8,12 +8,12 @@ sys.path.append('../agent_types')
 sys.path.append('../helper_functions')
 
 # stream is in core
-from stream import Stream, run
+#from stream import Stream, run
 # sink is in agent_types
 from sink import sink_list
 # print_stream is in helper_functions
-from print_stream import print_stream
-from recent_values import recent_values
+#from print_stream import print_stream
+#from recent_values import recent_values
 
 class PikaPublisher(object):
     def __init__(self, routing_key, exchange='publications', host='localhost'):
@@ -33,22 +33,3 @@ class PikaPublisher(object):
         self.connection.close()
     def publish(self, stream):
         sink_list(self.publish_list, stream)
-    
-
-def test():
-    stream = Stream('stream')
-    print_stream(stream, 'x')
-    publisher = PikaPublisher(
-        routing_key='temperature', exchange='publications', host='localhost')
-    publisher.publish(stream)
-    stream.extend(list(range(5)))
-    run()
-    stream.extend([1, 10, 100, 2, 20, 200])
-    run()
-
-    publisher.close()
-
-if __name__ == '__main__':
-    test()
-    
-
