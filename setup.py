@@ -5,9 +5,9 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="iotpy", # Replace with your own username
-    version="0.0.1",
+    version="1.0.0",
     author="Mani Chandy",
-    author_email="kmchandy@gmail.com",
+    author_email="",
     description="IoTPy - Python for Streams",
     long_description=long_description,
     long_description_content_type="text/markdown",
