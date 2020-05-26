@@ -20,17 +20,16 @@ import multiprocessing
 # be shared across processes.
 import threading
 import time
-sys.path.append("../agent_types")
-sys.path.append("../core")
 
+from ..agent_types.sink import sink_list, sink_element
 # sink, op are in ../agent_types.
-from sink import sink_list, sink_element
+
+from ..core.compute_engine import ComputeEngine
+from ..core.stream import Stream
+from ..core.system_parameters import  BUFFER_SIZE, MAX_NUM_SOURCES, MAX_NUM_PROCESSES
 # compute_engine, stream and system_parameters are in ../core.
-from compute_engine import ComputeEngine
-from stream import Stream
-from system_parameters import BUFFER_SIZE, MAX_NUM_SOURCES, MAX_NUM_PROCESSES
+from .utils import check_processes_connections_format, check_connections_validity
 # utils is in current folder.
-from utils import check_processes_connections_format, check_connections_validity
 
 #-----------------------------------------------------------------------
 class MulticoreProcess(object):
