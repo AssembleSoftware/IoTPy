@@ -1,6 +1,5 @@
-from ..agent_types import sink 
-from sink import sink_element
-
+from ..agent_types.sink import sink_element
+# sink is in ../agent_types
 
 def print_stream(in_stream, name=None):
     """
