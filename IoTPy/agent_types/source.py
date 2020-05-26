@@ -41,15 +41,12 @@ Functions in the module:
 import time
 import threading
 
-import sys
-import os
-sys.path.append(os.path.abspath("../helper_functions"))
-sys.path.append(os.path.abspath("../core"))
-sys.path.append(os.path.abspath("../agent_types"))
-from check_agent_parameter_types import check_source_function_arguments
-from check_agent_parameter_types import check_source_file_arguments
-from recent_values import recent_values
-from stream import Stream
+from ..core.stream import Stream
+# agent, stream, are in ../core
+from ..helper_functions.recent_values import recent_values
+# recent_values is present in ../helper_functions
+from .check_agent_parameter_types import check_source_function_arguments, check_source_file_arguments
+# check_agent_parameter_types is is the current directory
     
 def func_to_q(func, q, state=None, sleep_time=0, num_steps=None,
               name='source_to_q', *args, **kwargs):
