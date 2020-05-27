@@ -619,7 +619,7 @@ class Stream(object):
                 
     # Operator overloading
     def operator_overload(self, another_stream, func):
-        from merge import zip_map
+        from ..agent_types.merge import zip_map
         output_stream = Stream()
         zip_map(func=func,
                 in_streams=[self, another_stream],
@@ -909,7 +909,7 @@ class StreamArray(Stream):
 
     # Operator overloading for addition, subtraction, multiplication.
     def operator_overload(self, another_stream, func):
-        from merge import merge_list
+        from ..agent_types.merge import merge_list
         assert another_stream.dimension == self.dimension, \
           'Both stream arrays must have the same dimension.' \
           'The dimensions are {0} and {1}'.format(

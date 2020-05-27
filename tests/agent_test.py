@@ -1,9 +1,9 @@
 
+import unittest
 from IoTPy.core.stream import run, Stream, StreamArray
 from IoTPy.core.agent import Agent, BasicAgent
-import unittest
 #------------------------------------------------------------------------------------------
-# SIMPLE TEST. See IoTPy/IoTPy/tests for extensive tests.
+# Simple Agent Test
 #------------------------------------------------------------------------------------------
 
 
