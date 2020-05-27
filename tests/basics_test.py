@@ -261,7 +261,7 @@ class basics_test(unittest.TestCase):
         assert recent_values(heard) == [
             64.0, 64.0, 48.0, 32.0, 20.0, 12.0, 7.0, 3.5, 1.75, 0.875, 0.4375]
 
-    def echo_output(input_sound, D, A):
+    def echo_output(self, input_sound, D, A):
         spoken = Stream('spoken')
         heard = make_echo(spoken, D, A)
         spoken.extend(input_sound)
@@ -269,7 +269,7 @@ class basics_test(unittest.TestCase):
         return recent_values(heard)
 
     def test_echo_output(self):
-        output = echo_output(
+        output = self.echo_output(
             input_sound=[64, 32, 16, 8, 4, 2, 1, 0, 0, 0, 0],
             D=1, A=0.5)
         assert output == [

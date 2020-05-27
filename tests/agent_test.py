@@ -9,7 +9,7 @@ from IoTPy.core.agent import Agent, BasicAgent
 
 class agent_test(unittest.TestCase):
 
-    def test(self):
+    def test_(self):
 
         def copy(list_of_in_lists, state):
             return ([in_list.list[in_list.start:in_list.stop] for in_list in list_of_in_lists],
