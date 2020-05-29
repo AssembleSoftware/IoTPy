@@ -1,5 +1,5 @@
 from setuptools import find_packages, setup
-
+import os
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -7,6 +7,12 @@ with open("README.md", "r") as fh:
 with open("requirements.txt") as f:
     REQ = f.read().splitlines()
 
+# get __version__ from _version.py
+ver_file = os.path.join('IoTPy', '_version.py')
+with open(ver_file) as f:
+    exec(f.read())
+
+VER = __version__
 
 CLASSIFIERS = ['Intended Audience :: Science/Research',
                'Intended Audience :: Developers',
@@ -24,8 +30,8 @@ CLASSIFIERS = ['Intended Audience :: Science/Research',
 	       'Programming Language :: Python :: 3.8']
 
 setup(
-    name="IoTPy", # Replace with your own username
-    version="1.0.0",
+    name="IoTPy", 
+    version=VER,
     author="Mani Chandy",
     author_email="",
     description="IoTPy - Python for Streams",
