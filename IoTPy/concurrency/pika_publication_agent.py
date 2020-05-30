@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 import pika
-import sys
 import json
 
-sys.path.append('../agent_types')
+from ..agent_types.sink import sink_list 
 # sink is in agent_types
-from sink import sink_list
 
 class PikaPublisher(object):
     def __init__(self, routing_key, exchange='publications', host='localhost'):

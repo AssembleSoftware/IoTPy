@@ -3,28 +3,27 @@ This module has the basic decorators of IoTPy
 
 """
 import numpy as np
-import sys
-sys.path.append("../helper_functions")
-sys.path.append("../core")
-sys.path.append("../agent_types")
 
+from ..core.stream import Stream, StreamArray, _multivalue, run
+from ..core.agent import Agent
+from ..core.helper_control import _no_value, _multivalue
 # agent, stream, helper_control are in ../core
-from agent import Agent
-from stream import Stream, StreamArray, _multivalue, run
-from helper_control import _no_value, _multivalue
-# recent_values,  is in ../helper_functions
-from recent_values import recent_values
-# op, merge, split, multi, sink are in ../agent_types
-from op import map_element, map_element_f
-from op import filter_element, filter_element_f
-from op import map_list, map_list_f, timed_window
-from op import map_window_f, map_window, map_window_list
-from merge import zip_map, zip_map_f, merge_window_f, blend_f, blend
-from merge import merge_window
-from split import split_element_f, split_window_f, split_element
-from split import split_element, split_window
-from multi import multi_element_f, multi_window_f, multi_element, multi_window
-from sink import sink_element, sink_window
+
+from ..helper_functions.recent_values import recent_values
+# recent_values is in ../helper_functions
+
+from .op import map_element, map_element_f
+from .op import filter_element, filter_element_f
+from .op import map_list, map_list_f, timed_window
+from .op import map_window_f, map_window, map_window_list
+from .merge import zip_map, zip_map_f, merge_window_f, blend_f, blend
+from .merge import merge_window
+from .split import split_element_f, split_window_f, split_element
+from .split import split_element, split_window
+from .multi import multi_element_f, multi_window_f, multi_element, multi_window
+from .sink import sink_element, sink_window
+# op, merge, split, multi, sink are in the current directory
+
 
 #------------------------------------------------------------
 #       WRAPPERS FOR DECORATORS

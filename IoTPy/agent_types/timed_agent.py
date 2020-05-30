@@ -2,15 +2,12 @@
 in the manual documentation.
 
 """
-import sys
-sys.path.append("../core")
-sys.path.append("../helper_functions")
+from ..core.stream import Stream, StreamArray
+from ..core.agent import Agent
+from ..core.helper_control import _multivalue, _no_value
 # agent, stream are in ../core
-from agent import Agent
-from stream import Stream, StreamArray
-# helper_control is in ../helper_functions
-from helper_control import _multivalue, _no_value
-from check_agent_parameter_types import *
+# helper_control is in ../core
+from .check_agent_parameter_types import *
 
 ####################################################
 #                     TIMED ZIP

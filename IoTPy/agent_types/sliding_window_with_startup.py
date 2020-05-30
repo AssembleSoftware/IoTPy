@@ -1,15 +1,14 @@
 import numpy as np
-import sys
-sys.path.append("../core")
-sys.path.append("../agent_types")
-# agent, stream, helper_control, check_agent_parameter_types
+
+from ..core.stream import Stream, StreamArray, run
+from ..core.agent import Agent, InList
+from ..core.helper_control import _no_value, _multivalue
+# agent, stream, helper_control
 # are in ../core.
-from agent import Agent, InList
-from stream import Stream, StreamArray, run
-from helper_control import _no_value, _multivalue
-from check_agent_parameter_types import *
-# iot is in ../agent_types
-from iot import iot
+from .check_agent_parameter_types import *
+# check_agent_parameter is in current directory
+from .iot import iot
+# iot is in the current directory
 
 class sliding_window_with_startup(object):
     def __init__(self, func, in_stream, out_stream, window_size, step_size):

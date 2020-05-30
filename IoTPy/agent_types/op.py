@@ -21,15 +21,13 @@ In addition functions that return streams are:
    timed_window_f (version of timed_window)
 
 """
+from ..core.stream import StreamArray, Stream 
+from ..core.agent import Agent
+from ..core.helper_control import _multivalue
 
-import sys
-sys.path.append("../core")
-# Stream, StreamArray, Agent, helper_control are in IoTPy/IoTPy/Core.
-from stream import Stream, StreamArray
-from agent import Agent
-from helper_control import _multivalue
+# stream, agent, helper_control are in ../cores
+from .check_agent_parameter_types import *
 # check_agent_parameter_types is in this folder.
-from check_agent_parameter_types import *
 
 def make_out_stream(in_stream):
     if isinstance(in_stream, Stream):

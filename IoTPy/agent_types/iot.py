@@ -20,17 +20,14 @@ specified in *args or **kwargs, respectively.
 These arguments may include streams and agents.
 
 """
-import sys
-sys.path.append("../core")
-sys.path.append("../helper_functions")
-sys.path.append("../agent_types")
-# agent, stream are in ../core
-from agent import Agent, InList
-from stream import Stream, StreamArray
-# helper_control, recent_values are in ../helper_functions
-from helper_control import _no_value, _multivalue
-from recent_values import recent_values
-from check_agent_parameter_types import *
+from ..core.agent import Agent, InList
+from ..core.stream import StreamArray, Stream 
+from ..core.helper_control import _no_value, _multivalue
+# agent, stream, helper_control are in ../core
+from ..helper_functions.recent_values import recent_values
+#  recent_values is in ../helper_functions
+from .check_agent_parameter_types import *
+# check_agent_parameter_types is in current folder
 
 def iot(func, in_stream, *args, **kwargs):
     """

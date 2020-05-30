@@ -1,10 +1,10 @@
 import types
 import inspect
 
-import sys
-sys.path.append("../core")
-from stream import Stream, StreamArray
-from agent import InList
+from ..core.stream import Stream, StreamArray
+from ..core.agent import InList
+# , agent 
+# stream, agent are in ../core
 
 def check_list_of_streams_type(list_of_streams, agent_name, parameter_name):
     """ Helper function to check the types of streams used by an agent.
