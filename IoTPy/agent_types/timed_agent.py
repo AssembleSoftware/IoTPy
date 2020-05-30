@@ -45,11 +45,6 @@ def timed_zip_map_agent(func, in_streams, out_stream,
         of out_stream is a list where element[0] is a time T and
         element[1] is a list consisting of all elements of in in_streams
         that have time T.
-
-    Examples
-    --------
-       See test_timed_zip_agents() at the end of this file.
-
     """
     # Check types of arguments
     check_list_of_streams_type(list_of_streams=in_streams,
