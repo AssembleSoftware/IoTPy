@@ -76,12 +76,12 @@ Merge functions:
 
    
 """
-import sys
-sys.path.append("../core")
-from check_agent_parameter_types import *
-# agent and stream are in ../core
-from agent import Agent, InList
-from stream import Stream, _no_value
+from .check_agent_parameter_types import *
+# check_agent_parameter_types is in the current folder
+from ..core.stream import Stream, _no_value
+from ..core.agent import Agent
+# agent and stream are in ../core; _no_value is in helper_control but
+# is imported inside stream
 
 def zip_map(
         func, in_streams, out_stream,

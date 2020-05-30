@@ -40,12 +40,11 @@ Agents:
    7. split_tuple (same as split_element with identity function for func) 
    
 """
-import sys
-sys.path.append("../core")
-# agent, stream, check_agent_parameter_types are in ../core
-from agent import Agent, InList
-from stream import Stream, _no_value
-from check_agent_parameter_types import *
+from ..core.stream import Stream, _no_value
+from ..core.agent import Agent, InList
+# agent, stream,are in ../core
+from .check_agent_parameter_types import *
+# check_agent_parameter_types is in current directory
 
 #-----------------------------------------------------------------------
 # SPLIT: SINGLE INPUT STREAM, LIST OF OUTPUT STREAMS

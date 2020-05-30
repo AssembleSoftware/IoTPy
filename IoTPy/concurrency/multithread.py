@@ -2,11 +2,8 @@
 This module has targets for threads in a multithreaded application.
 
 """
-import sys
-
-sys.path.append("../core")
-from stream import run
-
+from ..core.stream import run
+# run is in ../core/stream.py
 def thread_target_appending(q_in, list_q_out, in_streams, finished='_finished'):
     """
     The target of a thread running IoTPy code. The thread waits for values to be

@@ -8,14 +8,14 @@ from __future__ import division
 # numpy used in StreamArray.
 import numpy as np
 # system_parameters is in IoTPy/IoTPy/core
-from system_parameters import DEFAULT_NUM_IN_MEMORY
+from .system_parameters import DEFAULT_NUM_IN_MEMORY
 # compute_engine is in IoTPy/IoTPy/core
-from compute_engine import ComputeEngine
+from .compute_engine import ComputeEngine
 # helper_control is in IoTPy/IoTPy/core
-from helper_control import TimeAndValue, _multivalue
-from helper_control import _no_value
-from helper_control import remove_novalue_and_open_multivalue
-from helper_control import remove_None
+from .helper_control import TimeAndValue, _multivalue
+from .helper_control import _no_value
+from .helper_control import remove_novalue_and_open_multivalue
+from .helper_control import remove_None
 
 class Stream(object):
     """
@@ -619,7 +619,7 @@ class Stream(object):
                 
     # Operator overloading
     def operator_overload(self, another_stream, func):
-        from merge import zip_map
+        from ..agent_types.merge import zip_map
         output_stream = Stream()
         zip_map(func=func,
                 in_streams=[self, another_stream],
@@ -909,7 +909,7 @@ class StreamArray(Stream):
 
     # Operator overloading for addition, subtraction, multiplication.
     def operator_overload(self, another_stream, func):
-        from merge import merge_list
+        from ..agent_types.merge import merge_list
         assert another_stream.dimension == self.dimension, \
           'Both stream arrays must have the same dimension.' \
           'The dimensions are {0} and {1}'.format(
@@ -940,5 +940,3 @@ class StreamArray(Stream):
 #------------------------------------------------------------------------------
 def run(): Stream.scheduler.step()
 #------------------------------------------------------------------------------
-
-        

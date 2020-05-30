@@ -1,13 +1,12 @@
-import sys
-sys.path.append("../core")
-sys.path.append("../helper_functions")
+from ..core.stream import Stream, StreamArray, _no_value, _multivalue
+from ..core.agent import Agent, InList
 # agent, stream are in ../core
-from agent import Agent, InList
-from stream import Stream, StreamArray
-from stream import _no_value, _multivalue
+# _no_value and _multivalue are in helper_control, but it is imported
+# into stream, so we can import above
+from ..helper_functions.recent_values import recent_values
 # recent_values is in ../helper_functions
-from recent_values import recent_values
-from check_agent_parameter_types import *
+
+from .check_agent_parameter_types import *
 
 """
 Functions in this module:

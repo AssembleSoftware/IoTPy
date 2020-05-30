@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import pika
-import sys
 import threading
 
 class PikaSubscriber(object):
