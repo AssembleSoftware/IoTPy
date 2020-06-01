@@ -21,7 +21,7 @@ def run(): Stream.scheduler.step()
 #--------------------------------------------------------
 #--------------------------------------------------------
 
-class merge_test(unittest.TestCase):
+class test_merge_agents(unittest.TestCase):
 
     def test_some_merge_agents(self):
         import numpy as np

@@ -90,20 +90,14 @@ once, from False to True. So, stop acts like a signal stream with a
 single value.
 
 """
-
-import sys
-import os
-sys.path.append(os.path.abspath("../helper_functions"))
-sys.path.append(os.path.abspath("../core"))
-sys.path.append(os.path.abspath("../agent_types"))
-
-from stream import Stream
-from helper_control import _no_value, _unchanged, _changed
-from recent_values import recent_values
-from op import signal_element, map_element
-from merge import weave_f
-from sink import sink
-from split import split_signal
+import unittest
+from IoTPy.core.stream import Stream
+from IoTPy.core.helper_control import _no_value, _unchanged, _changed
+from IoTPy.helper_functions.recent_values import recent_values
+from IoTPy.agent_types.op import signal_element, map_element
+from IoTPy.agent_types.merge import weave_f
+from IoTPy.agent_types.sink import sink
+from IoTPy.agent_types.split import split_signal
 
 def sort(lst):
     """
@@ -319,28 +313,28 @@ def stop_agent_when_enough_elements(N):
     return numbers
     assert list(range(N)) == recent_values(numbers)[:N]
 
-def test_shared_variables():
-    # EXAMPLE 1: SORT
-    lst = [10, 6, 8, 3, 20, 2, 23, 35]
-    sort(lst)
-    assert lst == [2, 3, 6, 8, 10, 20, 23, 35]
+class test_shared_variables(unittest.TestCase):
+    def test_shared_variables(self):
+        # EXAMPLE 1: SORT
+        lst = [10, 6, 8, 3, 20, 2, 23, 35]
+        sort(lst)
+        assert lst == [2, 3, 6, 8, 10, 20, 23, 35]
 
-    # EXAMPLE 2: MATRIX OF LENGTHS OF SHORTEST PATHS
-    D = [[0, 20, 40, 60], [20, 0, 10, 1], [40, 10, 0, 100],
-         [60, 1, 100, 0]]
-    shortest_path(D)
-    assert D == [[0, 20, 30, 21], [20, 0, 10, 1],
-                 [30, 10, 0, 11], [21, 1, 11, 0]]
+        # EXAMPLE 2: MATRIX OF LENGTHS OF SHORTEST PATHS
+        D = [[0, 20, 40, 60], [20, 0, 10, 1], [40, 10, 0, 100],
+             [60, 1, 100, 0]]
+        shortest_path(D)
+        assert D == [[0, 20, 30, 21], [20, 0, 10, 1],
+                     [30, 10, 0, 11], [21, 1, 11, 0]]
 
-    # EXAMPLE 3: STOP WHEN AGENT AFTER N ELEMENTS GENERATED.
-    N = 3
-    numbers = stop_agent_when_enough_elements(N)
-    assert list(range(N)) == recent_values(numbers)[:N]
+        # EXAMPLE 3: STOP WHEN AGENT AFTER N ELEMENTS GENERATED.
+        N = 3
+        numbers = stop_agent_when_enough_elements(N)
+        assert list(range(N)) == recent_values(numbers)[:N]
 
-    print ('TEST OF SHARED VARIABLES IS SUCCESSFUL!')
+        print ('TEST OF SHARED VARIABLES IS SUCCESSFUL!')
 
 if __name__ == '__main__':
-    test_shared_variables()
-
+    unittest.main()
     
             

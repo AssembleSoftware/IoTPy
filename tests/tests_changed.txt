@@ -5,4 +5,18 @@ iot_test.py
 list_test.py
 merge_test.py
 multi_test.py
+window_test.py
+split_test.py
+sink_test.py
+shared_variable_test.py
 
+
+
+Tests with errors:
+source_test.py -> Uses earlier version of IoTPy.
+
+
+Tests to add outputs:
+Basics Test
+Element Test
+Merge Test

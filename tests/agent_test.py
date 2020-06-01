@@ -7,7 +7,7 @@ from IoTPy.core.agent import Agent, BasicAgent
 #------------------------------------------------------------------------------------------
 
 
-class agent_test(unittest.TestCase):
+class test_agent(unittest.TestCase):
 
     def test_(self):
 

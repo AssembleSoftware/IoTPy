@@ -1,17 +1,13 @@
-import sys
-import os
 import threading
 import random
 import multiprocessing
 import numpy as np
-sys.path.append(os.path.abspath("../concurrency"))
-sys.path.append(os.path.abspath("../core"))
-sys.path.append(os.path.abspath("../agent_types"))
-sys.path.append(os.path.abspath("../helper_functions"))
-sys.path.append(os.path.abspath("../../examples/timing"))
-from multicore import *
-from recent_values import recent_values
-from basics import map_e, map_l, map_w, merge_e, sink_e
+
+from IoTPy.concurrency.multicore import *
+from IoTPy.helper_functions.recent_values import recent_values
+from IoTPy.agent_types.basics import map_e, map_l, map_w, merge_e, sink_e
+
+
 
 def test_0():
     NUM_STEPS=5
@@ -72,7 +68,7 @@ def test_0():
             }
       }
 
-    multicore(processes, connections)
+    MulticoreProcess(processes, connections)
 
 def test_source():
     test_0()
