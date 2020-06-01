@@ -26,7 +26,7 @@ from IoTPy.agent_types.merge import merge_list, merge_list_f
 #------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------
 
-class list_test(unittest.TestCase):
+class test_list(unittest.TestCase):
 
     def test_list(self):
         scheduler = Stream.scheduler

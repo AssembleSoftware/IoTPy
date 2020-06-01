@@ -17,7 +17,7 @@ from IoTPy.agent_types.sink import sink_element, sink_window
 from IoTPy.agent_types.basics import *
 
 
-class basics_test(unittest.TestCase):
+class test_basics(unittest.TestCase):
 
     def test_f_mul(self):
         x = Stream()
@@ -559,3 +559,7 @@ class basics_test(unittest.TestCase):
 #-----------------------------------------------------
 if __name__ == '__main__':
     unittest.main()
+
+
+# if unittest.TextTestRunner().run(test_basics('test_operators_on_three_streams')).wasSuccessful:
+# Check for individual methods

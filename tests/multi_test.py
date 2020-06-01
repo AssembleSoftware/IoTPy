@@ -17,7 +17,7 @@ from IoTPy.agent_types.multi import multi_element, multi_list, multi_window
 from IoTPy.agent_types.multi import multi_element_f
 
 
-class multi_test(unittest.TestCase):
+class test_multi(unittest.TestCase):
     def test_multi(self):
         scheduler = Stream.scheduler
         import numpy as np
