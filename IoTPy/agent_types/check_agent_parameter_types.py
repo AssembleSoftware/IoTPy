@@ -1,10 +1,10 @@
 import types
 import inspect
 
-from ..core.stream import Stream, StreamArray
-from ..core.agent import InList
-# , agent 
-# stream, agent are in ../core
+import sys
+sys.path.append("../core")
+from stream import Stream, StreamArray
+from agent import InList
 
 def check_list_of_streams_type(list_of_streams, agent_name, parameter_name):
     """ Helper function to check the types of streams used by an agent.
@@ -56,7 +56,7 @@ def check_in_lists_type(name, in_lists, num_in_streams):
 
 def check_num_args_in_func_no_state(name, func, func_args, func_kwargs):
     if isinstance(func, types.FunctionType):
-        args_and_defaults = inspect.getargspec(func)
+        args_and_defaults = inspect.getfullargspec(func)
         args = args_and_defaults.args
         defaults = args_and_defaults.defaults
         if defaults is None:
@@ -73,7 +73,7 @@ def check_num_args_in_func_with_state(name, func, func_args, func_kwargs):
     assert (isinstance(func, types.FunctionType) or
             isinstance(func, types.MethodType)), \
       ' func is {0}, but it must be a function or method'.format(func)
-    args_and_defaults = inspect.getargspec(func)
+    args_and_defaults = inspect.getfullargspec(func)
     args = args_and_defaults.args
     defaults = args_and_defaults.defaults
     assert len(args) <= 2+len(func_args)+len(func_kwargs), \
