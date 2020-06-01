@@ -38,7 +38,7 @@ from IoTPy.agent_types.basics import merge_sink_e
 # The seven steps in this test may occur in different orders
 # in the later tests.
 
-class element_test(unittest.TestCase):
+class test_element(unittest.TestCase):
     
     def test_example_1(self):
         # Specify streams
