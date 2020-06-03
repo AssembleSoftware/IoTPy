@@ -15,29 +15,22 @@ Look at:
 """
 #!/usr/bin/env python
 import pika
-import sys
 import json
 import time
-
-sys.path.append("../agent_types")
-sys.path.append("../core")
-sys.path.append("../helper_functions")
-sys.path.append("../concurrency")
-
 # stream is in core
-from stream import Stream, run
+from IoTPy.core.stream import Stream, run
 # sink, op, basics are in the agent_types
 # sink is in agent_types
-from sink import sink_list
-from op import map_element
-from recent_values import recent_values
+from IoTPy.agent_types.sink import sink_list
+from IoTPy.agent_types.op import map_element
+from IoTPy.helper_functions.recent_values import recent_values
 # multicore is in concurrency
-from multicore import copy_data_to_stream, finished_source
-from multicore import get_processes
+from IoTPy.concurrency.multicore import copy_data_to_stream, finished_source
+from IoTPy.concurrency.multicore import get_processes
 #from pika_subscribe_agent import PikaSubscriber
-from pika_publication_agent import PikaPublisher
+from IoTPy.concurrency.pika_publication_agent import PikaPublisher
 # print_stream is in helper_functions
-from print_stream import print_stream
+from IoTPy.helper_functions.print_stream import print_stream
 
 publisher = PikaPublisher(
     routing_key='temperature',

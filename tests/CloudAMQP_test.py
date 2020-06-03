@@ -11,7 +11,7 @@ channel = connection.channel() # start a channel
 channel.queue_declare(queue='hello') # Declare a queue
 ## channel.exchange_declare(exchange='amq.direct',
 ##                          exchange_type='direct')
-print '------------'
+print ('------------')
 channel.basic_publish(exchange='amq.direct',
                   routing_key='h',
                   body='Hello Mani!')
