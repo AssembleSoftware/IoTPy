@@ -10,7 +10,7 @@ Functions in the module:
    5. merge_asynch: asynch merge which keeps track of which stream an
                     item came from
    6. merge_asynch_f
-   5. mix: same as merge_asych with no function on merged stream
+   5. mix: same as merge_asynch with no function on merged stream
    6. mix_f
    7. blend: applies func to elements as they arrive. Does not keep
              track of which input stream an item came from.
