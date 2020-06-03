@@ -1,17 +1,33 @@
 agent_test.py
+agent_types_test.py
 basics_test.py
 element_test.py
 iot_test.py
 list_test.py
 merge_test.py
 multi_test.py
-window_test.py
-split_test.py
 sink_test.py
+split_test.py
 shared_variable_test.py
+window_test.py
+
+--------------
+multicore37test.py
+multicore_test.py
+multithread.py
+sliding_window_with_startup_test
+stream_size_test
+stream_test (Check with Prof. Changy on stream.py)
+timed_test_agent
+
+----------------2 to 3----------------
+socket_client, socket_server
+
+---Tests with no changes-------
+testing_lock 
 
 
-
+----------------------------------
 Tests with errors:
 source_test.py -> Uses earlier version of IoTPy.
 
@@ -20,3 +36,9 @@ Tests to add outputs:
 Basics Test
 Element Test
 Merge Test
+
+Pika Errors
+emit_log_direct
+multicore_test
+pika_publisher (NEED UNITTEST)
+pika_subsriber (NEED UNITTEST)
