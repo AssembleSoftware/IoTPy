@@ -9,5 +9,5 @@ port = 12345                # Reserve a port for your service.
 s.connect((host, port))
 s.send('I am sending ')
 s.send(' Can clients send?')
-print s.recv(1024)
+print (s.recv(1024))
 s.close()                     # Close the socket when done

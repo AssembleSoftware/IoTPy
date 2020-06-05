@@ -13,5 +13,5 @@ while True:
    print ('Got connection from'), addr
    c.send('hello .... ')
    c.send('Thank you for connecting')
-   print c.recv(1024)
+   print (c.recv(1024))
    c.close()                # Close the connection

@@ -47,4 +47,4 @@ couldAMQP_test
 ------
 5th June
 - removed VM tests
-- moved pika tests from multicore_test.py to pike_test.py
+- moved pika tests from multicore_test.py to pika_test.py
