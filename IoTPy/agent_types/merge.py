@@ -210,6 +210,69 @@ def zip_streams(in_streams, out_stream):
     """
     return zip_stream(in_streams, out_stream)
 
+def zip_map_sink(
+        func, in_streams,
+        state=None, call_streams=None, name='zip_map_sink',
+        *args, **kwargs): 
+    """
+    Same as zip_map except that the encapsulated function returns
+    nothing or None for zip_map_sink whereas the encapsulated
+    function returns an element of the output stream for zip_map.
+
+    Parameters
+    ----------
+        func: function
+           function from a list (and possibly state,
+           args and kwargs) to a single element of
+           the output stream. The list has one element
+           from each input stream.
+        in_streams: list of Stream
+           The list of input streams of the agent
+        out_stream: Stream
+           The single output stream of the agent
+        state: object
+           The state of the agent
+        call_streams: list of Stream
+           The list of call_streams. A new value in any stream in this
+           list causes a state transition of this agent.
+        name: str
+           Name of the agent created by this function.
+    Returns
+    -------
+        Agent.
+         The agent created by this function.
+
+    """
+    check_num_args_in_func(state, name, func, args, kwargs)
+    num_in_streams = len(in_streams)
+
+    # The transition function for this agent.
+    def transition(in_lists, state):
+        check_in_lists_type(name, in_lists, num_in_streams)
+        # input_snapshots is a list of snapshots.
+        # Each snapshot is a list containing one element for each
+        # input stream.
+        input_snapshots = list(zip(*[v.list[v.start:v.stop] for v in in_lists]))
+        # If the new input data is empty then return empty lists for
+        # each output stream, and leave the state and the starting point
+        # for each input stream unchanged.
+        if not input_snapshots:
+            return ([], state, [v.start for v in in_lists])
+
+        for i, snapshot in enumerate(input_snapshots):
+            assert isinstance(snapshot, list) or isinstance(snapshot, tuple)
+            if state is None:
+                func(snapshot, *args, **kwargs)
+            else:
+                state = func(snapshot, state, *args, **kwargs)
+
+        return ([], state, [v.start+len(input_snapshots) for v in in_lists])
+    # Finished transition
+
+    # Create agent
+    return Agent(in_streams, [], transition, state, call_streams, name)
+
+
 
 ####################################################
 # OPERATIONS ON ASYCHRONOUS INPUT STREAMS
