@@ -16,7 +16,7 @@ VER = __version__
 
 CLASSIFIERS = ['Intended Audience :: Science/Research',
                'Intended Audience :: Developers',
-               'License :: OSI Approved',
+               'License :: OSI Approved :: BSD License',
                'Programming Language :: Python',
                'Topic :: Software Development',
                'Topic :: Scientific/Engineering',
