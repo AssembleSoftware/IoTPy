@@ -334,16 +334,9 @@ class Stream(object):
     def append(self, value):
         """
         Append a single value to the end of the stream.
-        """
-        self.recent[self.stop] = value
-        self.stop += 1
-        # If the buffer, self.recent, becomes full
-        # then compact the buffer.
-        if self.stop >= len(self.recent):
-            self._set_up_next_recent()
-        # Inform subscribers that the stream has been modified.
-        self.wakeup_subscribers()
 
+        """
+        self.extend([value])
     
     def extend(self, value_list):
         """
