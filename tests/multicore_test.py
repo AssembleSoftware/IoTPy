@@ -43,44 +43,6 @@ from IoTPy.helper_functions.print_stream import print_stream
 
 class test_multicore(unittest.TestCase):
     #------------------------------------------------------------------
-    def test_pika_subscriber(self):
-        """
-        Simple example
-
-        """
-        # Agent function for process named 'p0'
-        def f(in_streams, out_streams):
-            print_stream(in_streams[0], 'x')
-
-        # Source thread target for source stream named 'x'.
-        def h(proc):
-            def callback(ch, method, properties, body):
-                json_data = json.loads(body)
-                proc.copy_stream(data=json_data, stream_name='x')
-            pika_subscriber = PikaSubscriber(
-                callback, routing_key='temperature',
-                exchange='publications', host='localhost')
-            pika_subscriber.start()
-
-
-        # The specification
-        multicore_specification = [
-            # Streams
-            [('x', 'i')],
-            # Processes
-            [
-                # Process p0
-                {'name': 'p0', 'agent': f, 'inputs':['x'], 'sources': ['x'],
-                 'source_functions':[h]}
-            ]
-           ]
-
-        # Execute processes (after including your own non IoTPy processes)
-        processes = get_processes(multicore_specification)
-        for process in processes: process.start()
-        for process in processes: process.join()
-        for process in processes: process.terminate()
-
 
     def test_0_0(self):
         """
@@ -180,199 +142,6 @@ class test_multicore(unittest.TestCase):
 
 
 
-    #------------------------------------------------------------------
-    def test_q_simple(self):
-        """
-        Illustrates the use of an output queue and use of a non-IoTPy
-        thread.
-        When the IoTPy processes terminate execution a special message
-        '_finished' is put on each of the output queues.
-        The non-IoTPy thread, my_thread, gets data from the output queue
-        and prints it.
-
-        """
-        print ('starting test_q_simple')
-
-        # An output queue of process 'p1'.
-        q = multiprocessing.Queue()
-
-        # Agent function for process named 'p0'
-        def f(in_streams, out_streams):
-            stream_to_queue(in_streams[0], q)
-
-        # Source thread target for source stream named 'x'.
-        def h(proc):
-            proc.copy_stream(data=list(range(5)), stream_name='x')
-            proc.finished_source(stream_name='x')
-
-        # Output thread target
-        def publish_data_from_queue(q):
-            publisher = PikaPublisher(
-                routing_key='temperature',
-                exchange='publications', host='localhost')
-            while True:
-                v = q.get()
-                if v == '_finished': break
-                else: publisher.publish_list([v])
-        # Output thread
-        my_thread = threading.Thread(target=publish_data_from_queue, args=(q,))
-
-        # Specification
-        multicore_specification = [
-            # Streams
-            [('x', 'i')],
-            # Processes
-            [
-                # Process p0
-                {'name': 'p0', 'agent': f, 'inputs': ['x'],
-                 'sources': ['x'], 'source_functions':[h], 'output_queues':[q],
-                 'threads': [my_thread]
-                }
-            ]
-           ]
-
-        # Execute processes (after including your own non IoTPy processes)
-        processes = get_processes(multicore_specification)
-        for process in processes: process.start()
-        for process in processes: process.join()
-        for process in processes: process.terminate()
-
-        print('')
-        print ('--------------------------------------')
-
-
-    #------------------------------------------------------------------
-    def test_q_simple_1(self):
-        """
-        
-        """
-        # Agent function for process named 'p0'
-        print ('starting test_q_simple')
-
-        def f(in_streams, out_streams):
-            publisher = PikaPublisher(
-                routing_key='temperature',
-                exchange='publications', host='localhost')
-            sink_list(publisher.publish_list, in_streams[0])
-
-        # Source thread target for source stream named 'x'.
-        def h(proc):
-            proc.copy_stream(data=list(range(5000, 10000, 1000)), stream_name='x')
-            proc.finished_source(stream_name='x')
-
-        # Specification
-        multicore_specification = [
-            # Streams
-            [('x', 'i')],
-            # Processes
-            [
-                # Process p0
-                {'name': 'p0', 'agent': f, 'inputs': ['x'],
-                 'sources': ['x'], 'source_functions':[h]
-                }
-            ]
-           ]
-
-        # Execute processes (after including your own non IoTPy processes)
-        processes = get_processes(multicore_specification)
-        for process in processes: process.start()
-        for process in processes: process.join()
-        for process in processes: process.terminate()
-        print('')
-        print ('--------------------------------------')
-
-            
-
-    #------------------------------------------------------------------
-    def test_1_q(self):
-        """
-        Illustrates the use of an output queue and use of a non-IoTPy
-        thread.
-        When the IoTPy processes terminate execution a special message
-        '_finished' is put on each of the output queues.
-        The non-IoTPy thread, my_thread, gets data from the output queue
-        and prints it.
-
-        """
-        print ('starting test_1_q')
-
-        # An output queue of process 'p1'.
-        q = multiprocessing.Queue()
-
-        # Agent function for process named 'p0'
-        def f(in_streams, out_streams):
-            map_element(lambda v: v+100, in_streams[0], out_streams[0])
-
-        # Agent function for process named 'p1'
-        # Puts stream into output queue, q.
-        def g(in_streams, out_streams, q):
-            s = Stream('s')
-            map_element(lambda v: v*2, in_streams[0], s)
-            stream_to_queue(s, q)
-
-        # Source thread target for source stream named 'x'.
-        def h(proc):
-            for i in range(2):
-                proc.copy_stream(data=list(range(i*3, (i+1)*3)),
-                                 stream_name='x')
-                time.sleep(0.001)
-            proc.finished_source(stream_name='x')
-
-        # Thread that gets data from the output queue
-        # This thread is included in 'threads' in the specification.
-        # Thread target
-        def publish_data_from_queue(q):
-            publisher = PikaPublisher(
-                routing_key='temperature',
-                exchange='publications', host='localhost')
-            finished = False
-            while not finished:
-                list_to_be_published = []
-                while not finished:
-                    try:
-                        v = q.get(timeout=0.1)
-                        if v == '_finished':
-                            finished = True
-                            if list_to_be_published:
-                                publisher.publish_list(list_to_be_published)
-                        else:
-                            list_to_be_published.append(v)
-                    except:
-                        print ('from queue: list_to_be_published is ', list_to_be_published)
-                        if list_to_be_published:
-                            publisher.publish_list(list_to_be_published)
-                            list_to_be_published = []
-        # Output thread
-        my_thread = threading.Thread(target=publish_data_from_queue, args=(q,))
-
-        # Specification
-        # Agent function g of process p1 has a positional argument q becauses
-        # 'args': [q] is in the specification for p1.
-        # q is an output queue because 'output_queues': [q] appears in the spec.
-        # When the IoTPy computation terminates, a special message '_finished' is
-        # put on each output queue.
-        multicore_specification = [
-            # Streams
-            [('x', 'i'), ('y', 'i')],
-            # Processes
-            [
-                # Process p0
-                {'name': 'p0', 'agent': f, 'inputs': ['x'], 'outputs': ['y'],
-                 'sources': ['x'], 'source_functions':[h]
-                },
-                # Process p1
-                {'name': 'p1', 'agent': g, 'inputs': ['y'], 'args': [q],
-                 'output_queues': [q], 'threads': [my_thread] }
-            ]
-           ]
-
-        # Execute processes (after including your own non IoTPy processes)
-        processes = get_processes(multicore_specification)
-        for process in processes: process.start()
-        for process in processes: process.join()
-
-        print('')
-        print ('--------------------------------------')
 
 
     #------------------------------------------------------------------
@@ -889,7 +658,6 @@ def multicore_example_v2( DATA, ADDEND, MULTIPLICAND, EXPONENT):
     print ('buffer is ', buffer[:ptr.value])
         
 if __name__ == '__main__':
-    # unittest.main()
     print ('starting multicore_example v1')
     print ('')
     print ('q[j] = (j+ADDEND)*MULTIPLICAND')
@@ -905,3 +673,4 @@ if __name__ == '__main__':
     print ('ADDEND=100, MULTIPLICAND=300, EXPONENT=2')
     print ('')
     multicore_example_v2(DATA=list(range(3)), ADDEND=100, MULTIPLICAND=300, EXPONENT=2)
+    unittest.main()

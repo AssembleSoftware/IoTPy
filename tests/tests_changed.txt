@@ -42,3 +42,9 @@ emit_log_direct
 multicore_test
 pika_publisher (NEED UNITTEST)
 pika_subsriber (NEED UNITTEST)
+couldAMQP_test
+
+------
+5th June
+- removed VM tests
+- moved pika tests from multicore_test.py to pika_test.py

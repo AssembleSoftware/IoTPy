@@ -1,7 +1,7 @@
-from IoTPy.core.agent import Agent, InList
-from IoTPy.core.stream import StreamArray, Stream, _no_value, _multivalue
-from IoTPy.agent_types.op import map_element
-from IoTPy.helper_functions.recent_values import recent_values
+from ..core.agent import Agent, InList
+from ..core.stream import StreamArray, Stream, _no_value, _multivalue
+from ..agent_types.op import map_element
+from .recent_values import recent_values
 
 def dtype_float(stream):
     s = StreamArray(dtype=float)

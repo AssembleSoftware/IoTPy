@@ -68,7 +68,7 @@ def test_0():
             }
       }
 
-    MulticoreProcess(processes, connections)
+    muticore(processes, connections)
 
 def test_source():
     test_0()

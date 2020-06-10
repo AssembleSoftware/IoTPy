@@ -27,9 +27,9 @@ channel.queue_bind(exchange='amq.direct',
                    queue='hello',
                    routing_key='v')
 
-channel.basic_consume(callback,
+channel.basic_consume(on_message_callback = callback,
                       queue='hello',
-                      no_ack=True)
+                      auto_ack=True)
 
 print(' [*] Waiting for messages:')
 channel.start_consuming()
