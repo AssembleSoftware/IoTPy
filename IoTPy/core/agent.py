@@ -304,10 +304,14 @@ class Agent(object):
         # If a parameter is None, convert it into the empty list.
         if not self._out_lists: self._out_lists = list()
         assert len(self._out_lists) == len(self.out_streams), \
-          'Error in agent named {0}. The number of output values, {1}, returned'\
-          ' by a state transition must equal, {2}, the number of output streams.'\
-          ' The output values are {3}'.format(
-              self.name, len(self._out_lists), len(self.out_streams), self._out_lists)
+          ' Error in agent named:   {0}. \n '\
+          ' The number of output values returned by the agent function is:  {1}. \n' \
+          ' The number of output streams is: {2}. \n' \
+          ' The numbers of output values and output streams should be equal. \n'\
+          ' The output streams are:  {3}. \n' \
+          ' The output values are:  {4}'.format(
+              self.name, len(self._out_lists), len(self.out_streams),
+              [out_stream.name for out_stream in self.out_streams], self._out_lists)
         # Put each of the output lists computed in the state
         # transition into each of the output streams.
         for j in range(len(self.out_streams)):
