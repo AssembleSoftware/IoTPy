@@ -187,6 +187,8 @@ class ComputeEngine(object):
 
                 if not self.stopped:
                     # Succeeded in getting a message from input_queue.
+                    # The status of this queue is not empty.
+                    self.queue_status[self.process_id] = 1
                     # This message, v, is:
                     #     (stream name, element for this stream)
                     # Get the specified stream name and its next element.
