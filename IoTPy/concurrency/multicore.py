@@ -252,10 +252,13 @@ class MulticoreProcess(object):
             self.inputs = self.spec['inputs']
         else:
             self.inputs = []
-        assert self.in_stream_names_connected_to_out_streams == \
-          [v[0] for v in self.inputs], \
-          "Input stream = {0}. Streams connected to outputs = {1}".format(
-              self.inputs, self.in_stream_names_connected_to_out_streams)
+        assert set(self.in_stream_names_connected_to_out_streams) == \
+          set([v[0] for v in self.inputs]), \
+          "Process name = {0}. \n" \
+          "Names of input streams = {1}. \n" \
+          "Names of streams connected to outputs = {2}. \n" \
+          "Names of input streams and streams connected to outputs must be same".format(
+              self.name, [v[0] for v in self.inputs], self.in_stream_names_connected_to_out_streams)
 
         # GET OUTPUT STREAMS AND CHECK CONNECTEDNESS
         # outputs is a list of out_stream names and their types for
