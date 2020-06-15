@@ -16,7 +16,6 @@ import random
 import multiprocessing
 import numpy as np
 import time
-import ntplib
 import logging
 import unittest
 #from new import *
