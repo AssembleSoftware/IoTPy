@@ -36,8 +36,6 @@ from IoTPy.helper_functions.recent_values import recent_values
 from IoTPy.concurrency.multicore import copy_data_to_stream, finished_source
 from IoTPy.concurrency.multicore import make_multicore_processes
 from IoTPy.concurrency.multicore import get_processes
-from IoTPy.concurrency.pika_publication_agent import PikaPublisher
-from IoTPy.concurrency.pika_subscribe_agent import PikaSubscriber
 # print_stream is in helper_functions
 from IoTPy.helper_functions.print_stream import print_stream
 
