@@ -64,7 +64,9 @@ def check_num_args_in_func_no_state(name, func, func_args, func_kwargs):
                     ' in addition to positional args and keyword args. \n '\
                     ' But args for func are {2}. \n '\
                     ' positional args are {3} \n '\
-                    ' and keyword args are {4} \n '.format(
+                    ' and keyword args are {4} \n ' \
+                    ' Does the agent have a state? \n' \
+                    ' If it does have a state, did you specify its initial value?'.format(
                         name, func.__name__, args, func_args, func_kwargs)
 
 def check_num_args_in_func_with_state(name, func, func_args, func_kwargs):
