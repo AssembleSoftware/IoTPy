@@ -37,8 +37,8 @@ def check_function_type(name, func):
 def check_stream_type(name, in_or_out_stream_str, stream):
     assert isinstance(stream, Stream) or isinstance(stream, StreamArray), \
       'Agent named {0} was created with a parameter, {1}, whose argument {2}'\
-      ' is not a single stream.'.\
-      format(name, in_or_out_stream_str, stream)
+      ' has type {3} which must be a single stream.'.\
+      format(name, in_or_out_stream_str, stream, type(stream))
 
 def check_in_lists_type(name, in_lists, num_in_streams):
     assert isinstance(in_lists, list) or isinstance(in_lists, tuple), \
