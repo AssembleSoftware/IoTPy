@@ -29,15 +29,15 @@ For distributed applications, additional dependencies include the following
 Note that Pika may require other software to run.
 
 ### User Installation
-The easiest way to install IoTPy is using ```pip``` as shows below.
+The easiest way to install IoTPy is using ```pip3``` as shows below.
 ```bash
-pip install IoTPy
+pip3 install IoTPy
 ```
 To install from source, please proceed as shown below:
 ```bash
 git clone https://github.com/AssembleSoftware/IoTPy.git
 cd IoTPy
-python setup.py install
+python3 setup.py install
 ```
 ## Documentation
 
