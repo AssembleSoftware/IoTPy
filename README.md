@@ -24,7 +24,7 @@ IoTPy is currently distributed under the 3-Clause BSD license.
 * Python (>=3.5)
 * NumPy (>=1.18.4)
 
-For distributed applications, additional dependencies include the following 
+For distributed applications, additional dependencies include the following:
 * Pika (1.1.0)
 Note that Pika may require other software to run.
 
@@ -39,6 +39,12 @@ git clone https://github.com/AssembleSoftware/IoTPy.git
 cd IoTPy
 python3 setup.py install
 ```
+
+## Examples
+
+* Please see the [Jupyter Notebooks](https://github.com/AssembleSoftware/IoTPy/tree/master/examples) inside the Examples directory above. We have several examples demonstrating a variety of applications that have be developed using IoTPy.
+
+
 ## Documentation
 
 * Our project website is [AssembleSoftware](https://www.assemblesoftware.com/). We request anyone using IoTPy to visit the website to develop a better understading of IoTPy and its aims. 
