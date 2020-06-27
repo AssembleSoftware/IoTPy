@@ -42,7 +42,7 @@ python3 setup.py install
 
 ## Examples
 
-* Please see the [Jupyter Notebooks](https://github.com/AssembleSoftware/IoTPy/tree/master/examples) inside the Examples directory above. We have several examples demonstrating a variety of applications that have be developed using IoTPy.
+* Please see the [Jupyter Notebooks](https://github.com/AssembleSoftware/IoTPy/tree/master/examples) inside the Examples directory above. We have several examples demonstrating a variety of applications that have been developed using IoTPy.
 
 
 ## Documentation
