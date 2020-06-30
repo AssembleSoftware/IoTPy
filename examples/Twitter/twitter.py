@@ -1,4 +1,3 @@
-
 import tweepy
 import pprint
 import json
@@ -10,6 +9,8 @@ sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
 sys.path.append(os.path.abspath("../../IoTPy/core"))
 sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
 sys.path.append(os.path.abspath("../../IoTPy/multiprocessing"))
+
+#from IoTPy.agent_types.sink import sink_element
 
 import time
 from sink import sink_element
@@ -30,7 +31,8 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 # http://www.tweepy.org/
 
 
-# Variables that contain the user credentials to access Twitter API 
+# Variables that contain the user credentials to access Twitter API
+# Create your own variables.
 access_token = "999118734320009216-jaE4Rmc6fU11sMmBKb566YTFAJoMPV5"
 access_token_secret = "6ZxqJdK2RU6iridMX1MzSqr3uNpQsC9fv1E6otpZquLiF"
 consumer_key = "Iv6RTiO7Quw3ivH0GWPWqbiD4"
@@ -108,13 +110,13 @@ class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
             time.sleep(0)
             return True
         except BaseException as e:
-            print
+            print (' ')
             if not e or str(e) == '':
-                print 'No data from Twitter'
+                print ('No data from Twitter')
             else:
                 print("Error on_data from Twitter: %s" % str(e))
-                print "See TwitterTrackwordsToStream.on_data()"
-            print
+                print ("See TwitterTrackwordsToStream.on_data()")
+            print (' ')
             sys.exit()
 
     def setup(self):
@@ -192,13 +194,13 @@ def print_tweets(tweet):
         retweet_count = tweet['retweet_count']
 
     # print output
-    print 'Text is: ', text
-    print
-    print 'followers_count is: ', followers_count
-    print 'retweet_count is: ', retweet_count
-    print 'friends_count is: ', friends_count
-    print '--------------------------------------'
-    print
+    print ('Text is: ', text)
+    print (' ')
+    print ('followers_count is: ', followers_count)
+    print ('retweet_count is: ', retweet_count)
+    print ('friends_count is: ', friends_count)
+    print ('--------------------------------------')
+    print (' ')
 
 def twitter_analysis(
         consumer_key, consumer_secret,
