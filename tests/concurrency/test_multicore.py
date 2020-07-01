@@ -516,20 +516,18 @@ class test_multicore(unittest.TestCase):
         q = multiprocessing.Queue()
 
         # Agent function for process named 'p0'
-        # echo is a delay of zeroes followed by attenuated heard sound.
-        # out_streams[0], which is the same as sound_heard is
-        # echo + sound_made
         def f_echo(in_streams, out_streams, delay, attenuation, q):
-            echo = Stream('echo', initial_value=[0]*delay)
+            echo = StreamArray(
+                'echo', initial_value=np.array([0.0]*delay, dtype='float'), dtype='float')
             #Note: sound_made = in_streams[0]
             sound_heard = in_streams[0] + echo
             map_element(lambda v: v*attenuation, sound_heard, echo)
             stream_to_queue(sound_heard, q)
 
         def source_thread_target(procs):
-            extend_stream(procs, data=list(range(10)), stream_name='sound_made')
+            extend_stream(procs, data=np.arange(10, dtype='float'), stream_name='sound_made')
             time.sleep(0.0001)
-            extend_stream(procs=procs, data=[0]*10, stream_name='sound_made')
+            extend_stream(procs=procs, data=np.zeros(10, dtype='float'), stream_name='sound_made')
             terminate_stream(procs, stream_name='sound_made')
 
         # Thread that gets data from the output queue
