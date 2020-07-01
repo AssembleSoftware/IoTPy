@@ -19,17 +19,27 @@ import multiprocessing
 # multiprocessing.Array provides shared memory that can
 # be shared across processes.
 import threading
+import numpy as np
 import time
+import ctypes
 
 from ..agent_types.sink import sink_list, sink_element
 # sink, op are in ../agent_types.
 
 from ..core.compute_engine import ComputeEngine
-from ..core.stream import Stream
+from ..core.stream import Stream, StreamArray
 from ..core.system_parameters import  BUFFER_SIZE, MAX_NUM_SOURCES, MAX_NUM_PROCESSES
 # compute_engine, stream and system_parameters are in ../core.
 from .utils import check_processes_connections_format, check_connections_validity
 # utils is in current folder.
+
+multiprocessing_type_to_np_type = {
+    'i': 'int',
+    'f': 'float',
+    'd': 'double',
+    ctypes.c_wchar: '<U5'
+    }
+
 
 #-----------------------------------------------------------------------
 class MulticoreProcess(object):
@@ -221,7 +231,6 @@ class MulticoreProcess(object):
         self.connect_streams = connect_streams
         self.connections = make_connections_from_connect_streams(connect_streams)
         self.name = name
-
         # ---------------------------------------------------------------------
         #  STEP 1. GET THE LISTS OF INPUT AND OUTPUT STREAMS OF THIS PROCESS.
         # ---------------------------------------------------------------------
@@ -535,7 +544,10 @@ class MulticoreProcess(object):
         # input or output stream and the value is the stream itself.
         self.name_to_stream = {}
         for in_stream_name, in_stream_type in self.inputs:
-            in_stream = Stream(name=in_stream_name)
+            #in_stream = Stream(name=in_stream_name)
+            in_stream = StreamArray(
+                name=in_stream_name,
+                dtype=multiprocessing_type_to_np_type[in_stream_type])
             self.in_streams.append(in_stream)
             self.name_to_stream[in_stream_name] = in_stream
 
@@ -573,7 +585,9 @@ class MulticoreProcess(object):
         # Create out_streams from their names.
         self.out_streams = []
         for out_stream_name, out_stream_type in self.outputs:
-            out_stream = Stream(out_stream_name)
+            #out_stream = Stream(out_stream_name)
+            out_stream = StreamArray(
+                name=out_stream_name, dtype=multiprocessing_type_to_np_type[out_stream_type])
             self.out_streams.append(out_stream)
             self.name_to_stream[out_stream_name] = out_stream
 
@@ -1041,7 +1055,10 @@ def copy_buffer_segment(message, out_stream, buffer, in_stream_type):
         # in cells 0 to end into the second part of remaining_space.
         return_value[remaining_space:] = \
             multiprocessing.Array(in_stream_type, buffer[:end])
-    out_stream.extend(list(return_value))
+            
+    out_stream.extend(
+        np.array(return_value,
+                 dtype=multiprocessing_type_to_np_type[in_stream_type]))
     return
 #-------------------------------------------------------------------
 
