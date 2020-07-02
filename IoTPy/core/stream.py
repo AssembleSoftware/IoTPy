@@ -908,9 +908,12 @@ class StreamArray(Stream):
           'The dimensions are {0} and {1}'.format(
               self.dimension, another_stream.dimension)
         assert another_stream.dtype == self.dtype, \
-          'Both stream arrays must have the same dtype.' \
-          'The dtypes are {0} and {1}'.format(
-              self.dtype, another_stream.dtype)
+          'Both stream arrays must have the same dtype. \n' \
+          'self.dtype = {0}. \n' \
+          'other_stream.dtype = {1}. \n' \
+          'self.name = {2}. \n' \
+          'other_stream.name = {3}' .format(
+              self.dtype, another_stream.dtype, self.name, another_stream.name)
         output_stream = StreamArray(dimension=self.dimension, dtype=self.dtype)
         merge_list(func=func,
                 in_streams=[self, another_stream],
