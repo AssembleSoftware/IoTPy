@@ -211,8 +211,11 @@ class ComputeEngine(object):
                         # This message is to be appended to the specified
                         # out_stream.
                         # Get the stream from its name
-                        out_stream = self.name_to_stream[out_stream_name] 
-                        out_stream.append(new_data_for_stream)
+                        out_stream = self.name_to_stream[out_stream_name]
+                        if out_stream_name.endswith('_signal_'):
+                            out_stream.append(new_data_for_stream)
+                        else:
+                            out_stream.extend(new_data_for_stream)
                         # Take a step of the computation, i.e.
                         # process the new input data and continue
                         # executing this thread.
