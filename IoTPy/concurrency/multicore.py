@@ -13,7 +13,7 @@ is_py2 = sys.version[0] == '2'
 if is_py2:
     import Queue as queue
 else:
-    import queue as queue
+    import queue as queu
 
 import multiprocessing
 # multiprocessing.Array provides shared memory that can
@@ -169,6 +169,8 @@ class MulticoreProcess(object):
        'get_source_data_and_compute_process'
        The output stream may be an output of agent or an
        a source.
+    stream_name_to_type: dict
+       Key is a stream name and value is its type.
 
     """
     def __init__(self, spec, connect_streams, name):
@@ -289,38 +291,59 @@ class MulticoreProcess(object):
         # self.agent is the function with parameters in_streams, out_streams.
         # This function creates the network of agents.
         # self.agent is not a regular agent; it is a function that makes agents.
+
+        # self.keyword_args
         if 'keyword_args' in self.spec:
             self.keyword_args = self.spec['keyword_args']
         else:
             self.keyword_args = {}
+        
+        self.source_keyword_args = {}
+
+        # self.args
         if 'args' in self.spec:
             self.args = self.spec['args']
         else:
             self.args = []
+
+        # self.sources
         if 'sources' in self.spec:
             self.sources = self.spec['sources']
         else:
             self.sources = []
             self.spec['sources'] = self.sources
+
+        # self.source_functions
         if 'source_functions' in self.spec:
             self.source_functions = self.spec['source_functions']
         else:
             self.source_functions = []
+
+        # self.threads
         if 'threads' in self.spec:
             self.threads = self.spec['threads']
         else:
             self.threads = []
-        self.source_keyword_args = {}
+
+        # self.output_queues
         if 'output_queues' in self.spec:
             self.output_queues = self.spec['output_queues']
         else:
             self.output_queues = []
             self.spec['output_queues'] = self.output_queues
+
+        # self.out_to_in
         if self.name in self.connections.keys():
             self.out_to_in = self.connections[self.name]
         else:
             self.out_to_in = []
 
+        # self.stream_name_to_type
+        self.stream_name_to_type = {}
+        for stream_name, stream_type in self.outputs + self.inputs + self.sources:
+            if not stream_name in self.stream_name_to_type.keys():
+                self.stream_name_to_type[stream_name] = stream_type
+        
         # ---------------------------------------------------------------------
         #  STEP 3: CREATE OUT_TO_BUFFER AND BUFFERS FOR EACH OUTPUT STREAM.
         # ---------------------------------------------------------------------
@@ -495,6 +518,7 @@ class MulticoreProcess(object):
             # Skip output streams that are not connected to input streams.
             if not out_stream_name in self.out_stream_names_connected_to_in_streams:
                 continue
+
             # self.out_to_q_and_in_stream_signal_names[out_stream_name] is
             # q_and_in_stream_signal_names which is a list of pairs:
             #    (q, in_stream_signal_name).
@@ -507,8 +531,17 @@ class MulticoreProcess(object):
             receivers = self.out_to_in[out_stream_name]
             for receiver_proc_name, in_stream_name in receivers:
                 receiver_proc = procs[receiver_proc_name]
-                self.out_to_q_and_in_stream_signal_names[out_stream_name].append(
-                    (receiver_proc.in_queue, in_stream_name + '_signal_'))
+                if out_stream_type in multiprocessing_type_to_np_type.keys():
+                    # CASE 1 in create_in_stream_signals_for_C_datatypes().
+                    self.out_to_q_and_in_stream_signal_names[out_stream_name].append(
+                        (receiver_proc.in_queue, in_stream_name + '_signal_'))
+                else:
+                    # CASE 2.
+                    # In this case 'in_stream_name' is used in place of
+                    # 'in_stream_name_signal' because there is no signal stream in
+                    # this case.
+                    self.out_to_q_and_in_stream_signal_names[out_stream_name].append(
+                        (receiver_proc.in_queue, in_stream_name))
 
         # 2. Create q_and_in_stream_signal_names for each source of this process.
         # self.out_to_q_and_in_stream_signal_names[name] is the
@@ -530,24 +563,42 @@ class MulticoreProcess(object):
                 # (2) The messages about new data in the source called source_name
                 #     are sent to the stream called in_stream_name + '_signal_'
                 #     in the receiver process.
-                self.out_to_q_and_in_stream_signal_names[source_name].append(
-                    (receiver_proc.in_queue, in_stream_name + '_signal_'))
-        return
 
+                if source_type in multiprocessing_type_to_np_type.keys():
+                    # CASE 1.
+                    self.out_to_q_and_in_stream_signal_names[source_name].append(
+                        (receiver_proc.in_queue, in_stream_name + '_signal_'))
+                else:
+                    # CASE 2.
+                    self.out_to_q_and_in_stream_signal_names[source_name].append(
+                        (receiver_proc.in_queue, in_stream_name))
+        return
 
     def create_in_streams_of_agent(self):
         # Create the in_streams of agent from their names:
         # and create compute the dict, name_to_stream.
         # in_streams is the list of in_stream of this process.
+        # We have two cases:
+        # (1) The in_stream type is a C_datatype such as 'i' or 'f'
+        # (2) The in_stream_type is unspecified.
+        # In the former case create a StreamArray and in the latter
+        # case create a Stream.
         self.in_streams = []
         # name_to_stream is a dict where the key is the name of an
         # input or output stream and the value is the stream itself.
         self.name_to_stream = {}
         for in_stream_name, in_stream_type in self.inputs:
-            #in_stream = Stream(name=in_stream_name)
-            in_stream = StreamArray(
-                name=in_stream_name,
-                dtype=multiprocessing_type_to_np_type[in_stream_type])
+            if in_stream_type in multiprocessing_type_to_np_type.keys():
+                # CASE 1.
+                # See CASE 1 in create_in_stream_signals_for_C_datatypes().
+                # The in_stream is a StreamArray.
+                in_stream = StreamArray(
+                    name=in_stream_name,
+                    dtype=multiprocessing_type_to_np_type[in_stream_type])
+            else:
+                # CASE 2.
+                # The in_stream is a Stream and not a StreamArray.
+                in_stream = Stream(name=in_stream_name)
             self.in_streams.append(in_stream)
             self.name_to_stream[in_stream_name] = in_stream
 
@@ -562,32 +613,77 @@ class MulticoreProcess(object):
             
     def create_in_stream_signals_for_C_datatypes(self):
         # in_stream_signals is a list of input streams, with
-        # one in_stream_signal for each in_stream.
+        # one in_stream_signal for each in_stream. We have
+        # two cases:
+        # (1) The data type is a C_datatype such as 'i' or 'f'
+        #     or a NumPy data type such as dtype='int'.
+        # (2) The data type is 'x' for unspecified.
+        #
+        # CASE 1.
         # in_stream_signal[j] is the stream that tells
         # this process that it has data to be read into
-        # in_stream[j]. The name of an in_stream_signal
-        # associated with an in_stream called 's' is 's_signal_'.
+        # in_stream[j].
+        # The name of an in_stream_signal associated with an in_stream
+        # called 's' is 's_signal_'.
+        # Data is copied to all input streams connected to the stream
+        # called stream_name by executing:
+        #       self.copy_stream(data, stream_name).
+        # See step 2 of create_agents_to_copy_each_out_stream_to_in_streams.
+        #
+        # CASE 2.
+        # in_stream_signal[j] is the same as in_stream[j].
+        # Data is copied to all input streams connected to the stream
+        # called stream_name by executing:
+        #       self.data_to_receiver_queue(data, stream_name)
+        
         self.in_stream_signals = []
         for in_stream_name, in_stream_type in self.inputs:
             # Skip input streams that are not connected to output streams.
             if not in_stream_name in self.in_stream_names_connected_to_out_streams:
                 continue
 
-            in_stream_signal_name = in_stream_name + '_signal_'
-            in_stream_signal = Stream(name=in_stream_signal_name)
-            self.in_stream_signals.append(in_stream_signal)
-            # name_to_stream is a dict where
-            # key is stream-name; value is the stream with that name
-            self.name_to_stream[in_stream_signal_name] = in_stream_signal
+            if in_stream_type in multiprocessing_type_to_np_type.keys():
+                # CASE 1.
+                # Create a stream, in_stream_signal, for each in_stream.
+                # We put information in in_stream_signal to tell the
+                # receiving process to copy data from a shared buffer into
+                # in_stream.
+                in_stream_signal_name = in_stream_name + '_signal_'
+                in_stream_signal = Stream(name=in_stream_signal_name)
+                self.in_stream_signals.append(in_stream_signal)
+                # name_to_stream is a dict where
+                # key is stream-name; value is the stream with that name
+                self.name_to_stream[in_stream_signal_name] = in_stream_signal
+            else:
+                # CASE 2.
+                # Do not create a new stream for in_stream signals for this
+                # case because data is put directly into the receiver process'
+                # queue. We do not copy data from a shared buffer.
+                in_stream_signal_name = in_stream_name
+                
 
     def create_out_streams_for_agent(self):
-        # out_streams is a list of the output streams of this process.
-        # Create out_streams from their names.
+        # Create the out_streams of agent from their names:
+        # and create compute the dict, name_to_stream.
+        # out_streams is the list of out_stream of this process.
+        # We have two cases:
+        # (1) The out_stream type is a C_datatype such as 'i' or 'f'
+        # (2) The out_stream_type is unspecified.
+        # In the former case create a StreamArray and in the latter
+        # case create a Stream.
         self.out_streams = []
         for out_stream_name, out_stream_type in self.outputs:
-            #out_stream = Stream(out_stream_name)
-            out_stream = StreamArray(
-                name=out_stream_name, dtype=multiprocessing_type_to_np_type[out_stream_type])
+            if out_stream_type in multiprocessing_type_to_np_type.keys():
+                # CASE 1.
+                # See CASE 1 in create_in_stream_signals_for_C_datatypes().
+                # The out_stream is a StreamArray.
+                out_stream = StreamArray(
+                    name=out_stream_name,
+                    dtype=multiprocessing_type_to_np_type[out_stream_type])
+            else:
+                # CASE 2.
+                # The out_stream is a Stream and not a StreamArray.
+                out_stream = Stream(name=out_stream_name)
             self.out_streams.append(out_stream)
             self.name_to_stream[out_stream_name] = out_stream
 
@@ -596,7 +692,7 @@ class MulticoreProcess(object):
         # an agent for each source. These agents copy the elements
         # in each out_stream and each source into the in_streams to
         # which it is connected.
-        # See copy_stream().
+        # See copy_stream(data, stream_name).
         for out_stream_name, out_stream_type in self.outputs: 
             if not out_stream_name in self.out_stream_names_connected_to_in_streams:
                 # If this output stream is not connected to any input stream then
@@ -607,14 +703,30 @@ class MulticoreProcess(object):
             # STEP 2: Make agent that copies out_stream to the in_streams to
             # which it is connected.
             # stream_name is a keyword argument of copy_stream().
-            sink_list(self.copy_stream, out_stream,
-                      stream_name=out_stream_name,
-                      name='copy_stream. stream is:  '+  out_stream_name)
+            # CASE 1. 
+            # The stream type is a C_datatype such as 'i' or 'f'.
+            # See create_in_stream_signals_for_C_datatypes().
+            # CASE 2.
+            # The stream type is unspecified.
+            if out_stream_type in multiprocessing_type_to_np_type.keys():
+                # CASE 1:
+                sink_list(self.copy_stream, out_stream,
+                          stream_name=out_stream_name,
+                          name='copy_stream. stream is:  '+  out_stream_name)
+            else:
+                # CASE 2:
+                sink_list(self.data_to_receiver_queue, out_stream,
+                          stream_name=out_stream_name,
+                          name='data_to_receiver_queue. stream is:  '+  out_stream_name)
+                          
 
     def create_agents_to_copy_buffers_to_in_streams(self):
         # For each in_stream of this process, create an agent that
         # copies data from the input buffer of this in_stream into
-        # the in_stream.
+        # the in_stream, ONLY IF this stream type is a
+        # C_datatype such as 'i' or 'f'.
+        # No buffers are created for other stream types.
+        #
         # This agent subscribes to the in_stream_signal associated
         # with this in_stream. When in_stream_signal gets a message
         # (start, end) this agent copies the buffer segment between
@@ -624,6 +736,8 @@ class MulticoreProcess(object):
         # with the segment of the buffer specified by the message.
         for in_stream_name, in_stream_type in self.inputs:
             if not in_stream_name in self.in_stream_names_connected_to_out_streams:
+                continue
+            if not in_stream_type in multiprocessing_type_to_np_type.keys():
                 continue
             in_stream_signal_name = in_stream_name + '_signal_'
             # Get the in_stream_signal stream from its name.
@@ -737,6 +851,7 @@ class MulticoreProcess(object):
 
     #---------------------------------------------------------------------
     # COPY DATA FROM A BUFFER INTO A STREAM.
+    # See CASE 1 in create_in_stream_signals_for_C_datatypes().
     #---------------------------------------------------------------------
     def copy_stream(self, data, stream_name):
         """
@@ -851,6 +966,59 @@ class MulticoreProcess(object):
         else:
             buffer_ptr.value = buffer_end_ptr
         return None
+
+    #---------------------------------------------------------------------
+    # COPY DATA FROM ONE STREAM INTO THE QUEUE OF A RECEIVER PROCESS.
+    # See CASE 2 in create_in_stream_signals_for_C_datatypes().
+    #---------------------------------------------------------------------
+    def data_to_receiver_queue(self, data, stream_name):
+        """
+        This function extends a source stream or output stream,
+        called stream_name, with data.
+
+        Parameters
+        ----------
+          data: list
+            the sequence of values that extend the stream with name
+            stream_name.
+          stream_name: str
+            The name of the stream. This stream is a source stream or
+            an output stream of this process.
+        Returns
+        -------
+           None
+        Notes
+        -----
+
+        """
+        # See step 1 of copy_stream().
+        q_and_in_stream_signal_names = \
+            self.out_to_q_and_in_stream_signal_names[stream_name]
+
+        # STEP 2: PUT DATA INTO THE RECEIVER PROCESS' QUEUE.
+        # Same as step 3 of copy_stream().
+        # 1. Set the status of queues that will now get data to
+        # 'not empty' or 1.
+        # 2. Put a message into the queue of each process that
+        # receives a copy of data.
+
+        # Always acquire lock for operations on queue_status or
+        # source_status
+        self.main_lock.acquire()
+        # Step 2.1: Set queue status to "not empty" for queues that
+        #         receive this message.
+        for receiver in self.out_to_in[stream_name]:
+            # The output stream called stream_name is connected to the
+            # input stream called in_stream_name in the receiving
+            # process called receiver_proc_name.
+            receiver_proc_name, in_stream_name = receiver
+            receiver_process_id = self.process_ids[receiver_proc_name]
+            # queues status is 1 for not empty, 0 for empty.
+            self.queue_status[receiver_process_id] = 1
+        # Step 2.2: Put data into the queue of the receiving process.
+        for q, in_stream_signal_name in q_and_in_stream_signal_names:
+            q.put((in_stream_signal_name, data))
+        self.main_lock.release()
 
 
     def broadcast(self, receiver_stream_name, msg):
@@ -1239,7 +1407,11 @@ def get_proc_that_inputs_source(procs):
 def extend_stream(procs, data, stream_name):
     source_stream_name_to_proc = get_proc_that_inputs_source(procs)
     proc = source_stream_name_to_proc[stream_name]
-    proc.copy_stream(data, stream_name)
+    stream_type = proc.stream_name_to_type[stream_name]
+    if stream_type in multiprocessing_type_to_np_type.keys():
+        proc.copy_stream(data, stream_name)
+    else:
+        proc.data_to_receiver_queue(data, stream_name)
 
 def terminate_stream(procs, stream_name):
     source_stream_name_to_proc = get_proc_that_inputs_source(procs)
