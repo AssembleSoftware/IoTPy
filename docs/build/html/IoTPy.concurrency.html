@@ -1,0 +1,797 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>IoTPy.concurrency package &mdash; IoTPy 1.1.0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> IoTPy
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">IoTPy.concurrency package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-IoTPy.concurrency.PikaPublisher">IoTPy.concurrency.PikaPublisher module</a></li>
+<li><a class="reference internal" href="#module-IoTPy.concurrency.PikaSubscriber">IoTPy.concurrency.PikaSubscriber module</a></li>
+<li><a class="reference internal" href="#module-IoTPy.concurrency.multicore">IoTPy.concurrency.multicore module</a></li>
+<li><a class="reference internal" href="#module-IoTPy.concurrency.multithread">IoTPy.concurrency.multithread module</a></li>
+<li><a class="reference internal" href="#module-IoTPy.concurrency.pika_publication_agent">IoTPy.concurrency.pika_publication_agent module</a></li>
+<li><a class="reference internal" href="#module-IoTPy.concurrency.pika_subscribe_agent">IoTPy.concurrency.pika_subscribe_agent module</a></li>
+<li><a class="reference internal" href="#module-IoTPy.concurrency.utils">IoTPy.concurrency.utils module</a></li>
+<li><a class="reference internal" href="#module-IoTPy.concurrency">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">IoTPy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>IoTPy.concurrency package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/IoTPy.concurrency.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="iotpy-concurrency-package">
+<h1>IoTPy.concurrency package<a class="headerlink" href="#iotpy-concurrency-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-IoTPy.concurrency.PikaPublisher">
+<span id="iotpy-concurrency-pikapublisher-module"></span><h2>IoTPy.concurrency.PikaPublisher module<a class="headerlink" href="#module-IoTPy.concurrency.PikaPublisher" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="IoTPy.concurrency.PikaPublisher.PikaPublisher">
+<em class="property">class </em><code class="sig-prename descclassname">IoTPy.concurrency.PikaPublisher.</code><code class="sig-name descname">PikaPublisher</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">routing_key</span></em>, <em class="sig-param"><span class="n">exchange</span><span class="o">=</span><span class="default_value">'publications'</span></em>, <em class="sig-param"><span class="n">host</span><span class="o">=</span><span class="default_value">'localhost'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.PikaPublisher.PikaPublisher" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt id="IoTPy.concurrency.PikaPublisher.PikaPublisher.close">
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.PikaPublisher.PikaPublisher.close" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="IoTPy.concurrency.PikaPublisher.PikaPublisher.publish">
+<code class="sig-name descname">publish</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">stream</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.PikaPublisher.PikaPublisher.publish" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="IoTPy.concurrency.PikaPublisher.PikaPublisher.publish_list">
+<code class="sig-name descname">publish_list</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">stream_segment</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.PikaPublisher.PikaPublisher.publish_list" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-IoTPy.concurrency.PikaSubscriber">
+<span id="iotpy-concurrency-pikasubscriber-module"></span><h2>IoTPy.concurrency.PikaSubscriber module<a class="headerlink" href="#module-IoTPy.concurrency.PikaSubscriber" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="IoTPy.concurrency.PikaSubscriber.PikaSubscriber">
+<em class="property">class </em><code class="sig-prename descclassname">IoTPy.concurrency.PikaSubscriber.</code><code class="sig-name descname">PikaSubscriber</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">callback</span></em>, <em class="sig-param"><span class="n">routing_key</span></em>, <em class="sig-param"><span class="n">exchange</span><span class="o">=</span><span class="default_value">'publications'</span></em>, <em class="sig-param"><span class="n">host</span><span class="o">=</span><span class="default_value">'localhost'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.PikaSubscriber.PikaSubscriber" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt id="IoTPy.concurrency.PikaSubscriber.PikaSubscriber.start">
+<code class="sig-name descname">start</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.PikaSubscriber.PikaSubscriber.start" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-IoTPy.concurrency.multicore">
+<span id="iotpy-concurrency-multicore-module"></span><h2>IoTPy.concurrency.multicore module<a class="headerlink" href="#module-IoTPy.concurrency.multicore" title="Permalink to this headline">¶</a></h2>
+<p>This module makes processes for a multicore application.
+It uses multiprocessing.Array to enable multiple processes to
+share access to streams efficiently.</p>
+<p>TO DO: remove source_keyword_args because you can have multiple
+sources.</p>
+<dl class="py class">
+<dt id="IoTPy.concurrency.multicore.MulticoreProcess">
+<em class="property">class </em><code class="sig-prename descclassname">IoTPy.concurrency.multicore.</code><code class="sig-name descname">MulticoreProcess</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">spec</span></em>, <em class="sig-param"><span class="n">connect_streams</span></em>, <em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.MulticoreProcess" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>MulticoreProcess creates a single process in a multicore application.
+The parameters of this class describe ALL the processes in the
+multicore application. Each process is created from the specification
+of the collection of all processes.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul>
+<li><p><strong>multicore_specification</strong> (<em>2-tuple or 2-element list</em>)</p></li>
+<li><p><strong>[Streams, Processes]</strong></p></li>
+<li><p><strong>Streams is a list of 2-tuples</strong> – (stream_name, stream,type)
+stream_type is a single character: ‘i’, ‘f’, ‘d’
+for int, float, double, … etc.
+This is a list of all the streams that connect
+processes.</p></li>
+<li><p><strong>Processes is a list of process specifications, with</strong></p></li>
+<li><p><strong>one process specification for each process in the</strong></p></li>
+<li><p><strong>multicore application.</strong></p></li>
+<li><p><strong>Each process specification has the following keys</strong> – ‘name’
+‘agent’
+‘inputs’
+‘outputs’
+‘keyword_args’
+‘sources’
+‘output_queues’</p></li>
+<li><p><strong>The keyword ‘agent’ is required. The other keywords</strong></p></li>
+<li><p><strong>of process can be omitted in which case a default is used.</strong></p></li>
+<li><p><strong>Notes</strong></p></li>
+<li><p><strong>—–</strong> – The attributes described below are for a SINGLE
+process. By contrast, the multicore specification is for
+all processes.</p>
+<p>Associated with each process is a single agent. This
+agent has input and output streams. The process may
+also have source threads and source streams in addition
+to the agent’s input and output streams.</p>
+</li>
+</ul>
+</dd>
+<dt class="field-even">Variables</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>inputs</strong> (<em>list</em>) – inputs is a list of pairs where each pair is
+(in_stream name, in_stream_type). in_stream_type is a
+str defined in multiprocessing.Array. For example ‘i’ stands
+for int.
+Example of inputs = [(‘in’, ‘i’)]
+which says that the agent has a single input stream
+called ‘in’ which is of type int.
+Default: empty list
+Inputs describes the input streams of the agent associated
+with this process.</p></li>
+<li><p><strong>outputs</strong> (<em>list</em>) – Similar to inputs.
+Example of outputs = [(‘out’, ‘i’)]
+which says that the compute function (agent) has a
+single input stream called ‘out’ which is of type int.
+Default: empty list
+Outputs describes the output streams of the agent associated
+with this process.</p></li>
+<li><p><strong>agent</strong> (<em>function</em>) – agent(in_streams=inputs, out_streams=outputs) creates
+an agent that reads the streams in inputs and extends
+the streams in outputs.
+The main thread of this process executes the code that
+runs this agent. This thread is started by calling.
+Stream.scheduler.start(). See IoTPy/IoTPy/core/ComputeEngine.py.</p></li>
+<li><p><strong>keyword_args</strong> (<em>dict</em>) – The keys of this dict are the names of keyword arguments of the
+agent and the values are the corresponding keyword arguments.
+Example: {‘ADDEND’ :10} where ADDEND is the name of a keyword
+argument of agent, and this keyword argument has value 10.
+The arguments must be constants.
+Default: empty dict.</p></li>
+<li><p><strong>sources</strong> (<em>list</em>) – list of 2-tuples: stream_name, stream_type
+An external thread is used to put data into the stream with the
+specified stream_name. stream_type is ‘i’, ‘f’, ‘d’,.. as before.
+stream_name is the name of a stream that is fed by a source.
+The stream is an output stream of the process but not necessarily
+an output stream of the agent. This source stream can be
+connected to input streams of the same or other processes.</p></li>
+<li><p><strong>output_queues</strong> (<em>list</em>) – The list of queues into which this process puts output data.
+When the multicore computation terminates, a special message
+‘_finished’ is put in each output queue.
+Note: The agent may have arguments that are queues and that are
+not listed as ouput queues. Only output_queues will get the
+message ‘_finished’ when computation terminates.</p></li>
+<li><p><strong>out_to_in</strong> (<em>dict</em>) – <p>The keys are names of output streams of this process, and the
+values are lists.
+out_to_in[out_stream_name] is a list of pairs:</p>
+<blockquote>
+<div><p>(receiver_process_name, in_stream_name)</p>
+</div></blockquote>
+<p>where the out_stream called out_stream_name of this process
+is connected to the in_stream called in_stream_name in the
+receiver process called receiver_process_name.
+Example of self.out_to_in:</p>
+<blockquote>
+<div><p>{‘out’: [(‘aggregate_and_output_process’, ‘in’)],
+‘acceleration’: [(‘get_source_data_and_compute_process’, ‘in’)]
+}</p>
+</div></blockquote>
+<p>The output stream called ‘out’ of this process is connected to
+an input stream called ‘in’ of the process called
+‘aggregate_and_output_process’.
+The output stream called ‘acceleration’ of this process is connected to
+an input stream called ‘in’ of the process called
+‘get_source_data_and_compute_process’.
+Note that output streams of a process includes output streams
+of the agent associated with the process and source streams
+in the process.</p>
+</p></li>
+<li><p><strong>in_to_out</strong> (<em>dict</em>) – <p>The keys are in_stream_names of this process and the values are
+pairs (out_process_name, out_stream_name).
+Example of in_to_out:
+{</p>
+<blockquote>
+<div><p>’in’: (‘get_source_data_and_compute_process’, ‘acceleration’)</p>
+</div></blockquote>
+<p>}
+This process has an input stream called ‘in’ connected to an
+output stream called ‘acceleration’ in the process called
+‘get_source_data_and_compute_process’
+The output stream may be an output of agent or an
+a source.</p>
+</p></li>
+<li><p><strong>stream_name_to_type</strong> (<em>dict</em>) – Key is a stream name and value is its type.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="IoTPy.concurrency.multicore.MulticoreProcess.broadcast">
+<code class="sig-name descname">broadcast</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">receiver_stream_name</span></em>, <em class="sig-param"><span class="n">msg</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.MulticoreProcess.broadcast" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="IoTPy.concurrency.multicore.MulticoreProcess.copy_stream">
+<code class="sig-name descname">copy_stream</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">stream_name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.MulticoreProcess.copy_stream" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function extends a source stream or output stream,
+called stream_name, with data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>list</em>) – the sequence of values that extend the stream with name
+stream_name.</p></li>
+<li><p><strong>stream_name</strong> (<em>str</em>) – The name of the stream. This stream is a source stream or
+an output stream of this process.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>This function takes the following steps:
+STEP 1: Get objects connected to the stream with this name, stream_name.</p>
+<blockquote>
+<div><p>These objects are (1) the buffer into which data is placed and
+(2) the list of pairs:
+(receiving process queue, receiving input stream signal name).</p>
+</div></blockquote>
+<dl class="simple">
+<dt>STEP 2: Copy data into the circular buffer which is the output buffer for</dt><dd><p>the stream called stream_name.</p>
+</dd>
+<dt>STEP 3: Put a message into the queue of each receiving process that</dt><dd><p>is connected to this stream_name.
+This message is put into an in_stream_signal of the receiving
+process.</p>
+</dd>
+</dl>
+<p>STEP 4: Update parameters to get ready for next call to this function.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="IoTPy.concurrency.multicore.MulticoreProcess.create_agents_to_copy_buffers_to_in_streams">
+<code class="sig-name descname">create_agents_to_copy_buffers_to_in_streams</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.MulticoreProcess.create_agents_to_copy_buffers_to_in_streams" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="IoTPy.concurrency.multicore.MulticoreProcess.create_agents_to_copy_each_out_stream_to_in_streams">
+<code class="sig-name descname">create_agents_to_copy_each_out_stream_to_in_streams</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.MulticoreProcess.create_agents_to_copy_each_out_stream_to_in_streams" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="IoTPy.concurrency.multicore.MulticoreProcess.create_in_stream_signals_for_C_datatypes">
+<code class="sig-name descname">create_in_stream_signals_for_C_datatypes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.MulticoreProcess.create_in_stream_signals_for_C_datatypes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="IoTPy.concurrency.multicore.MulticoreProcess.create_in_streams_of_agent">
+<code class="sig-name descname">create_in_streams_of_agent</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.MulticoreProcess.create_in_streams_of_agent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="IoTPy.concurrency.multicore.MulticoreProcess.create_out_streams_for_agent">
+<code class="sig-name descname">create_out_streams_for_agent</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.MulticoreProcess.create_out_streams_for_agent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="IoTPy.concurrency.multicore.MulticoreProcess.create_source_threads">
+<code class="sig-name descname">create_source_threads</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.MulticoreProcess.create_source_threads" title="Permalink to this definition">¶</a></dt>
+<dd><p>threads is a list of thread targets.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="IoTPy.concurrency.multicore.MulticoreProcess.data_to_receiver_queue">
+<code class="sig-name descname">data_to_receiver_queue</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">stream_name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.MulticoreProcess.data_to_receiver_queue" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function extends a source stream or output stream,
+called stream_name, with data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>list</em>) – the sequence of values that extend the stream with name
+stream_name.</p></li>
+<li><p><strong>stream_name</strong> (<em>str</em>) – The name of the stream. This stream is a source stream or
+an output stream of this process.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="IoTPy.concurrency.multicore.MulticoreProcess.finished_source">
+<code class="sig-name descname">finished_source</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">stream_name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.MulticoreProcess.finished_source" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the source_status of this stream to 0 to
+indicate that this source has terminated execution.</p>
+<p>Called by source thread functions.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="IoTPy.concurrency.multicore.MulticoreProcess.get_stream_names_connected_to_streams">
+<code class="sig-name descname">get_stream_names_connected_to_streams</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.MulticoreProcess.get_stream_names_connected_to_streams" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="IoTPy.concurrency.multicore.MulticoreProcess.make_in_to_out">
+<code class="sig-name descname">make_in_to_out</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">procs</span></em>, <em class="sig-param"><span class="n">connections</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.MulticoreProcess.make_in_to_out" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes self.in_to_out and self.in_to_buffer
+self.in_to_buffer[in_stream_name] is the buffer that feeds</p>
+<blockquote>
+<div><p>the input stream called in_stream_name.</p>
+</div></blockquote>
+<dl class="simple">
+<dt>self.in_to_out[in_stream_name] is the pair</dt><dd><p>(out_process_name, out_stream_name) which identifies
+the output process and output stream connected to the
+input stream called in_stream_name.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>procs</strong> (<em>dict</em>) – procs[proc_name] is an instance of the MulticoreProcess class
+procs has a key proc_name (the name of a process) for every
+process in the multicore application.</p></li>
+<li><p><strong>connections</strong> (<em>dict</em>) – connections is described in __init__()</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="IoTPy.concurrency.multicore.MulticoreProcess.make_out_to_q_and_in_stream_signal_names">
+<code class="sig-name descname">make_out_to_q_and_in_stream_signal_names</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">procs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.MulticoreProcess.make_out_to_q_and_in_stream_signal_names" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>procs</strong> (<em>dict</em>) – procs[proc_name] is an instance of the MulticoreProcess class
+procs has a key proc_name (the name of a process) for every
+process in the multicore application.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>out_to_q_and_in_stream_signal_names is a dict where</dt><dd><p>out_to_q_and_in_stream_signal_names[out_stream_name] is a list
+of pairs (receiver_proc.in_queue, in_stream_name + ‘_signal_’)
+where receiver_proc.in_queue is the input queue of a process that
+receives the output stream called out_stream_name and
+‘<a href="#id1"><span class="problematic" id="id2">s_signal_</span></a>’ is the input stream of the receiver process that
+receives messages (called signals) that tell it that the stream ‘s’
+buffer has data waiting for it to be ingested.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="IoTPy.concurrency.multicore.MulticoreProcess.make_process">
+<code class="sig-name descname">make_process</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.MulticoreProcess.make_process" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="IoTPy.concurrency.multicore.copy_buffer_segment">
+<code class="sig-prename descclassname">IoTPy.concurrency.multicore.</code><code class="sig-name descname">copy_buffer_segment</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">message</span></em>, <em class="sig-param"><span class="n">out_stream</span></em>, <em class="sig-param"><span class="n">buffer</span></em>, <em class="sig-param"><span class="n">in_stream_type</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.copy_buffer_segment" title="Permalink to this definition">¶</a></dt>
+<dd><p>copy_buffer_segment() is the function executed by the agent
+when a new message arrives. A message is (start, end).
+This function extends out_stream with the segment of the buffer
+between start and end.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="IoTPy.concurrency.multicore.copy_data_to_stream">
+<code class="sig-prename descclassname">IoTPy.concurrency.multicore.</code><code class="sig-name descname">copy_data_to_stream</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">proc</span></em>, <em class="sig-param"><span class="n">stream_name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.copy_data_to_stream" title="Permalink to this definition">¶</a></dt>
+<dd><p>Another version of copy_stream. This can be more convenient
+in running applications of MulticoreProcess.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>list or array</em>)</p></li>
+<li><p><strong>proc</strong> (<em>MulticoreProcess</em>)</p></li>
+<li><p><strong>stream_name</strong> (<em>str</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="IoTPy.concurrency.multicore.extend_stream">
+<code class="sig-prename descclassname">IoTPy.concurrency.multicore.</code><code class="sig-name descname">extend_stream</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">procs</span></em>, <em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">stream_name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.extend_stream" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="IoTPy.concurrency.multicore.finished_source">
+<code class="sig-prename descclassname">IoTPy.concurrency.multicore.</code><code class="sig-name descname">finished_source</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">proc</span></em>, <em class="sig-param"><span class="n">stream_name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.finished_source" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>proc</strong> (<em>MulticomputerProcess</em>)</p></li>
+<li><p><strong>stream_name</strong> (<em>str</em>)</p></li>
+<li><p><strong>Set the source_status of this stream to 0 to</strong></p></li>
+<li><p><strong>indicate that this source has terminated execution.</strong></p></li>
+<li><p><strong>Used for detecting termination of a multicore</strong></p></li>
+<li><p><strong>application.</strong></p></li>
+<li><p><strong>Called by source thread functions.</strong></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="IoTPy.concurrency.multicore.get_proc_that_inputs_source">
+<code class="sig-prename descclassname">IoTPy.concurrency.multicore.</code><code class="sig-name descname">get_proc_that_inputs_source</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">procs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.get_proc_that_inputs_source" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="IoTPy.concurrency.multicore.get_processes">
+<code class="sig-prename descclassname">IoTPy.concurrency.multicore.</code><code class="sig-name descname">get_processes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">multicore_specification</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.get_processes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="IoTPy.concurrency.multicore.get_processes_and_procs">
+<code class="sig-prename descclassname">IoTPy.concurrency.multicore.</code><code class="sig-name descname">get_processes_and_procs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">multicore_specification</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.get_processes_and_procs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="IoTPy.concurrency.multicore.make_connections_from_connect_streams">
+<code class="sig-prename descclassname">IoTPy.concurrency.multicore.</code><code class="sig-name descname">make_connections_from_connect_streams</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">connect_streams</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.make_connections_from_connect_streams" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts from the format of connect_streams to the format of
+connections.
+connect_streams is a list of 4-tuples:</p>
+<blockquote>
+<div><p>sender_process, out_stream, receiver_process, in_stream</p>
+</div></blockquote>
+<dl class="simple">
+<dt>connections is a dict where</dt><dd><p>connections[sender_process] is a dict where
+connections[sender_process][out_stream_name] is a list of 2-tuples
+(receiver_process, in_stream_name)</p>
+</dd>
+</dl>
+<p>In this code, sender_process, out_stream, receiver_process, in_stream
+refer to the NAMES of the sender process, output stream receiver process
+and input stream.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="IoTPy.concurrency.multicore.make_multicore_processes">
+<code class="sig-prename descclassname">IoTPy.concurrency.multicore.</code><code class="sig-name descname">make_multicore_processes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">process_specs</span></em>, <em class="sig-param"><span class="n">connect_streams</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.make_multicore_processes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="IoTPy.concurrency.multicore.make_spec_from_multicore_specification">
+<code class="sig-prename descclassname">IoTPy.concurrency.multicore.</code><code class="sig-name descname">make_spec_from_multicore_specification</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">multicore_specification</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.make_spec_from_multicore_specification" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts from the multicore specification format to the process
+specification format (called spec).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="IoTPy.concurrency.multicore.terminate_stream">
+<code class="sig-prename descclassname">IoTPy.concurrency.multicore.</code><code class="sig-name descname">terminate_stream</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">procs</span></em>, <em class="sig-param"><span class="n">stream_name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multicore.terminate_stream" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-IoTPy.concurrency.multithread">
+<span id="iotpy-concurrency-multithread-module"></span><h2>IoTPy.concurrency.multithread module<a class="headerlink" href="#module-IoTPy.concurrency.multithread" title="Permalink to this headline">¶</a></h2>
+<p>This module has targets for threads in a multithreaded application.</p>
+<dl class="py function">
+<dt id="IoTPy.concurrency.multithread.thread_target_appending">
+<code class="sig-prename descclassname">IoTPy.concurrency.multithread.</code><code class="sig-name descname">thread_target_appending</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">q_in</span></em>, <em class="sig-param"><span class="n">list_q_out</span></em>, <em class="sig-param"><span class="n">in_streams</span></em>, <em class="sig-param"><span class="n">finished</span><span class="o">=</span><span class="default_value">'_finished'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multithread.thread_target_appending" title="Permalink to this definition">¶</a></dt>
+<dd><p>The target of a thread running IoTPy code. The thread waits for values to be
+put into it input queue, q_in. These elements are 2-tuples:
+(stream_name, stream_element). It finds the stream with the specified
+stream_name from a dictionary, and then appends the stream with the
+stream_element.</p>
+<p>If it gets a finished message from the queue then it puts finished
+messages in all its output queues.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>q_in</strong> (<em>queue.Queue()</em>) – An element put into q_in is a pair with the form:
+(stream_name, stream_element.)</p></li>
+<li><p><strong>list_q_out</strong> (<em>list of queue.Queue()</em>)</p></li>
+<li><p><strong>in_streams</strong> (<em>list of Stream</em>)</p></li>
+<li><p><strong>finished</strong> (<em>object</em>) – Any object to signal that the computation is over.
+A convention (though not required) is to use ‘_finished’.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="IoTPy.concurrency.multithread.thread_target_extending">
+<code class="sig-prename descclassname">IoTPy.concurrency.multithread.</code><code class="sig-name descname">thread_target_extending</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">q_in</span></em>, <em class="sig-param"><span class="n">list_q_out</span></em>, <em class="sig-param"><span class="n">in_streams</span></em>, <em class="sig-param"><span class="n">finished</span><span class="o">=</span><span class="default_value">'_finished'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.multithread.thread_target_extending" title="Permalink to this definition">¶</a></dt>
+<dd><p>Same as thread_target_appending except that elements put
+into q_in are pairs of the form (stream_name, stream_segment)
+where stream_segment is a list of elements of the stream.
+So, a stream is EXTENDED with the stream_segment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>q_in</strong> (<em>queue.Queue()</em>) – An element put into q_in is a pair with the form:
+(stream_name, stream_element.)</p></li>
+<li><p><strong>list_q_out</strong> (<em>list of queue.Queue()</em>)</p></li>
+<li><p><strong>in_streams</strong> (<em>list of Stream</em>)</p></li>
+<li><p><strong>finished</strong> (<em>object</em>) – Any object to signal that the computation is over.
+A convention (though not required) is to use _close from
+IoTPy/IoTPy/core/helper_control.py</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-IoTPy.concurrency.pika_publication_agent">
+<span id="iotpy-concurrency-pika-publication-agent-module"></span><h2>IoTPy.concurrency.pika_publication_agent module<a class="headerlink" href="#module-IoTPy.concurrency.pika_publication_agent" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="IoTPy.concurrency.pika_publication_agent.PikaPublisher">
+<em class="property">class </em><code class="sig-prename descclassname">IoTPy.concurrency.pika_publication_agent.</code><code class="sig-name descname">PikaPublisher</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">routing_key</span></em>, <em class="sig-param"><span class="n">exchange</span><span class="o">=</span><span class="default_value">'publications'</span></em>, <em class="sig-param"><span class="n">host</span><span class="o">=</span><span class="default_value">'localhost'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.pika_publication_agent.PikaPublisher" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt id="IoTPy.concurrency.pika_publication_agent.PikaPublisher.close">
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.pika_publication_agent.PikaPublisher.close" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="IoTPy.concurrency.pika_publication_agent.PikaPublisher.publish">
+<code class="sig-name descname">publish</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">stream</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.pika_publication_agent.PikaPublisher.publish" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="IoTPy.concurrency.pika_publication_agent.PikaPublisher.publish_list">
+<code class="sig-name descname">publish_list</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">stream_segment</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.pika_publication_agent.PikaPublisher.publish_list" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-IoTPy.concurrency.pika_subscribe_agent">
+<span id="iotpy-concurrency-pika-subscribe-agent-module"></span><h2>IoTPy.concurrency.pika_subscribe_agent module<a class="headerlink" href="#module-IoTPy.concurrency.pika_subscribe_agent" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="IoTPy.concurrency.pika_subscribe_agent.PikaSubscriber">
+<em class="property">class </em><code class="sig-prename descclassname">IoTPy.concurrency.pika_subscribe_agent.</code><code class="sig-name descname">PikaSubscriber</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">callback</span></em>, <em class="sig-param"><span class="n">routing_key</span></em>, <em class="sig-param"><span class="n">exchange</span><span class="o">=</span><span class="default_value">'publications'</span></em>, <em class="sig-param"><span class="n">host</span><span class="o">=</span><span class="default_value">'localhost'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.pika_subscribe_agent.PikaSubscriber" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt id="IoTPy.concurrency.pika_subscribe_agent.PikaSubscriber.start">
+<code class="sig-name descname">start</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.pika_subscribe_agent.PikaSubscriber.start" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-IoTPy.concurrency.utils">
+<span id="iotpy-concurrency-utils-module"></span><h2>IoTPy.concurrency.utils module<a class="headerlink" href="#module-IoTPy.concurrency.utils" title="Permalink to this headline">¶</a></h2>
+<p>This module provides utility functions for other files in multiprocessing directory.
+Written by Daniel Lee.</p>
+<dl class="py function">
+<dt id="IoTPy.concurrency.utils.check_connections_validity">
+<code class="sig-prename descclassname">IoTPy.concurrency.utils.</code><code class="sig-name descname">check_connections_validity</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">processes</span></em>, <em class="sig-param"><span class="n">connections</span></em>, <em class="sig-param"><span class="n">external_sources</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.utils.check_connections_validity" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function checks whether the connections between processes
+are complete and valid</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>processes</strong> (<em>processes used in multicore applications</em>)</p></li>
+<li><p><strong>connections</strong> (<em>connections between processes in multicore applications</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="IoTPy.concurrency.utils.check_processes_connections_format">
+<code class="sig-prename descclassname">IoTPy.concurrency.utils.</code><code class="sig-name descname">check_processes_connections_format</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">processes</span></em>, <em class="sig-param"><span class="n">connections</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IoTPy.concurrency.utils.check_processes_connections_format" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function checks the validity of the format of
+input processes and connections</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>processes</strong> (<em>processes used for multicore applications</em>)</p></li>
+<li><p><strong>connections</strong> (<em>connections between processes of multicore applications</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-IoTPy.concurrency">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-IoTPy.concurrency" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, K. Mani Chandy
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
