@@ -17,20 +17,20 @@ Look at:
 import pika
 import json
 import time
-# stream is in core
-from IoTPy.core.stream import Stream, run
-# sink, op, basics are in the agent_types
-# sink is in agent_types
-from IoTPy.agent_types.sink import sink_list
+
+
+
+from IoTPy.core.agent import Agent
+from IoTPy.core.stream import Stream, StreamArray, _no_value, _multivalue, run
 from IoTPy.agent_types.op import map_element
 from IoTPy.helper_functions.recent_values import recent_values
-# multicore is in concurrency
-from IoTPy.concurrency.multicore import copy_data_to_stream, finished_source
-from IoTPy.concurrency.multicore import get_processes
-#from pika_subscribe_agent import PikaSubscriber
-from IoTPy.concurrency.pika_publication_agent import PikaPublisher
-# print_stream is in helper_functions
 from IoTPy.helper_functions.print_stream import print_stream
+# multicore imports
+from IoTPy.concurrency.multicore import get_processes, get_processes_and_procs
+from IoTPy.concurrency.multicore import terminate_stream
+from IoTPy.concurrency.multicore import get_proc_that_inputs_source
+from IoTPy.concurrency.multicore import extend_stream
+from IoTPy.concurrency.PikaPublisher import PikaPublisher
 
 publisher = PikaPublisher(
     routing_key='temperature',
