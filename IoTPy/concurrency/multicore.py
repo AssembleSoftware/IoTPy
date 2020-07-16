@@ -13,7 +13,7 @@ is_py2 = sys.version[0] == '2'
 if is_py2:
     import Queue as queue
 else:
-    import queue as queu
+    import queue as queue
 
 import multiprocessing
 # multiprocessing.Array provides shared memory that can
