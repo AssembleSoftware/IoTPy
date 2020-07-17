@@ -61,10 +61,10 @@ class test_multithread(unittest.TestCase):
         x_q = queue.Queue()
 
         # Create threads to read output queues of IoTPy thread.
-        output_1 = []
+        x_output = []
         output_thread = threading.Thread(
             target=self.output_thread_target,
-            args=(x_q, output_1))
+            args=(x_q, x_output))
 
         # Declare streams
         x = Stream('x')
@@ -80,7 +80,8 @@ class test_multithread(unittest.TestCase):
         output_thread.start()
 
         # Put data into streams.
-        ithread.extend(in_stream_name='x', list_of_elements=list(range(5)))
+        test_data = list(range(5))
+        ithread.extend(in_stream_name='x', list_of_elements=test_data)
 
         # Indicate stream is finished
         ithread.finished()
@@ -90,23 +91,13 @@ class test_multithread(unittest.TestCase):
         output_thread.join()
 
         # Check output
-        assert output_1 == list(range(5))
+        assert x_output == test_data
 
 
     def test_multithread_2(self):
         from IoTPy.agent_types.sink import sink_element, stream_to_queue
         from IoTPy.agent_types.merge import zip_map, zip_stream
         from IoTPy.agent_types.op import map_element
-        # The thread target that reads output queues and puts the results
-        # in a list.
-        def output_thread_target(self, q_out, output):
-            while True:
-                try:
-                    w = q_out.get()
-                    if w == '_finished': break
-                    else: output.append(w)
-                except:
-                    time.sleep(0.0001)
 
         # Declare output queues
         z_q = queue.Queue()
@@ -170,11 +161,6 @@ class test_multithread(unittest.TestCase):
         # Check output
         assert z_output == list(zip(x_data, y_data))
         assert b_output == [g(v) for v in a_data]
-        
-        
 
-#----------------------------------------------------
-#  TESTS
-#----------------------------------------------------
 if __name__ == '__main__':
     unittest.main()
