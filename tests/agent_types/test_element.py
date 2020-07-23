@@ -926,7 +926,6 @@ class test_element(unittest.TestCase):
         count = [0, 0]
         input_list = [1, -1, 2, 3, -4]
         y_values = self.square_and_count_pos_and_non_pos(count, input_list)
-        run()
         assert count == [2, 3]
         assert y_values == [1, 1, 4, 9, 16]
     
