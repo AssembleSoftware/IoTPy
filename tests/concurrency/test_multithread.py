@@ -10,13 +10,13 @@ which tests code from multicore.py in multiprocessing.
 
 """
 
-import sys
+#import sys
 import threading
 import random
 import multiprocessing
-import numpy as np
-import time
-import logging
+#import numpy as np
+#import time
+#import logging
 import unittest
 import queue
 #from new import *
@@ -76,7 +76,7 @@ class test_multithread(unittest.TestCase):
         ithread = iThread(in_streams=[x], output_queues=[x_q])
 
         # Start threads.
-        ithread.thread.start()
+        ithread.start()
         output_thread.start()
 
         # Put data into streams.
