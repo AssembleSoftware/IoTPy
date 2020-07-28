@@ -72,7 +72,7 @@ def iot(func, in_stream, *args, **kwargs):
         # index in_lists[0].start + new_start
         new_start = func(A, *args, **kwargs)
         assert isinstance(new_start, int), \
-          'funct in iot() must return a nonnegative integer' \
+          'func in iot() must return a nonnegative integer' \
           ' but it returned {0}'.format(new_start)
         assert new_start >= 0, \
           ' func in iot() must return nonnegative integer, but it '\
