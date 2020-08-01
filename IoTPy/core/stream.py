@@ -932,7 +932,25 @@ class StreamArray(Stream):
         def mul_pair(pair): return pair[0] * pair[1]
         return self.operator_overload(another_stream, func=mul_pair)
 
+#-------------------------------------------------------------------------
+class Shared(object):
+    def __init__(self, name="NoName", initial_value=None):
+        self.name = name
+        self.initial_value = initial_value
+        self.subscribers_set = set()
+
+    def register(self, agent):
+        self.subscribers_set.add(agent)
+
+    def delete(self, agent):
+        self.subscribers_set.discard(agent)
+
+    def activate(self):
+        # Put subscribers into the compute_engine's scheduler queue.
+        for subscriber in self.subscribers_set:
+            activate(subscriber)
 
 #------------------------------------------------------------------------------
 def run(): Stream.scheduler.step()
+def activate(obj): Stream.scheduler.put(obj)
 #------------------------------------------------------------------------------
