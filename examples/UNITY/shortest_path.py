@@ -6,7 +6,6 @@ class triangle_inequality(object):
     def __init__(self, d, i, j, k):
         self.d, self.i, self.j, self.k = d, i, j, k
         self.actors = None
-        self.name = str(i) + '_' + str(j) + '_' + str(k)
     def next(self):
         if self.d[self.i][self.k] > self.d[self.i][self.j] + self.d[self.j][self.k]:
             self.d[self.i][self.k] = self.d[self.i][self.j] + self.d[self.j][self.k]
