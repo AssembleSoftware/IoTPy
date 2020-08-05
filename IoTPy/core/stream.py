@@ -802,8 +802,12 @@ class StreamArray(Stream):
 
         """
 
-        if len(output_array) == 0:
-            return
+        if type(output_array) == np.ndarray:
+            if output_array.size == 0: return
+        elif type(output_array) == list:
+            if len(output_array) == 0: return
+        else:
+            if len(list(output_array)) == 0: return
         
         # output_array should be an array.
         if isinstance(output_array, list) or isinstance(output_array, tuple):
