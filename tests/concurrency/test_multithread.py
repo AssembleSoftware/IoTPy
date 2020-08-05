@@ -23,10 +23,7 @@ import queue
 from IoTPy.concurrency.multicore import *
 from IoTPy.agent_types.basics import map_e, map_l, map_w, merge_e,  merge_sink_e
 from IoTPy.agent_types.basics import f_mul, f_add
-#from run import run
 from IoTPy.core.stream import StreamArray, run
-from IoTPy.concurrency.multithread import thread_target_extending
-from IoTPy.concurrency.multithread import thread_target_appending
 from IoTPy.concurrency.multithread import iThread
 from IoTPy.helper_functions.recent_values import recent_values
 from IoTPy.agent_types.sink import stream_to_queue
