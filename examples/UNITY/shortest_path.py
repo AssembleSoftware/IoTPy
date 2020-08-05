@@ -1,53 +1,58 @@
-import numpy as np
 import sys
 sys.path.append("../")
-from IoTPy.core.stream import Shared, activate, run
+from IoTPy.core.stream import Shared, activate, run, Stream
 
 class triangle_inequality(object):
-    def __init__(self, d, signals, i, j, k, name):
-        self.d, self.signals = d, signals
-        self.i, self.j, self.k = i, j, k
-        self.name = name
-        self.N = d.shape[0]
-        for r in range(self.N):
-            signals[i][r].register(self)
-            signals[r][k].register(self)
-            activate(self)
+    def __init__(self, d, i, j, k):
+        self.d, self.i, self.j, self.k = d, i, j, k
+        self.actors = None
+        self.name = str(i) + '_' + str(j) + '_' + str(k)
     def next(self):
-        if self.d[self.i, self.k] > self.d[self.i, self.j] + self.d[self.j, self.k]:
-            self.d[self.i, self.k] = self.d[self.i, self.j] + self.d[self.j, self.k]
-            for r in range(self.N):
-                self.signals[self.i][r].activate()
-                self.signals[r][self.k].activate()
+        if self.d[self.i][self.k] > self.d[self.i][self.j] + self.d[self.j][self.k]:
+            self.d[self.i][self.k] = self.d[self.i][self.j] + self.d[self.j][self.k]
+            for r in range(len(self.d)):
+                activate(self.actors[self.i][self.k][r])
+                activate(self.actors[r][self.i][self.k])
 
 def shortest_path(d):
-    dimension = d.shape[0]
-    signals = [[Shared() for i in range(dimension)] for j in range(dimension)]
-    for i in range(dimension):
-        for j in range(dimension):
-            for k in range(dimension):
-                triangle_inequality(d, signals, i, j, k, str(i)+'_'+str(j)+'_'+str(k))
+    R = range(len(d))
+    actors = [[[[] for k in R] for j in R] for i in R]
+    for i in R:
+        for j in R:
+            for k in R:
+                actors[i][j][k] = triangle_inequality(d, i, j, k)
+                actors[i][j][k].actors = actors
+                activate(actors[i][j][k])
     run()
-    return d
-    
+
+#----------------------------------------------------------------------
+# TESTS
+#----------------------------------------------------------------------
+
 def test_shortest_path():
-    d = np.array([[0, 2, 4], [3, 0, 9], [15, 32, 0]])
+    d = [[0, 2, 4], [3, 0, 9], [15, 32, 0]]
     shortest_path(d)
-    assert np.array_equal(d, np.array([[0, 2, 4], [3, 0, 7], [15, 17, 0]]))
+    assert d == [[0, 2, 4], [3, 0, 7], [15, 17, 0]]
 
 def test_shortest_path_random():
-    dimension = 4
-    d = np.random.randint(100, size=(dimension, dimension))
-    for i in range(dimension): d[i, i] = 0
-    print ('initial d is ')
-    print (d)
-    # Run the shortest path algorithm
+    import numpy as np
+    N = 5
+    d = np.random.randint(100, size=(N, N))
+    for i in range(N): d[i, i] = 0
+    D = d.copy()
+    # Run the agent-based shortest path algorithm. The result is in d.
     shortest_path(d)
-    print ('d is ')
-    print (d)
-    
-
+    # Run the traditional sequential shortest path algorithm.
+    # Result is in D.
+    for n in range(int(np.ceil(np.log2(N)))):
+        for i in range(N):
+            for j in range(N):
+                for k in range(N):
+                    D[i][k] = min(D[i][k], D[i][j]+D[j][k])
+    # Assert that the results of both algorithms are the same.
+    assert (D == d).all()
 
 if __name__ == '__main__':
     test_shortest_path()
-    test_shortest_path_random()
+    for _ in range(10):
+        test_shortest_path_random()
