@@ -1,24 +1,11 @@
-import tweepy
 import pprint
 import json
 import threading
-
-import sys
-import os
-sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
-sys.path.append(os.path.abspath("../../IoTPy/core"))
-sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
-sys.path.append(os.path.abspath("../../IoTPy/multiprocessing"))
-
-#from IoTPy.agent_types.sink import sink_element
-
 import time
-from sink import sink_element
-from stream import Stream
-from multicore import shared_memory_process, Multiprocess
-# nltk: Natural Language Toolkit.
-# open source, free toolkit
-# https://www.nltk.org/
+# Tweepy is an open source free Python library for Twitter.
+# http://www.tweepy.org/
+import tweepy
+# The Natural Language ToolKit
 import nltk
 nltk.download('punkt')
 from nltk.tokenize import word_tokenize
@@ -26,11 +13,18 @@ from nltk.corpus import stopwords
 # Sentiment analysis
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
-# You should also download Tweepy, an open source, free
-# Python library for Twitter.
-# http://www.tweepy.org/
+import sys
+sys.path.append("../")
+from IoTPy.core.stream import Stream, run
+from IoTPy.agent_types.sink import sink_element
+from IoTPy.agent_types.op import map_window
+from IoTPy.helper_functions.recent_values import recent_values
+from IoTPy.concurrency.multicore import get_processes
+from IoTPy.concurrency.multicore import get_processes_and_procs
+from IoTPy.concurrency.multicore import extend_stream, terminate_stream
+import ctypes
 
-
+#-----------------------------------------------------------------
 # Variables that contain the user credentials to access Twitter API
 # Create your own variables.
 access_token = "999118734320009216-jaE4Rmc6fU11sMmBKb566YTFAJoMPV5"
@@ -38,6 +32,25 @@ access_token_secret = "6ZxqJdK2RU6iridMX1MzSqr3uNpQsC9fv1E6otpZquLiF"
 consumer_key = "Iv6RTiO7Quw3ivH0GWPWqbiD4"
 consumer_secret = "theWmGwcKFG76OtTerxwhrxfX5nSDqGDWB2almLlp2ndRpxACm"
 
+auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+auth.set_access_token(access_token, access_token_secret)
+api = tweepy.API(auth)
+#-----------------------------------------------------------------
+def check_Twitter_credentials():
+    try:
+        api.verify_credentials()
+        print("Authentication OK")
+    except:
+        print("Error during authentication")
+
+    # Get the User object for twitter...
+    user = api.get_user('twitter')
+    print (user.followers_count)
+    for friend in user.friends():
+       print (friend.screen_name)
+
+
+#-----------------------------------------------------------------
 class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
     """
     Tweets are converted to dictionary objects and placed on a stream.
@@ -54,6 +67,7 @@ class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
        Tweet dicts placed on out_stream, after which the function
        closes. If num_steps is zero, the class is persistent until
        an error occurs.
+    proc: 
 
     Attributes
     ----------
@@ -69,14 +83,15 @@ class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
     def __init__(
             self, consumer_key, consumer_secret,
             access_token, access_token_secret,
-            trackwords, out_stream, num_steps=0):
+            trackwords, stream_name, procs, num_steps=0):
         self.consumer_key = consumer_key
         self.consumer_secret = consumer_secret
         self.access_token = access_token
         self.access_token_secret = access_token_secret
         self.trackwords = trackwords
-        self.out_stream = out_stream
+        self.stream_name = stream_name
         self.num_steps = num_steps
+        self.procs = procs
         self.ready = threading.Event()
         self.n = 0
 
@@ -97,17 +112,23 @@ class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
         """
         try:
             if data is None: return True
-
-            # Put the data in the scheduler's input queue
-            Stream.scheduler.input_queue.put(
-                (self.out_stream.name, json.loads(data)))
-            # Increment the number of puts into the queue
+            #Stream.scheduler.input_queue.put((self.stream_name, json.loads(data)))
+            print ('data is:')
+            print (data)
+            #data = bytes(data, 'utf-8')
+            #extend_stream(self.procs, [data], self.stream_name)
+            extend_stream(self.procs, data, self.stream_name)
+            # Increment the number of times data is copied into the stream
             self.n += 1
-            # Exit if enough steps have completed.
+            # Exit if enough steps have completed. 
+            # Don't stop if self.num_steps is None.
             if self.num_steps and (self.n >= self.num_steps):
+                print ('FINISHED')
+                print ('----------------------------')
+                terminate_stream(self.procs, self.stream_name)
                 sys.exit()
             # Yield the thread
-            time.sleep(0)
+            time.sleep(0.0001)
             return True
         except BaseException as e:
             print (' ')
@@ -137,17 +158,17 @@ class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
         on out_stream.
 
         """
+        print ('in class. in start()')
         self.twitter_stream.filter(track=self.trackwords)
-        
 
     def get_thread_object(self):
         self.setup()
         return threading.Thread(target=self.start)
 
+#-----------------------------------------------------------------
 def twitter_to_stream(
-        consumer_key, consumer_secret,
-        access_token, access_token_secret,
-        trackwords, out_stream, num_steps):
+        consumer_key, consumer_secret, access_token, access_token_secret,
+        trackwords, stream_name, procs, num_steps):
     """
                       
     Get Tweets from Twitter and put them on out_stream.
@@ -160,22 +181,31 @@ def twitter_to_stream(
            Credentials that you must establish on Twitter
        trackwords: list of str
            The list of words that you want to track on Twitter.
-       out_stream: Stream
+       stream_name: str
            Tweets are placed as dicts on this output stream.
+       procs: dict
+           Generated by get_procs
        num_steps: int, optional
            The number of Tweets that are obtained.
            If left unspecified then the agent does not stop
            execution.
 
     """
+    print ('twitter to stream')
     obj = TwitterTrackwordsToStream(
-        consumer_key, consumer_secret,
-        access_token, access_token_secret,
-        trackwords, out_stream, num_steps)
+        consumer_key, consumer_secret, access_token, access_token_secret,
+        trackwords, stream_name, procs, num_steps)
     return obj.get_thread_object()
 
-
+#-----------------------------------------------------------------
 def print_tweets(tweet):
+    print ('in print_tweets 1')
+    print ('tweet is ')
+    print (tweet)
+    tweet = json.loads(tweet)
+    print ('in print_tweets 2')
+    print ('tweet is ')
+    print (tweet)
     if 'extended_tweet' in tweet:
         text = tweet['extended_tweet']['full_text']
     elif 'text' in tweet:
@@ -202,41 +232,50 @@ def print_tweets(tweet):
     print ('--------------------------------------')
     print (' ')
 
+#-----------------------------------------------------------------
 def twitter_analysis(
-        consumer_key, consumer_secret,
-        access_token, access_token_secret,
-        trackwords, tweet_analyzer, num_tweets):
-    # SOURCE
-    def source(out_stream):
-        return twitter_to_stream(
-            consumer_key, consumer_secret,
-            access_token, access_token_secret,
-            trackwords, out_stream, num_tweets)
-    # COMPUTATIONAL FUNCTION
-    def compute_func(in_streams, out_streams):
-        sink_element(func=tweet_analyzer,
-                     in_stream=in_streams[0])
-    # PROCESSES
-    proc = shared_memory_process(
-        compute_func=compute_func,
-        in_stream_names=['in'],
-        out_stream_names=[],
-        connect_sources=[('in', source)],
-        connect_actuators=[],
-        name='proc')
-    # CREATE AND RUN MULTIPROCESS APPLICATION
-    mp = Multiprocess(processes=[proc], connections=[])
-    mp.run()
+        consumer_key, consumer_secret, access_token, access_token_secret,
+        trackwords, tweet_analyzer, stream_name, num_tweets):
+    print ('twitter_analysis')
+    # Agent function for process named 'p0'
+    def f(in_streams, out_streams):
+        s = Stream('s')
+        def convert_bytes_to_string(window):
+            return_value = ''.join(window)
+            print ('return_value is', return_value)
+            return str(return_value)
+        map_window(
+            func=convert_bytes_to_string, in_stream=in_streams[0], out_stream=s,
+            window_size=2000, step_size=2000)
+        print(recent_values(s))
 
+    multicore_specification = [
+        # Streams
+        [('x', ctypes.c_wchar)],
+        # Processes
+        [{'name': 'p0', 'agent': f, 'inputs':['x'], 'sources':['x']}]]
+
+    # PROCESSES
+    processes, procs = get_processes_and_procs(multicore_specification)
+    print ('source_thread')
+    source_thread = twitter_to_stream(
+        consumer_key, consumer_secret, access_token, access_token_secret,
+        trackwords, stream_name, procs, num_tweets)
+
+    procs['p0'].threads = [source_thread]
+
+    for process in processes: process.start()
+    for process in processes: process.join()
+    for process in processes: process.terminate()
 
 #-----------------------------------------------------------------------
 # TEST
 #-----------------------------------------------------------------------
 
 if __name__ == '__main__':
+    check_Twitter_credentials()
+    print ('Finished checking Twitter credentials')
     twitter_analysis(
-        consumer_key, consumer_secret,
-        access_token, access_token_secret,
-        trackwords=['Trump'], tweet_analyzer=print_tweets,
-        num_tweets=5)
+    consumer_key, consumer_secret, access_token, access_token_secret,
+    trackwords=['Trump'], tweet_analyzer=print_tweets, stream_name='x', num_tweets=3)
 
