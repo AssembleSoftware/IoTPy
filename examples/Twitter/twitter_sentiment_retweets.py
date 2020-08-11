@@ -1,19 +1,35 @@
-import sys
-import os
 import re
-import tweepy
+import pprint
 import json
 import threading
+import time
+# Tweepy is an open source free Python library for Twitter.
+# http://www.tweepy.org/
+import tweepy
+# The Natural Language ToolKit
+import nltk
+nltk.download('punkt')
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+# Sentiment analysis
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+
+import sys
+sys.path.append("../")
+from IoTPy.core.stream import Stream, run
+from IoTPy.agent_types.sink import sink_element, stream_to_file
+from IoTPy.agent_types.op import map_window, map_element
+from IoTPy.agent_types.merge import zip_stream
+from IoTPy.helper_functions.recent_values import recent_values
+from IoTPy.concurrency.multicore import get_processes
+from IoTPy.concurrency.multicore import get_processes_and_procs
+from IoTPy.concurrency.multicore import extend_stream, terminate_stream
+import ctypes
+
+from examples.Twitter.twitter import twitter_to_stream, twitter_analysis, check_Twitter_credentials
 
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
-sys.path.append(os.path.abspath('../../IoTPy/agent_types'))
-sys.path.append(os.path.abspath('../../IoTPy/multiprocessing'))
-sys.path.append(os.path.abspath('../../IoTPy/core'))
-sys.path.append(os.path.abspath('../../IoTPy/helper_functions'))
-from multicore import shared_memory_process, Multiprocess
-from sink import sink_element
-from twitter import twitter_to_stream, twitter_analysis
 # Written by Tommy Hannan
 
 ## # variables that contain the user credentials to access Twitter API 
@@ -23,11 +39,12 @@ from twitter import twitter_to_stream, twitter_analysis
 ## consumer_secret = "Enter Your Consumer Secret"
 
 
-# Variables that contain the user credentials to access Twitter API 
-access_token = "999118734320009216-jaE4Rmc6fU11sMmBKb566YTFAJoMPV5"
-access_token_secret = "6ZxqJdK2RU6iridMX1MzSqr3uNpQsC9fv1E6otpZquLiF"
-consumer_key = "Iv6RTiO7Quw3ivH0GWPWqbiD4"
-consumer_secret = "theWmGwcKFG76OtTerxwhrxfX5nSDqGDWB2almLlp2ndRpxACm"
+# Variables that contain the user credentials to access Twitter API
+# Enter your values here
+access_token = " "
+access_token_secret = " "
+consumer_key = " "
+consumer_secret = " "
 
 # HELPER FUNCTIONS FOR DEALING WITH TWEETS
 def get_text(tweet):
