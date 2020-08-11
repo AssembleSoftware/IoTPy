@@ -358,8 +358,9 @@ class Stream(object):
         if isinstance(value_list, tuple):
             value_list = list(value_list)
         assert (isinstance(value_list, list)), \
-          'value_list = {0}, stream = {1}. value_list is not a list'.format(
-              value_list, self.name)
+          'value_list = {0}, \n' \
+          'stream = {1}. \n' \
+          'value_list is not a list'.format(value_list, self.name)
 
         if len(value_list) == 0:
             return
