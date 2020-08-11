@@ -69,7 +69,7 @@ class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
        stream.
     num_steps: int, optional
        If num_steps is non-zero, then num_steps is the number of
-xs       Tweet dicts placed on out_stream, after which the function
+       Tweet dicts placed on out_stream, after which the function
        closes. If num_steps is zero, the class is persistent until
        an error occurs.
     proc: 
