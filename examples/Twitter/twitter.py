@@ -28,10 +28,10 @@ import ctypes
 #-----------------------------------------------------------------
 # Variables that contain the user credentials to access Twitter API
 # Create your own variables.
-access_token = "999118734320009216-jaE4Rmc6fU11sMmBKb566YTFAJoMPV5"
-access_token_secret = "6ZxqJdK2RU6iridMX1MzSqr3uNpQsC9fv1E6otpZquLiF"
-consumer_key = "Iv6RTiO7Quw3ivH0GWPWqbiD4"
-consumer_secret = "theWmGwcKFG76OtTerxwhrxfX5nSDqGDWB2almLlp2ndRpxACm"
+access_token = ""
+access_token_secret = ""
+consumer_key = ""
+consumer_secret = ""
 
 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(access_token, access_token_secret)
@@ -69,7 +69,7 @@ class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
        stream.
     num_steps: int, optional
        If num_steps is non-zero, then num_steps is the number of
-       Tweet dicts placed on out_stream, after which the function
+xs       Tweet dicts placed on out_stream, after which the function
        closes. If num_steps is zero, the class is persistent until
        an error occurs.
     proc: 
