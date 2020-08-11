@@ -17,8 +17,9 @@ import sys
 sys.path.append("../")
 from IoTPy.core.stream import Stream, run
 from IoTPy.agent_types.sink import sink_element
-from IoTPy.agent_types.op import map_window
+from IoTPy.agent_types.op import map_window, map_element
 from IoTPy.helper_functions.recent_values import recent_values
+from IoTPy.helper_functions.print_stream import print_stream
 from IoTPy.concurrency.multicore import get_processes
 from IoTPy.concurrency.multicore import get_processes_and_procs
 from IoTPy.concurrency.multicore import extend_stream, terminate_stream
@@ -37,6 +38,10 @@ auth.set_access_token(access_token, access_token_secret)
 api = tweepy.API(auth)
 #-----------------------------------------------------------------
 def check_Twitter_credentials():
+    """
+    Verify your Twitter credentials.
+
+    """
     try:
         api.verify_credentials()
         print("Authentication OK")
@@ -112,19 +117,13 @@ class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
         """
         try:
             if data is None: return True
-            #Stream.scheduler.input_queue.put((self.stream_name, json.loads(data)))
-            print ('data is:')
-            print (data)
-            #data = bytes(data, 'utf-8')
-            #extend_stream(self.procs, [data], self.stream_name)
-            extend_stream(self.procs, data, self.stream_name)
+            # Put the tweet into the stream called stream_name.
+            extend_stream(self.procs, [json.loads(data)], self.stream_name)
             # Increment the number of times data is copied into the stream
             self.n += 1
             # Exit if enough steps have completed. 
             # Don't stop if self.num_steps is None.
             if self.num_steps and (self.n >= self.num_steps):
-                print ('FINISHED')
-                print ('----------------------------')
                 terminate_stream(self.procs, self.stream_name)
                 sys.exit()
             # Yield the thread
@@ -158,7 +157,6 @@ class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
         on out_stream.
 
         """
-        print ('in class. in start()')
         self.twitter_stream.filter(track=self.trackwords)
 
     def get_thread_object(self):
@@ -189,75 +187,126 @@ def twitter_to_stream(
            The number of Tweets that are obtained.
            If left unspecified then the agent does not stop
            execution.
+    Returns
+    -------
+        thread
+        The thread that puts tweets into the stream with name stream_name.
 
     """
-    print ('twitter to stream')
     obj = TwitterTrackwordsToStream(
         consumer_key, consumer_secret, access_token, access_token_secret,
         trackwords, stream_name, procs, num_steps)
     return obj.get_thread_object()
 
-#-----------------------------------------------------------------
-def print_tweets(tweet):
-    print ('in print_tweets 1')
-    print ('tweet is ')
-    print (tweet)
-    tweet = json.loads(tweet)
-    print ('in print_tweets 2')
-    print ('tweet is ')
-    print (tweet)
-    if 'extended_tweet' in tweet:
-        text = tweet['extended_tweet']['full_text']
-    elif 'text' in tweet:
-        text = tweet['text']
-    else:
-        text = str()
-    followers_count = 0
-    retweet_count = 0
-    if 'user' in tweet:
-        tweet_user = tweet['user']
-        if 'followers_count' in tweet_user:
-            followers_count = tweet_user['followers_count']
-        if 'friends_count' in tweet_user:
-            friends_count = tweet_user['friends_count']
-    if 'retweet_count' in tweet:
-        retweet_count = tweet['retweet_count']
 
-    # print output
-    print ('Text is: ', text)
-    print (' ')
-    print ('followers_count is: ', followers_count)
-    print ('retweet_count is: ', retweet_count)
-    print ('friends_count is: ', friends_count)
+def get_tweet_fields(tweet, fields=None):
+    """
+    This function filters retains only those parts of tweet that are
+    specified in fields.
+
+    Parameters
+    ----------
+    tweet: dict
+       A JSON loaded tweet object.
+    fields: dict
+       field is a dict with keys '-' or a string.
+       An example of fields:
+            {'-': ['created_at', 'text'],
+             'user': ['name', 'followers_count', 'friends_count'],
+             'coordinates': ['coordinates'],
+             'place': ['country', 'full_name'],
+             'entities':['hashtags'],
+             }
+    Returns
+    -------
+      result: dict
+        result retains only those fields of the tweet that are
+        specified in fields.
+
+    """
+    result = {}
+    if fields == None:
+        return tweet
+    for key in fields.keys():
+        if key == '-':
+            # This is the top-level field in a tweet.
+            # Examples are 'created_at' and 'text'.
+            for subfield in fields['-']:
+                if subfield in tweet.keys():
+                    # Special situation for 'text'. Get
+                    # 'extended_tweet' if it is in the tweet.
+                    if subfield == 'text':
+                        if 'extended_tweet' in tweet.keys():
+                            text = tweet['extended_tweet']['full_text']
+                        else:
+                            text = tweet['text']
+                        result['text'] = text
+                    else:
+                        result[subfield] = tweet[subfield]
+        else:
+            # This is a lower-level field in a tweet.
+            # Examples are 'user'['name']. In this example, 'user is in
+            # tweet.keys(), and 'name' is a category in the list
+            # fields['user']
+            if key in tweet.keys():
+                result[key] = {}
+                for category in fields[key]:
+                    if category in tweet[key].keys():
+                        result[key][category] = tweet[key][category]
+    return result
+                        
+    
+#-----------------------------------------------------------------
+def print_tweets(tweet, fields=None):
+    if fields != None:
+        tweet_fields = get_tweet_fields(tweet, fields)
+        for key, value in tweet_fields:
+            print (key + ' : ' + value + '\n')
+        return
+    print ('--------------------------------------')
+    print ('tweet:  \n')
+    for key, value in tweet.items():
+        if type(value) == dict:
+            print (' ')
+            print ('    ' + key)
+            for k, v in value.items():
+                if type(v) == dict:
+                    print (' ')
+                    print (k)
+                    for kk, vv in v.items():
+                        print (' ')
+                        print ('    ' + str(kk) + ' : ' + str(vv))
+                else:
+                    print ('    ' + str(k) + ' : ' + str(v))
+        else:
+            print ('    ' + str(key) + ' : ' + str(value))
     print ('--------------------------------------')
     print (' ')
 
 #-----------------------------------------------------------------
 def twitter_analysis(
         consumer_key, consumer_secret, access_token, access_token_secret,
-        trackwords, tweet_analyzer, stream_name, num_tweets):
+        trackwords, tweet_analyzer, num_tweets):
     print ('twitter_analysis')
     # Agent function for process named 'p0'
     def f(in_streams, out_streams):
         s = Stream('s')
-        def convert_bytes_to_string(window):
-            return_value = ''.join(window)
-            print ('return_value is', return_value)
-            return str(return_value)
-        map_window(
-            func=convert_bytes_to_string, in_stream=in_streams[0], out_stream=s,
-            window_size=2000, step_size=2000)
-        print(recent_values(s))
+        map_element(get_tweet_fields, in_streams[0], s,
+                    fields={'-': ['created_at', 'text'],
+                            'user':['name', 'followers_count']})
+        sink_element(print_tweets, s)
 
     multicore_specification = [
         # Streams
-        [('x', ctypes.c_wchar)],
+        #[('x', ctypes.c_wchar)],
+        [('x', 'x')],
         # Processes
         [{'name': 'p0', 'agent': f, 'inputs':['x'], 'sources':['x']}]]
 
     # PROCESSES
     processes, procs = get_processes_and_procs(multicore_specification)
-    print ('source_thread')
+    # name of source stream is 'x'
+    stream_name = 'x'
     source_thread = twitter_to_stream(
         consumer_key, consumer_secret, access_token, access_token_secret,
         trackwords, stream_name, procs, num_tweets)
@@ -277,5 +326,5 @@ if __name__ == '__main__':
     print ('Finished checking Twitter credentials')
     twitter_analysis(
     consumer_key, consumer_secret, access_token, access_token_secret,
-    trackwords=['Trump'], tweet_analyzer=print_tweets, stream_name='x', num_tweets=3)
+    trackwords=['Trump'], tweet_analyzer=print_tweets, num_tweets=3)
 
