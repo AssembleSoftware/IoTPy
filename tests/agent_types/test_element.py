@@ -928,7 +928,71 @@ class test_element(unittest.TestCase):
         y_values = self.square_and_count_pos_and_non_pos(count, input_list)
         assert count == [2, 3]
         assert y_values == [1, 1, 4, 9, 16]
-    
+
+    def test_filter_number_1(self):
+        input_list = list(range(-5, 5))
+        in_stream = Stream('input')
+        out_stream = Stream('output')
+        def f(v): return v > 0
+        filter_element(f, in_stream, out_stream)
+        in_stream.extend(input_list)
+        run()
+        assert recent_values(out_stream) == list(filter(f, input_list))
+
+    def test_filter_number_2(self):
+        in_stream = Stream('input')
+        out_stream = Stream('output')
+        def f(v, threshold):
+            # v is an element of the input stream
+            # threshold is a constant
+            return v > threshold
+        # Create an agent by encapsulating f.
+        filter_element(f, in_stream, out_stream, threshold=10)
+        input_list = list(range(-20, 20))
+        in_stream.extend(input_list)
+        run()
+        assert recent_values(out_stream) == list(range(11, 20))
+
+    def test_filter_number_3(self):
+        in_stream = Stream('input')
+        out_stream = Stream('output')
+        def f(v, w):
+            # w is the current state.
+            # v is the current element of the input stream.
+            # Returns: (1) a boolean: v <= w
+            # If this boolean is true then
+            # v appears in the output.
+            # (2) the next state, v.
+            # The next state is the current input, v.
+            # Keeps those elements in the stream that are
+            # decreasing
+            return v < w, v
+         # Create an agent with an initial state of 0
+        filter_element(f, in_stream, out_stream, state=0)
+        input_list = [10, 9, 5, 7, 8, 12, 11, 3, 6, 9]
+        in_stream.extend(input_list)
+        run()
+        assert recent_values(out_stream) == [9, 5, 11, 3]
+
+    def test_filter_number_4(self):
+        in_stream = Stream('input')
+        out_stream = Stream('output')
+        def f(v, w, increase):
+            # v is an element of the input stream
+            # w is the current state
+            # increase is a constant parameter specified in the
+            # call that creates the agent
+            # return (1) a Boolean and (2) the next state.
+            # In this example, the next state is the current input v. 
+            return v < w*increase, v
+
+        # Create an agent by encapsulating function f. This agent
+        # has an initial state of 0, and a parameter, increase, with constant value 1.01
+        filter_element(f, in_stream, out_stream, state=0, increase=1.01)
+        input_list = [10, 10, 9, 200, 201, 200, 202, 203, 1, 0, 2]
+        in_stream.extend(input_list)
+        run()
+        assert recent_values(out_stream) == [10, 9, 201, 200, 203, 1, 0]
 
 if __name__ == '__main__':
     unittest.main()
