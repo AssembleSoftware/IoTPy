@@ -1136,7 +1136,8 @@ def make_spec_from_multicore_specification(multicore_specification):
                         found_category_stream_name = True
                 assert found_category_stream_name, \
                   " Category: {0}. \n "\
-                  " Stream name: {2} is not in list of streams: {1}".format(
+                  " Stream name: {2} is not in list of streams \n"\
+                  " in multicore specification: {1}".format(
                       category, streams_spec, category_stream_name)
             # Replace the list of stream names by a list of pairs
             # (stream name, stream type)
