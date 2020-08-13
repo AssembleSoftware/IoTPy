@@ -158,7 +158,7 @@ def sentiment_of_text(text):
     sentiment = analyzer.polarity_scores(text)['compound']
 
     return sentiment
-    
+
 def print_sentiment_followers_retweets(tweet):
     """      
     Detailed test containing functions for retrieving and analyzing
