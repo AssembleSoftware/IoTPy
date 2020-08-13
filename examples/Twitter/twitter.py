@@ -26,6 +26,11 @@ from IoTPy.concurrency.multicore import get_processes_and_procs
 from IoTPy.concurrency.multicore import terminate_stream, extend_stream
 import ctypes
 
+
+
+# Create sentiment analyzer to compute sentiments of tweets.
+sentiment_analyzer = SentimentIntensityAnalyzer()
+
 #-----------------------------------------------------------------
 # Variables that contain the user credentials to access Twitter API
 # Create your own variables.
@@ -34,6 +39,11 @@ import ctypes
 ## access_token_secret = ""
 ## consumer_key = ""
 ## consumer_secret = ""
+
+access_token = "999118734320009216-jaE4Rmc6fU11sMmBKb566YTFAJoMPV5"
+access_token_secret = "6ZxqJdK2RU6iridMX1MzSqr3uNpQsC9fv1E6otpZquLiF"
+consumer_key = "Iv6RTiO7Quw3ivH0GWPWqbiD4"
+consumer_secret = "theWmGwcKFG76OtTerxwhrxfX5nSDqGDWB2almLlp2ndRpxACm"
 
 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(access_token, access_token_secret)
@@ -257,6 +267,11 @@ def get_tweet_fields(tweet, fields=None):
             # This is the top-level field in a tweet.
             # Examples are 'created_at' and 'text'.
             for subfield in fields['-']:
+                # Special treatment for 'sentiment' because it is not
+                # part of a tweet. It has to be computed from the
+                # text.
+                if subfield == 'sentiment':
+                    continue
                 if subfield in tweet.keys():
                     # Special situation for 'text'. Get
                     # 'extended_tweet' if it is in the tweet.
@@ -281,8 +296,18 @@ def get_tweet_fields(tweet, fields=None):
             if key in tweet.keys():
                 result[key] = {}
                 for category in fields[key]:
-                    if category in tweet[key].keys():
-                        result[key][category] = tweet[key][category]
+                    if tweet[key] and (type(tweet[key]) == dict):
+                        if category in tweet[key].keys():
+                            result[key][category] = tweet[key][category]
+                    else:
+                        result[key][category] = None
+
+    # Special case where subfield is 'sentiment'.
+    if '-' in fields.keys():
+        if 'sentiment' in fields['-']:
+            sentiment = sentiment_of_text(result['text'])
+            # Add sentiment to result
+            result['sentiment'] = sentiment
     return result
                         
 #-----------------------------------------------------------------
@@ -351,6 +376,25 @@ def filter_tweet(tweet, required_phrases, avoid_phrases=[]):
     # Text has at least one required phrase and has none
     # of the avoid phrases. So, return True
     return True
+
+def sentiment_of_text(text):
+    """
+    Helper function that analyzes sentiment of a tweet
+
+    Parameters
+    ----------
+       text: str
+          cleaned text of tweet
+
+    Returns
+    -------
+        sentiment: float
+           sentiment ranging from -1.0 (negative) to
+           1.0 (positive)
+    """
+    sentiment = sentiment_analyzer.polarity_scores(text)['compound']
+
+    return sentiment
     
 #-----------------------------------------------------------------
 """
@@ -396,11 +440,11 @@ def twitter_analysis(consumer_key, consumer_secret, access_token, access_token_s
         t = Stream('t')
         map_element(
             get_tweet_fields, in_streams[0], out_stream=s,
-            fields={'-': ['text', 'created_at', 'in_reply_to_status_id'],
+            fields={'-': ['text', 'created_at', 'sentiment'],
                     'user':['name', 'screen_name', 'description',
                             'favorites_count', 'followers_count']})
         filter_element(filter_tweet, in_stream=s, out_stream=out_streams[0],
-                       required_phrases=['Biden', 'conspiracy', 'QAnon', 'Harris'],
+                       required_phrases=['Biden'],
                        avoid_phrases=['#MAGA', '@thedemocrat', 'stable genius'])
 
     # Agent function for process named 'CovidProcess'
@@ -409,8 +453,9 @@ def twitter_analysis(consumer_key, consumer_secret, access_token, access_token_s
         t = Stream('t')
         map_element(
             get_tweet_fields, in_streams[0], out_stream=s,
-            fields={'-': ['text'],
-                    'user':['name']})
+            fields={'-': ['text', 'sentiment'],
+                    'user':['name', 'screen_name', 'description',
+                            'favorites_count', 'followers_count']})
         filter_element(filter_tweet, in_stream=s, out_stream=out_streams[0],
                        required_phrases=['covid', 'vaccine', 'Fauci', 'Birks'],
                        avoid_phrases=['evil'])
@@ -437,7 +482,7 @@ def twitter_analysis(consumer_key, consumer_secret, access_token, access_token_s
     # SOURCE THREADS
     source_thread_Trump = twitter_to_stream(
         consumer_key, consumer_secret, access_token, access_token_secret,
-        trackwords=['Trump'], stream_name='TrumpStream', procs=procs, num_tweets=20)
+        trackwords=['Trump'], stream_name='TrumpStream', procs=procs, num_tweets=50)
     
     source_thread_Covid = twitter_to_stream(
         consumer_key, consumer_secret, access_token, access_token_secret,
