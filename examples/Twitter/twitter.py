@@ -29,10 +29,6 @@ import ctypes
 #-----------------------------------------------------------------
 # Variables that contain the user credentials to access Twitter API
 # Create your own variables.
-access_token = "999118734320009216-jaE4Rmc6fU11sMmBKb566YTFAJoMPV5"
-access_token_secret = "6ZxqJdK2RU6iridMX1MzSqr3uNpQsC9fv1E6otpZquLiF"
-consumer_key = "Iv6RTiO7Quw3ivH0GWPWqbiD4"
-consumer_secret = "theWmGwcKFG76OtTerxwhrxfX5nSDqGDWB2almLlp2ndRpxACm"
 
 ## access_token = ""
 ## access_token_secret = ""
@@ -53,13 +49,6 @@ def check_Twitter_credentials():
         print("Authentication OK")
     except:
         print("Error during authentication")
-
-    ## # Get the User object for twitter...
-    ## user = api.get_user('twitter')
-    ## print (user.followers_count)
-    ## for friend in user.friends():
-    ##    print (friend.screen_name)
-
 
 #-----------------------------------------------------------------
 class TwitterTrackwordsToStream(tweepy.streaming.StreamListener):
@@ -425,7 +414,6 @@ def twitter_analysis(consumer_key, consumer_secret, access_token, access_token_s
         filter_element(filter_tweet, in_stream=s, out_stream=out_streams[0],
                        required_phrases=['covid', 'vaccine', 'Fauci', 'Birks'],
                        avoid_phrases=['evil'])
-        #sink_element(print_tweets, t)
 
     # Agent function for process named 'FuseTweets'
     def h(in_streams, out_streams):
