@@ -1,47 +1,41 @@
 """
-This module contains code for the k-means algorithm, see
+This module contains:
+(1) code for the k-means algorithm, see
 https://en.wikipedia.org/wiki/K-means_clustering
-and applications of the algorithm to sliding windows of
+and
+(2) applications of the algorithm to sliding windows of
 a stream.
 
 The module contains the following functions:
  * random_points: returns random points in a space.
  * random_items_in_data: returns a sample, without
    replacement, of the data.
+ * normally_distributed_points: returns points in space
+   where the points are normally distributed with a
+   specified center and standard deviation.
  * closest_sentinel: given a collection of points and
    another collection of points, called sentinels,
    then the function returns the closest sentinel to
    each point.
+ * mean_squared_distance_to_sentinels: returns the
+   average of the square of the distance of each point
+   to its associated sentinel.
  * compute_centroids: given a collection of clusters of
    points this function returns the centroids of the
    clusters.
  * kmeans: the k-means algorithm.
  * kmeans_sliding_windows: the k-means algorithm applied
    to sliding windows in a stream.
- * normally_distributed_points: returns points in space
-   where the points are normally distributed with a
-   specified center and standard deviation.
- * mean_squared_distance_to_sentinels: returns the
-   average of the square of the distance of each point
-   to its associated sentinel.
 
 """
 import numpy as np
 import random
-
 import sys
-import os
-
-sys.path.append(os.path.abspath("../../IoTPy/core"))
-sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
-sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
-
-# stream is in ../../IoTPy/core
-from stream import Stream, StreamArray
-# op is in ../../IoTPy/agent_types
-from op import map_window
-# recent_values is in ../../IoTPy/helper_functions
-from recent_values import recent_values
+sys.path.append("../")
+from IoTPy.core.stream import Stream, StreamArray, run
+from IoTPy.agent_types.op import map_window
+from IoTPy.helper_functions.recent_values import recent_values
+from IoTPy.helper_functions.print_stream import print_stream
 
 
 def random_points(num_points, num_dimensions, low, high):
@@ -49,7 +43,8 @@ def random_points(num_points, num_dimensions, low, high):
     Returns num_points random points in a space with
     num_dimensions. In the plots in this module,
     num_dimensions is 2, and so the points are in
-    the x-y plane. Each coordinate lies in [low, high).
+    the x-y plane. Each coordinate of each point lies
+    in [low, high).
 
     Parameters
     ----------
@@ -98,10 +93,10 @@ def random_items_in_data(data, num_items):
         number of columns in data.
 
     """
-    # random.sample(xrange(0, len(data)), num_items) is
+    # random.sample(range(0, len(data)), num_items) is
     # a list of num_items random numbers in the range
     # [0, len(data)) where the list has no duplicates.
-    index = random.sample(xrange(0, len(data)), num_items)
+    index = random.sample(range(0, len(data)), num_items)
     random_items = data[index, :]
     return random_items
 
@@ -133,8 +128,10 @@ def closest_sentinel(points, sentinels):
         the i-th point.
 
     """
-    # np.dot(point - sentinel, point - sentinel) is the square of the distance
-    # between point and sentinel.
+    # np.dot(point - sentinel, point - sentinel) is the
+    # square of the distance between point and sentinel.
+    # We don't need to compute the actual distance using
+    # np.linalg.norm, and it's faster not to.
     sentinel_ids = np.array(
         [np.argmin([np.dot(point - sentinel, point - sentinel)
                     for sentinel in sentinels])
@@ -267,8 +264,8 @@ def kmeans(
 
         # Print number of points reassigned
         if num_iters != 0 and output_flag:
-            print np.count_nonzero(cluster_ids - previous_cluster_ids),\
-                " data points changed centroids"
+            print (np.count_nonzero(cluster_ids - previous_cluster_ids),\
+                " data points changed centroids")
         previous_cluster_ids, previous_centroids = cluster_ids, centroids
         ## if draw:
         ##     plotKMeans(X, centroids, previous, index, source)
@@ -279,7 +276,7 @@ def kmeans(
         num_iters += 1
 
     if output_flag:
-        print "Num iters: ", num_iters
+        print ("Num iters: ", num_iters)
     return [centroids, cluster_ids]
 
 class KMeansForSlidingWindows(object):
@@ -496,14 +493,14 @@ def test_random_points():
     low, high = 0.0, 1.0
     points = random_points(
         num_points, num_dimensions, low, high)
-    print '---------------------------------------'
-    print
-    print 'testing random points'
-    print 'num_points is ', num_points
-    print 'num_dimensions is ', num_dimensions
-    print 'low, high are ', low, high
-    print 'points is:'
-    print points
+    print ('---------------------------------------')
+    print (' ')
+    print ('testing random points')
+    print ('num_points is ', num_points)
+    print ('num_dimensions is ', num_dimensions)
+    print ('low, high are ', low, high)
+    print ('points is:')
+    print (points)
 
 def test_random_items_in_data():
     data = np.array([
@@ -524,14 +521,14 @@ def test_random_items_in_data():
         ])
     num_items=5
     points = random_items_in_data(data, num_items)
-    print '---------------------------------------'
-    print
-    print 'testing random items in data'
-    print 'data is '
-    print data
-    print 'num_items is ', num_items
-    print 'points is '
-    print points
+    print ('---------------------------------------')
+    print (' ')
+    print ('testing random items in data')
+    print ('data is ')
+    print (data)
+    print ('num_items is ', num_items)
+    print ('points is ')
+    print (points)
 
 def test_compute_centroids():
     points = np.array([
@@ -553,15 +550,15 @@ def test_compute_centroids():
     cluster_ids = np.array([0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3])
     num_clusters = 4
     centroids = compute_centroids(points, cluster_ids, num_clusters)
-    print '---------------------------------------'
-    print
-    print 'testing compute centroids'
-    print 'points is '
-    print points
-    print 'cluster_ids is ', cluster_ids
-    print 'num_clusters is ', num_clusters
-    print 'centroids is '
-    print centroids
+    print ('---------------------------------------')
+    print (' ')
+    print ('testing compute centroids')
+    print ('points is ')
+    print (points)
+    print ('cluster_ids is ', cluster_ids)
+    print ('num_clusters is ', num_clusters)
+    print ('centroids is ')
+    print (centroids)
     
 def test_kmeans():
     points = np.array([
@@ -582,23 +579,23 @@ def test_kmeans():
         ])
     centroids, cluster_ids = kmeans(
         points, num_clusters=4)
-    print '---------------------------------------'
-    print
-    print 'testing kmeans'
-    print 'input points is '
-    print points
-    print 'output:'
-    print 'centroids: '
-    print centroids
-    print
-    print 'cluster_ids: '
-    print cluster_ids
-    print
+    print ('---------------------------------------')
+    print (' ')
+    print ('testing kmeans')
+    print ('input points is ')
+    print (points)
+    print ('output:')
+    print ('centroids: ')
+    print (centroids)
+    print (' ')
+    print ('cluster_ids: ')
+    print (cluster_ids )
+    print (' ')
 
 def test_kmeans_sliding_windows():
-    print '-----------------------------------------'
-    print
-    print 'testing kmeans sliding windows'
+    print ('-----------------------------------------')
+    print (' ')
+    print ('testing kmeans sliding windows')
     num_dimensions=2
     window_size = 12
     step_size = 2
@@ -636,30 +633,30 @@ def test_kmeans_sliding_windows():
         ])
     in_stream.extend(points)
     Stream.scheduler.step()
-    print
-    print 'num_dimensions = ', num_dimensions
-    print 'window_size = ', window_size
-    print 'step_size = ', step_size
-    print 'num_clusters = ', num_clusters
-    print 'points: '
-    print points
-    print 'output_stream: '
-    print recent_values(out_stream)
+    print (' ')
+    print ('num_dimensions = ', num_dimensions)
+    print ('window_size = ', window_size)
+    print ('step_size = ', step_size)
+    print ('num_clusters = ', num_clusters)
+    print ('points: ')
+    print (points)
+    print ('output_stream: ')
+    print (recent_values(out_stream))
 
 def test_generate_normally_distributed_points():
     center = np.array([0.0, 0.0, 0.0])
     stdev = 1.0
     num_points=5
-    print '-----------------------------------------'
-    print
-    print 'testing normally distributed points'
-    print 'center is ', center
-    print 'stdev is ', stdev
-    print 'num_points is ', num_points
+    print ('-----------------------------------------')
+    print (' ')
+    print ('testing normally distributed points')
+    print ('center is ', center)
+    print ('stdev is ', stdev)
+    print ('num_points is ', num_points)
     points = normally_distributed_points(
         center, stdev, num_points)
-    print 'points is'
-    print points
+    print ('points is')
+    print (points)
     
 
 if __name__ == '__main__':
