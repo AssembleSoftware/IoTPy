@@ -417,7 +417,7 @@ A source thread called 'source_thread_Trump' feeds the source 'TrumpStream'.
 The specification for TrumpProcess identifies TrumpStream as an input of
 the process and also as a source that runs in the same process.
 
-TrumProcess has a map_element agent which extracts the specified fields
+TrumpProcess has a map_element agent which extracts the specified fields
 from each tweet.
 The output of the map_element agent is fed to a filter_element agent which
 filters tweets to have at least one of the required phrases and none of the
