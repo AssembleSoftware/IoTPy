@@ -192,7 +192,7 @@ def compute_centroids(points, cluster_ids, num_clusters):
 
 
 def kmeans(
-        points, num_clusters, initial_centroids=None, output_flag=False):
+        points, num_clusters, initial_centroids=None, draw=False, output_flag=False):
     """
     Runs kmeans until clusters stop moving.
 
@@ -267,8 +267,10 @@ def kmeans(
             print (np.count_nonzero(cluster_ids - previous_cluster_ids),\
                 " data points changed centroids")
         previous_cluster_ids, previous_centroids = cluster_ids, centroids
-        ## if draw:
-        ##     plotKMeans(X, centroids, previous, index, source)
+        X = points
+        if draw:
+            #plotKMeans(X, centroids, previous, index, source)
+            plotKMeans(X, centroids, previous_centroids, index, source)
 
         # Compute location of the centroid of each cluster given the
         # clusters.
@@ -306,7 +308,7 @@ def kmeans_sliding_windows(
 def normally_distributed_points(center, stdev, num_points):
     """
     Return num_points points with a normal distribution and
-    the specified standard deviation, stdev, and center.
+    the specified center and specified standard deviation.
 
     Parameters
     ----------
@@ -346,11 +348,17 @@ def mean_squared_distance_to_sentinels(points, sentinels, indexes):
     points : numpy.ndarray
         Each row of the array represents a point in d-space
         where d is the number of columns of the array.
+        The number of rows of points is num_points.
     sentinels : numpy.ndarray
         A numpy array with d columns.
         Each row represents a sentinel.
-    index : numpy.ndarray
-        A numpy array with 1 column.
+        The number of rows is the number of sentinels which
+        is an arbitrary positive value.
+    indexes : numpy.ndarray
+        A numpy array with 1 column. The number of rows is
+        num_points.
+        sentinel[indexes[p]] is the sentinel associated with
+        point p.
 
     Returns
     -------
@@ -372,44 +380,8 @@ def mean_squared_distance_to_sentinels(points, sentinels, indexes):
         sum_of_squares += np.dot(point-sentinel, point-sentinel)
     return sum_of_squares / num_points
 
-def initializeData(n, k, scale, low, high):
-    """
-    Initialize n points around k random centroids each with a normal
-    distribution and scale.
-
-    Parameters
-    ----------
-    n : int
-        Describes the number of points to make around each centroid.
-    k : int
-        Describes the number of centroids.
-    scale : int
-        Describes the scale for the distribution.
-    low : int
-        The lower bound (inclusive) for a centroid.
-    high : int
-        The upper bound (exclusive) for a centroid.
-
-    Returns
-    -------
-    X : numpy.ndarray
-        A numpy array with dimensions (`n` * `k`) * 2.
-
-    """
-    centroids = random_points_on_xy_plane(k, low, high)
-
-    for i in range(0, len(centroids)):
-        if i == 0:
-            X = initializeDataCenter(centroids[i], scale, n)
-        else:
-            X = np.vstack((X, initializeDataCenter(centroids[i], scale, n)))
-
-    return X
-
-
 def _plotData(X, index, source):
     source.data = dict(x=X[:, 0], y=X[:, 1], index=index)
-
 
 def plotKMeans(X, centroids, previous, index, source):
     """Plots the data and centroids.
@@ -462,7 +434,9 @@ def init_plot(figsize=(1000, 500)):
         x0=[], y0=[], x1=[], y1=[]
     ))
 
-    p = figure(plot_width=figsize[0], plot_height=figsize[1], tools="xpan,xwheel_zoom,xbox_zoom,reset", x_axis_type=None, y_axis_location="right")
+    p = figure(plot_width=figsize[0], plot_height=figsize[1],
+               tools="xpan,xwheel_zoom,xbox_zoom,reset",
+               x_axis_type=None, y_axis_location="right")
     # p.x_range.follow = "end"
     # p.x_range.follow_interval = 100
     # p.x_range.range_padding = 0
@@ -578,7 +552,7 @@ def test_kmeans():
         [-0.99, -0.99]
         ])
     centroids, cluster_ids = kmeans(
-        points, num_clusters=4)
+        points, num_clusters=4, draw=True)
     print ('---------------------------------------')
     print (' ')
     print ('testing kmeans')
@@ -632,7 +606,7 @@ def test_kmeans_sliding_windows():
         [-0.8, -0.8]
         ])
     in_stream.extend(points)
-    Stream.scheduler.step()
+    run()
     print (' ')
     print ('num_dimensions = ', num_dimensions)
     print ('window_size = ', window_size)
