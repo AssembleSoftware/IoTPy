@@ -4,55 +4,47 @@ https://github.com/scikit-learn/scikit-learn/blob/7813f7efb/sklearn/decompositio
 """
 
 import numpy as np
+import random
 import pickle as p
-import sys
-import os
-from sklearn.utils.extmath import svd_flip
-from IPCAutils import _incremental_mean_and_var
-
 from scipy import linalg
-sys.path.append(os.path.abspath("../../IoTPy/multiprocessing"))
-sys.path.append(os.path.abspath("../../IoTPy/core"))
-sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
-sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
+from sklearn.utils.extmath import svd_flip
+
+import sys
+sys.path.append("../")
+from IoTPy.core.stream import Stream, StreamArray, run
+from IoTPy.agent_types.op import map_window
+from IoTPy.agent_types.source import source_list, source_list_to_stream
+from IoTPy.agent_types.sink import sink_window
+from IoTPy.helper_functions.recent_values import recent_values
+from IoTPy.helper_functions.print_stream import print_stream
+from IoTPy.concurrency.multicore import get_processes_and_procs
+from IoTPy.concurrency.multicore import terminate_stream, extend_stream
+from examples.PCA.IPCAutils import _incremental_mean_and_var
 
 
-from multicore import shared_memory_process, Multiprocess
-from stream import Stream
-from source import source_list, source_list_to_stream
-from sink import sink_window
-from recent_values import recent_values
-
-
-source_list = [[1,5,0.1],[3,1,-0.1],[3,7,0.2],[-4,4,-0.3],[-1,-5,0.1],[2,0,0.2],[3,3,-0.2],[-4,8,0],[-7,-2,0.1],'eof']
+source_list = [[1,5,0.1],[3,1,-0.1],[3,7,0.2],[-4,4,-0.3],
+               [-1,-5,0.1],[2,0,0.2],[3,3,-0.2],[-4,8,0],
+               [-7,-2,0.1],'eof']
 #source_list = np.array(source_list)
-
-
 
 def source(out_stream):
     return source_list_to_stream(source_list, out_stream)
 
-def make_and_run_process(compute_func):
-    proc = shared_memory_process(
-        compute_func=compute_func,
-        in_stream_names=['in'],
-        out_stream_names=[],
-        connect_sources=[('in', source)],
-        connect_actuators=[],
-        name='proc')
-    mp = Multiprocess(processes=[proc], connections=[])
-    mp.run()
+## def make_and_run_process(compute_func):
+##     proc = shared_memory_process(
+##         compute_func=compute_func,
+##         in_stream_names=['in'],
+##         out_stream_names=[],
+##         connect_sources=[('in', source)],
+##         connect_actuators=[],
+##         name='proc')
+##     mp = Multiprocess(processes=[proc], connections=[])
+##     mp.run()
 
 
 
 def IPCA(k = 5,batches = 25):
-
-
-
-
-
-    class IPCAValues:
-            
+    class IPCAValues(object):
         def __init__(self,k):
                 self.n_components_ = k
                 self.n_samples_seen_ = 0
@@ -66,14 +58,9 @@ def IPCA(k = 5,batches = 25):
                 self.noise_variance_ = None
                 self.count = 0
 
-
-
     state = IPCAValues(k)
-            
 
-    
-    def compute_func(in_streams, out_streams):
-
+    def gh(in_stream):
 
         def partial_fit(X, state):
             """Incremental fit with X. All of X is processed as a single batch.
@@ -151,28 +138,14 @@ def IPCA(k = 5,batches = 25):
                 np.savetxt("IPCA.dat", state.components_)
 
             return state
-        
-
-
-
-
-        
-
-        
-        
-
-        
        
-        sink_window(func = partial_fit, in_stream = in_streams[0], window_size = batches, step_size=batches, state = state )
-    
+        sink_window(func = partial_fit, in_stream = in_stream,
+                    window_size = batches, step_size=batches, state = state)
         
-
-        
-
-        
-    make_and_run_process(compute_func)
-
-    
+    s = Stream('s')
+    gh(s)
+    s.extend(source_list)
+    run()
 
 if __name__ == '__main__':
     
