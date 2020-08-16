@@ -21,7 +21,6 @@ from IoTPy.agent_types.merge import weave
 from IoTPy.agent_types.op import map_window, map_element, filter_element
 from IoTPy.helper_functions.recent_values import recent_values
 from IoTPy.helper_functions.print_stream import print_stream
-from IoTPy.concurrency.multicore import get_processes
 from IoTPy.concurrency.multicore import get_processes_and_procs
 from IoTPy.concurrency.multicore import terminate_stream, extend_stream
 import ctypes
