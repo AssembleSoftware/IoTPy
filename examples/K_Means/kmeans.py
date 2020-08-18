@@ -30,6 +30,7 @@ The module contains the following functions:
 """
 import numpy as np
 import random
+
 import sys
 sys.path.append("../")
 from IoTPy.core.stream import Stream, StreamArray, run
@@ -41,9 +42,7 @@ from IoTPy.helper_functions.print_stream import print_stream
 def random_points(num_points, num_dimensions, low, high):
     """
     Returns num_points random points in a space with
-    num_dimensions. In the plots in this module,
-    num_dimensions is 2, and so the points are in
-    the x-y plane. Each coordinate of each point lies
+    num_dimensions. Each coordinate of each point lies
     in [low, high).
 
     Parameters
@@ -76,6 +75,7 @@ def random_points(num_points, num_dimensions, low, high):
 def random_items_in_data(data, num_items):
     """
     Returns num_items from data without replacement.
+    Picks random rows of data.
 
     Parameters
     ----------
@@ -192,7 +192,8 @@ def compute_centroids(points, cluster_ids, num_clusters):
 
 
 def kmeans(
-        points, num_clusters, initial_centroids=None, draw=False, output_flag=False):
+        points, num_clusters, initial_centroids=None, output_flag=False,
+        source=None):
     """
     Runs kmeans until clusters stop moving.
 
@@ -211,10 +212,8 @@ def kmeans(
         number of columns is dimension of the space, i.e the same
         number of columns as in points.
         If initial_centroids is None then compute random centroids to
-        initialize the algorithm.
-    draw : boolean, optional
-        Describes whether the data is to be plotted (data must have 2 or less
-        dimensions). The default is False.
+        initialize the algorithm. Get random centroids by calling
+        random_items_in_data(..)
     output_flag : boolean, optional
         Describes whether debug info is to be printed (the default is False).
         Info includes current number of iterations and number of changed points
@@ -268,10 +267,6 @@ def kmeans(
                 " data points changed centroids")
         previous_cluster_ids, previous_centroids = cluster_ids, centroids
         X = points
-        if draw:
-            #plotKMeans(X, centroids, previous, index, source)
-            plotKMeans(X, centroids, previous_centroids, index, source)
-
         # Compute location of the centroid of each cluster given the
         # clusters.
         centroids = compute_centroids(points, cluster_ids, num_clusters)
@@ -309,6 +304,8 @@ def normally_distributed_points(center, stdev, num_points):
     """
     Return num_points points with a normal distribution and
     the specified center and specified standard deviation.
+    The number of dimensions of the space is obtained from
+    the number of dimensions of center.
 
     Parameters
     ----------
@@ -380,91 +377,51 @@ def mean_squared_distance_to_sentinels(points, sentinels, indexes):
         sum_of_squares += np.dot(point-sentinel, point-sentinel)
     return sum_of_squares / num_points
 
-def _plotData(X, index, source):
-    source.data = dict(x=X[:, 0], y=X[:, 1], index=index)
-
-def plotKMeans(X, centroids, previous, index, source):
-    """Plots the data and centroids.
-
-    This function plots the data with the current centroids and shows the
-    movement of the centroids.
+def random_points_around_random_centroids(n, num_centroids, stdev, low, high):
+    """
+    Create num_centroids random centroids.
+    For each centroid generate n random points, normally distributed,
+    where the center is the centroid and with the specified standard deviation,
+    stdev.
 
     Parameters
     ----------
+    n : int
+        The number of points around each centroid.
+    num_centroids : int
+        The number of centroids.
+    stdev : int
+        Describes the stdev for the distribution.
+    low : int
+        The lower bound (inclusive) for a centroid.
+    high : int
+        The upper bound (exclusive) for a centroid.
+
+    Returns
+    -------
     X : numpy.ndarray
-        A numpy array with 2 columns.
-    centroids : numpy.ndarray
-        A numpy array with 2 columns.
-    previous : numpy.ndarray
-        A numpy array with 2 columns and the same number of rows as
-        `centroids`.
-    index : numpy.ndarray
-        A numpy array with 1 column.
-    source : list
-        List of ColumnDataSource
+        A numpy array with dimensions (`n` * `num_centroids`) * 2.
 
     """
+    centroids = random_points(num_points=num_centroids, num_dimensions=2,
+                              low=low, high=high)
 
-    source, source_centroids, segments = source
-    _plotData(X, index, source)
-    source_centroids.data = dict(x=centroids[:, 0], y=centroids[:, 1],)
-    segments.data = dict(x0=previous[:,0], y0=previous[:,1], x1=centroids[:,0], y1=centroids[:,1])
+    for i in range(0, len(centroids)):
+        if i == 0:
+            X = normally_distributed_points(center=centroids[i], stdev=stdev, num_points=n)
+        else:
+            X = np.vstack((X, normally_distributed_points(center=centroids[i], stdev=stdev, num_points=n)))
 
-
-def init_plot(figsize=(1000, 500)):
-    """Initializes the plot.
-
-    Parameters
-    ----------
-    figsize : tuple, optional
-        A tuple containing the width and height of the plot (the default is
-        (1000, 800)).
-
-    """
-
-    source = ColumnDataSource(dict(
-        x=[], y=[], index=[]
-    ))
-
-    centroids = ColumnDataSource(dict(
-        x=[], y=[]
-    ))
-
-    segments = ColumnDataSource(dict(
-        x0=[], y0=[], x1=[], y1=[]
-    ))
-
-    p = figure(plot_width=figsize[0], plot_height=figsize[1],
-               tools="xpan,xwheel_zoom,xbox_zoom,reset",
-               x_axis_type=None, y_axis_location="right")
-    # p.x_range.follow = "end"
-    # p.x_range.follow_interval = 100
-    # p.x_range.range_padding = 0
-
-    mapper = LinearColorMapper(palette=Magma[256])
-
-    p.circle(x='x', y='y', alpha=0.2, line_width=3, color={"field": "index", "transform": mapper}, source=source)
-    p.circle(x='x', y='y', alpha=0.2, size=20, color='black', source=centroids)
-    p.segment(x0='x0', y0='y0', x1='x1', y1='y1', line_width=3, color='blue', source=segments)
-
-    session = push_session(curdoc())
-
-    curdoc().add_root(p)
-
-    session.show()
-
-    return source, centroids, segments
-
-
-
+    print ('X is ', X)
+    return X
 
 #------------------------------------------------------------------------
 #     TESTS
 #------------------------------------------------------------------------
 def test_random_points():
     num_points = 4
-    num_dimensions = 2
-    low, high = 0.0, 1.0
+    num_dimensions = 3
+    low, high = 2.0, 10.0
     points = random_points(
         num_points, num_dimensions, low, high)
     print ('---------------------------------------')
@@ -473,6 +430,9 @@ def test_random_points():
     print ('num_points is ', num_points)
     print ('num_dimensions is ', num_dimensions)
     print ('low, high are ', low, high)
+    print ('points is an array with num_dimensions columns')
+    print ('  and num_points rows. Its entries are random ')
+    print ('  points in the range [low, high)  \n')
     print ('points is:')
     print (points)
 
@@ -501,6 +461,9 @@ def test_random_items_in_data():
     print ('data is ')
     print (data)
     print ('num_items is ', num_items)
+    print ('points is an array with num_items rows')
+    print (' Each point is picked randomly from data.')
+    print (' ')
     print ('points is ')
     print (points)
 
@@ -552,7 +515,7 @@ def test_kmeans():
         [-0.99, -0.99]
         ])
     centroids, cluster_ids = kmeans(
-        points, num_clusters=4, draw=True)
+        points, num_clusters=4)
     print ('---------------------------------------')
     print (' ')
     print ('testing kmeans')
@@ -631,12 +594,22 @@ def test_generate_normally_distributed_points():
         center, stdev, num_points)
     print ('points is')
     print (points)
+
+def test_random_points_around_random_centroids():
+    print ('testing random_points_around_random_centroids')
+    n = 4
+    num_centroids = 3
+    stdev = 1.0
+    low = -1.0
+    high = 1.0
+    random_points_around_random_centroids(n, num_centroids, stdev, low, high)
     
 
 if __name__ == '__main__':
     test_random_points()
     test_random_items_in_data()
     test_compute_centroids()
+    test_random_points_around_random_centroids()
     test_kmeans()
     test_kmeans_sliding_windows()
     test_generate_normally_distributed_points()
