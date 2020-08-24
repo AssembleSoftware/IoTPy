@@ -350,12 +350,12 @@ class test_merge_agents(unittest.TestCase):
 
         x.extend(np.linspace(0.0, 9.0, 10))
         scheduler.step()
-        y.extend(np.linspace(0.0, 4.0, 5))
+        y.extend(np.linspace(20.0, 24.0, 5))
         scheduler.step()
-        expected_array = np.sum([np.linspace(0.0, 4.0, 5), np.linspace(0.0, 4.0, 5)], axis=0)
+        expected_array = np.sum([np.linspace(20.0, 24.0, 5), np.linspace(0.0, 4.0, 5)], axis=0)
         assert isinstance(z, StreamArray)
         assert np.array_equal(recent_values(z), expected_array)
-        expected_means = np.linspace(0.0, 4.0, 5)
+        expected_means = np.mean([np.linspace(20.0, 24.0, 5), np.linspace(0.0, 4.0, 5)], axis=0)
         assert np.array_equal(recent_values(a), expected_means)
 
 
