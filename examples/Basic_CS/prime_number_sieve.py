@@ -22,16 +22,12 @@ import sys
 import os
 import math
 
-sys.path.append(os.path.abspath("../"))
-sys.path.append(os.path.abspath("../../IoTPy/core"))
-sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
-sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
-
-from stream import Stream, _no_value
-from op import map_element
-from sink import sink
-from merge import merge_asynch
-from recent_values import recent_values
+sys.path.append("../")
+from IoTPy.core.stream import Stream, _no_value
+from IoTPy.agent_types.op import map_element
+from IoTPy.agent_types.sink import sink_element
+from IoTPy.agent_types.merge import merge_asynch
+from IoTPy.helper_functions.recent_values import recent_values
     
 def sieve(in_stream, prime_stream):
     """
@@ -109,7 +105,7 @@ def sieve(in_stream, prime_stream):
     # Create a sink agent that encapsulates a stateful function f with
     # an initial state of 0. Pass parameters prime_stream and
     # out_stream from the sink agent to its encapsulated function.
-    sink(func=f, in_stream=in_stream, state=0,
+    sink_element(func=f, in_stream=in_stream, state=0,
          prime_stream=prime_stream, out_stream=Stream())
 
 def primes_example_1(N):
@@ -240,7 +236,7 @@ def primes_example_2(N):
                 first_N.append(v)
                 state += 1
             return state
-        sink(func=first_N_elements_of_stream, in_stream=in_stream,
+        sink_element(func=first_N_elements_of_stream, in_stream=in_stream,
              state=0, N=N, first_N=first_N)
 
     #-----------------------------------------------------------------
