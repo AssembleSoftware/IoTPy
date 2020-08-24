@@ -22,17 +22,13 @@ import sys
 import os
 import math
 
-sys.path.append(os.path.abspath("../"))
-sys.path.append(os.path.abspath("../../IoTPy/core"))
-sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
-sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
-
-from stream import Stream, _no_value
-from op import map_element
-from sink import sink
-from merge import merge_asynch
-from recent_values import recent_values
-from basics import map_e
+sys.path.append("../")
+from IoTPy.core.stream import Stream, _no_value
+from IoTPy.agent_types.op import map_element
+from IoTPy.agent_types.sink import sink_element
+from IoTPy.agent_types.merge import merge_asynch
+from IoTPy.agent_types.basics import map_e
+from IoTPy.helper_functions.recent_values import recent_values
     
 def sieve(in_stream, prime_stream):
     """
