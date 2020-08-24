@@ -1,29 +1,38 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
+# sklearn imports
 from sklearn.datasets import load_iris
 from sklearn.decomposition import IncrementalPCA
 
 import sys
-import os
-sys.path.append(os.path.abspath("../../IoTPy/core"))
-sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
-sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
-
-from agent import Agent
-from stream import Stream, StreamArray
-from stream import _no_value, _multivalue
-from check_agent_parameter_types import *
-from recent_values import recent_values
-from run import run
-from op import map_window
-from sink import sink_window
-# incremental_buffer is in ../../IoTPy/helper_functions
-from incremental_buffer import incremental_buffer
-from basics import fmap_w, sink_w
+from IoTPy.core.agent import Agent
+from IoTPy.core.stream import Stream, StreamArray, _no_value, _multivalue, run
+from IoTPy.agent_types.check_agent_parameter_types import check_agent_parameter_types
+from IoTPy.agent_types.op import map_window
+from IoTPy.agent_types.sink import sink_window
+from IoTPy.agent_types.basics import fmap_w, sink_w
+from IoTPy.helper_functions.recent_values import recent_values, incremental_buffer
+from IoTPy.helper_functions.print_stream import print_stream
 
 class incremental_PCA(object):
     def __init__(self, in_stream, out_stream, n_components, batch_size, n_recompute, plotter):
+        '''
+        Parameters
+        ----------
+        in_stream: Stream
+           The single input stream
+        out_stream: Stream
+           The single output stream
+        n_components: int (optional)
+           Positive int, greater than 1, specifying number of components of
+           the PCA. See IncrementalPCA
+        batch_size: int (optional)
+           The size of the batches used in IncrementalPCA
+        n_recompute: int
+        plotter: func
+           The function used for plotting the results.
+
+        '''
         self.in_stream = in_stream
         self.out_stream = out_stream
         self.n_components = n_components
