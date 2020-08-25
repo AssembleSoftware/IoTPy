@@ -45,18 +45,14 @@ single value.
 
 """
 import sys
-import os
-sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
-sys.path.append(os.path.abspath("../../IoTPy/core"))
-sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
-
-from stream import Stream, _no_value
-from recent_values import recent_values
-from op import signal_element, map_element
-from merge import weave_f, merge_asynch, blend
-from sink import sink
-from split import split_signal
-from run import run
+sys.path.append("../")
+from IoTPy.core.stream import Stream, _no_value, run
+from IoTPy.agent_types.op import signal_element, map_element
+from IoTPy.agent_types.merge import weave_f, merge_asynch, blend
+from IoTPy.agent_types.split import split_signal
+from IoTPy.agent_types.sink import sink_element
+from IoTPy.helper_functions.print_stream import print_stream
+from IoTPy.helper_functions.recent_values import recent_values
 
 def sort(lst):
     """
@@ -218,7 +214,7 @@ def stop_agent_when_enough_elements(N):
     # Create an agent that sets stop to True after it reads more than
     # N values.
     N = 3
-    sink(func=call_halt, in_stream=numbers, N=N, stop=stop)
+    sink_element(func=call_halt, in_stream=numbers, N=N, stop=stop)
 
     #----------------------------------------------------------------
     #STEP 4. START COMPUTATION
