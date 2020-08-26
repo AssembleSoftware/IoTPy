@@ -483,6 +483,22 @@ class test_window_agents(unittest.TestCase):
         x.extend(list(range(20)))
         run()
         print (recent_values(y))
+
+    def test_stream_array_simple(self):
+        def add(in_stream_array, out_stream_array,
+              window_size, addend):
+            def f(an_array):
+                return _multivalue(an_array + addend)
+            map_window(f,in_stream_array, out_stream_array,
+                window_size=window_size,step_size=window_size)
+
+        def multiply(in_stream_array, out_stream_array,
+                      window_size, multiplicand):
+            def f(an_array):
+                return _multivalue(an_array*multiplicand)
+            map_window(f,in_stream_array, out_stream_array,
+                window_size=window_size,step_size=window_size)
+        
         
 
 if __name__ == '__main__':
