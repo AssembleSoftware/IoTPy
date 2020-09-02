@@ -35,12 +35,15 @@ def test_pika_publisher():
     # Step 0.1: Define source thread targets (if any).
     # This is some arbitrary data merely for testing. In this example
     # the data is a list of lists.
-    data = [list(range(5)), list(range(5, 10)), list(range(10, 20))]
+    data = [list(range(2)), list(range(2, 4))]
     def thread_target_source(procs):
         for sublist in data:
             extend_stream(procs, data=sublist, stream_name='source')
             # Sleep to simulate an external data source.
             time.sleep(0.001)
+        # Put '_finished' on the stream because the stream will not
+        # be extended further.
+        extend_stream(procs, data=['_finished'], stream_name='source')
         # Terminate stream because this stream will not be extended.
         terminate_stream(procs, stream_name='source')
 
@@ -91,6 +94,5 @@ def test():
 #--------------------------------------------
 # TESTS
 #--------------------------------------------
-test()
 test_pika_publisher()
 
