@@ -72,6 +72,11 @@ def test_pika_publisher():
     for process in processes: process.terminate()
 
 def test():
+    """
+    A simpler test than test_pika_publisher. This simpler
+    test uses 'run' rather than creating a process and thread.
+
+    """
     publisher = PikaPublisher(
         routing_key='temperature',
         exchange='publications', host='localhost')
