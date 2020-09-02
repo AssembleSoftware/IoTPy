@@ -15,9 +15,11 @@ Look at:
 """
 #!/usr/bin/env python
 import pika
-import sys
 import json
 import threading
+
+import sys
+sys.path.append("../")
 
 from IoTPy.helper_functions.print_stream import print_stream
 
@@ -49,8 +51,14 @@ def pika_subscriber_test():
     # Step 0.1: Define source thread targets (if any).
     def pika_callback_thread_target(procs):
         def callback(ch, method, properties, body):
-            extend_stream(procs, data=json.loads(body),
-                          stream_name='pika_receive_stream')
+            data=json.loads(body)
+            print ('data[-1] is ', data[-1])
+            if data[-1] == '_finished':
+                print ('terminating')
+                terminate_stream(procs, stream_name='pika_receive_stream')
+                sys.exit()
+            else:
+                extend_stream(procs, data, stream_name='pika_receive_stream')
         # Declare the Pika subscriber
         pika_subscriber = PikaSubscriber(
             callback, routing_key='temperature',
