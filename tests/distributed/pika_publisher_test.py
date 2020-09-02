@@ -24,18 +24,17 @@ def test_pika_publisher():
 
     # Step 0.0: Define agent functions.
 
-    # pika_publisher_agent is the agent for the processor called 'pika_publisher_process'.
+    # pika_publisher_agent is the agent for the processor
+    # called 'pika_publisher_process'.
     def pika_publisher_agent(in_streams, out_streams):
-        y = Stream('y')
-        def f(v):
-            print('v is ', v)
-            return v
-        map_element(f, in_streams[0], y)
-        print_stream(y, y.name)
-        publisher = PikaPublisher(routing_key='temperature', exchange='publications', host='localhost')
-        publisher.publish(y)
+        # publish in_streams[0] for the specified routing key, exchange, host.
+        PikaPublisher(
+            routing_key='temperature', exchange='publications',
+            host='localhost').publish(in_streams[0])
 
     # Step 0.1: Define source thread targets (if any).
+    # This is some arbitrary data merely for testing. In this example
+    # the data is a list of lists.
     data = [list(range(5)), list(range(5, 10)), list(range(10, 20))]
     def thread_target_source(procs):
         for sublist in data:
