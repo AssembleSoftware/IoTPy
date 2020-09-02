@@ -1,25 +1,10 @@
-"""
-You MUST test pika_subscriber_test.py and pika_publisher_test.py
-before you use distributed computing with IoTPy.
-
-When you execute:
-                   pika_subscriber_test.py
-in one terminal window, and execute
-                   pika_publisher_test.py argument
-in a different terminal window, you shoud see the argument echoed
-in the subscriber window.
-
-Look at:
- https://www.rabbitmq.com/tutorials/tutorial-one-python.html
-
-"""
-#!/usr/bin/env python
 import pika
 import json
 import time
+import threading
 
-
-
+import sys
+sys.path.append("../")
 from IoTPy.core.agent import Agent
 from IoTPy.core.stream import Stream, StreamArray, _no_value, _multivalue, run
 from IoTPy.agent_types.op import map_element
@@ -32,9 +17,59 @@ from IoTPy.concurrency.multicore import get_proc_that_inputs_source
 from IoTPy.concurrency.multicore import extend_stream
 from IoTPy.concurrency.PikaPublisher import PikaPublisher
 
-publisher = PikaPublisher(
-    routing_key='temperature',
-    exchange='publications', host='localhost')
+
+def test_pika_publisher():
+    # Step 0: Define agent functions, source threads 
+    # and actuator threads (if any).
+
+    # Step 0.0: Define agent functions.
+
+    # pika_publisher_agent is the agent for the processor called 'pika_publisher_process'.
+    def pika_publisher_agent(in_streams, out_streams):
+        y = Stream('y')
+        def f(v):
+            print('v is ', v)
+            return v
+        map_element(f, in_streams[0], y)
+        print_stream(y, y.name)
+        publisher = PikaPublisher(routing_key='temperature', exchange='publications', host='localhost')
+        publisher.publish(y)
+
+    # Step 0.1: Define source thread targets (if any).
+    data = [list(range(5)), list(range(5, 10)), list(range(10, 20))]
+    def thread_target_source(procs):
+        for sublist in data:
+            extend_stream(procs, data=sublist, stream_name='source')
+            # Sleep to simulate an external data source.
+            time.sleep(0.001)
+        # Terminate stream because this stream will not be extended.
+        terminate_stream(procs, stream_name='source')
+
+    # Step 1: multicore_specification of streams and processes.
+    # Specify Streams: list of pairs (stream_name, stream_type).
+    # Specify Processes: name, agent function, 
+    #       lists of inputs and outputs, additional arguments.
+    multicore_specification = [
+        # Streams
+        [('source', 'x')],
+        # Processes
+        [{'name': 'pika_publisher_process', 'agent': pika_publisher_agent, 
+          'inputs':['source'], 'sources': ['source']}]]
+
+    # Step 2: Create processes.
+    processes, procs = get_processes_and_procs(multicore_specification)
+
+    # Step 3: Create threads (if any)
+    thread_0 = threading.Thread(target=thread_target_source, args=(procs,))
+
+    # Step 4: Specify which process each thread runs in.
+    # thread_0 runs in the process called 'p1'
+    procs['pika_publisher_process'].threads = [thread_0]
+
+    # Step 5: Start, join and terminate processes.
+    for process in processes: process.start()
+    for process in processes: process.join()
+    for process in processes: process.terminate()
 
 def test():
     publisher = PikaPublisher(
@@ -42,54 +77,16 @@ def test():
         exchange='publications', host='localhost')
     x = Stream('x')
     y = Stream('y')
-    map_element(lambda v: 2*v, x, y)
+    map_element(lambda v: 10*v, x, y)
     publisher.publish(y)
     for i in range(3):
         x.extend(list(range(i*4, (i+1)*4)))
         run()
         time.sleep(0.001)
-    
 
-def pika_publisher_test():
-    """
-    Simple example
+#--------------------------------------------
+# TESTS
+#--------------------------------------------
+test()
+test_pika_publisher()
 
-    """
-    publisher = PikaPublisher(
-        routing_key='temperature',
-        exchange='publications', host='localhost')
-
-    # Agent function for process named 'p0'
-    def f(in_streams, out_streams):
-        print ('in f')
-        print ('in_streams[0]')
-        #print_stream(in_streams[0], 'x')
-        publisher.publish(in_streams[0])
-        #publisher.close()
-
-    # Source thread target for source stream named 'x'.
-    def h(proc):
-        proc.copy_stream(data=list(range(10)), stream_name='x')
-        proc.finished_source(stream_name='x')
-
-    # The specification
-    multicore_specification = [
-        # Streams
-        [('x', 'i')],
-        # Processes
-        [
-            # Process p0
-            {'name': 'p0', 'agent': f, 'inputs':['x'], 'sources': ['x'],
-             'source_functions':[h]}
-        ]
-       ]
-
-    # Execute processes (after including your own non IoTPy processes)
-    processes = get_processes(multicore_specification)
-    for process in processes: process.start()
-    for process in processes: process.join()
-    for process in processes: process.terminate()
-
-if __name__ == '__main__':
-    test()
-    ## pika_publisher_test()
