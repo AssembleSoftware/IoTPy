@@ -31,10 +31,10 @@ CLASSIFIERS = ['Intended Audience :: Science/Research',
 
 setup(
     name="IoTPy", 
-    version=VER,
+    version=1.1.1,
     author="Mani Chandy",
-    author_email="",
-    description="IoTPy - Python for Streams",
+    author_email="kmchandy@gmail.com",
+    description="IoTPy - Sense & Respond Applications",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/AssembleSoftware/IoTPy",
