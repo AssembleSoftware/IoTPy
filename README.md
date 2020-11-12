@@ -16,7 +16,9 @@ The two goals of IoTPy:
 
 Sensors, social media, news feeds, webcams and other sources generate streams of data. Many applications ingest and analyze data streams to control actuators, generate alerts, and feed continuous displays. IoTPy helps you to build such applications.
 
-IoTPy is currently distributed under the 3-Clause BSD license.
+IoTPy is distributed under the 3-Clause BSD license. Collaborations are welcome.
+
+Look at AssembleSoftware.com for documentation and tutorials.
 
 ## Installation
 
