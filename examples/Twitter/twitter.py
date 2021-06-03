@@ -39,11 +39,6 @@ sentiment_analyzer = SentimentIntensityAnalyzer()
 ## consumer_key = ""
 ## consumer_secret = ""
 
-access_token = "999118734320009216-jaE4Rmc6fU11sMmBKb566YTFAJoMPV5"
-access_token_secret = "6ZxqJdK2RU6iridMX1MzSqr3uNpQsC9fv1E6otpZquLiF"
-consumer_key = "Iv6RTiO7Quw3ivH0GWPWqbiD4"
-consumer_secret = "theWmGwcKFG76OtTerxwhrxfX5nSDqGDWB2almLlp2ndRpxACm"
-
 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(access_token, access_token_secret)
 api = tweepy.API(auth)
