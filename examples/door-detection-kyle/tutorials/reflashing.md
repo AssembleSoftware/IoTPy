@@ -1,7 +1,7 @@
 # Reflashing the Pi
 You'll probably need to do this if you can't boot to the desktop. I had a "firmware not found" error message:
 
-!["firmware not found" screen](images/firmware_not_found.jpg)
+!["firmware not found" screen](../images/firmware_not_found.jpg)
 
 ## Formatting
 
@@ -11,12 +11,12 @@ I got my Pi from Canakit, so I initially looked at their paper guide to figure o
 
 By the way, make sure your microSD card is plugged into a microSD to USB adapter, since very few computers actually have SD (let alone micro SD) ports these days. Here's the one was part of my Canakit bundle, although there are better-designed ones (that are also faster by way of USB 3.0 support) out there:
 
-![Canakit Micro SD to USB adapter, side 1](images/canakit_adapter_1.jpg)
-![Canakit Micro SD to USB adapter, side 2](images/canakit_adapter_2.jpg)
+![Canakit Micro SD to USB adapter, side 1](../images/canakit_adapter_1.jpg)
+![Canakit Micro SD to USB adapter, side 2](../images/canakit_adapter_2.jpg)
 
 For this particular one, I had to slot in the micro SD on the underside of the USB. The fit felt and looked a little sketchy to me (it was also a hassle to remove the SD card), but it worked.
 
-![Canakit adapter with microSD](images/canakit_adapter_with_microsd.jpg)
+![Canakit adapter with microSD](../images/canakit_adapter_with_microsd.jpg)
 
 If you have this particular adatper, don't bother trying to get the micro SD to sit flush in the USB. It *will* stick out, and it won't look any better than that.
 
@@ -26,4 +26,4 @@ I tried formatting the microSD card on my personal Windows system, but that just
 
 Then, **on that computer** (similarly, you can't use your RPi to flash its own SD card), install the Raspberry Pi Imager: [https://www.raspberrypi.com/software/](https://www.raspberrypi.com/software/). Select your operating system to install (Raspberry Pi OS, 32-bit) and your storage (ie., your freshly formatted SD card); then, you're pretty much home free.
 
-![Raspberry Pi Imager](images/raspberry_pi_imager.png)
+![Raspberry Pi Imager](../images/raspberry_pi_imager.png)
