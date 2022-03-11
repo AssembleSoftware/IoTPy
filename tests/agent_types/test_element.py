@@ -2,8 +2,10 @@
 This module tests element_agent.py
 
 """
-import numpy as np
+import os
 import sys
+sys.path.append("../../")
+
 # Check the version of Python
 is_py2 = sys.version[0] == '2'
 if is_py2:
@@ -11,6 +13,8 @@ if is_py2:
 else:
     import queue as queue
 import threading
+
+import numpy as np
 
 import unittest
 

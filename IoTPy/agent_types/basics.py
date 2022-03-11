@@ -307,6 +307,16 @@ def sink_w(func):
         return g
     return wrapper()
 
+#-------------------------------------------------------------------
+# filter_element
+#-------------------------------------------------------------------
+def filter_e(func):
+    def wrapper(**kwargs):
+        def g(s, **kwargs):
+            return filter_element_f(func, s, **kwargs)
+        return g
+    return wrapper()
+
 #------------------------------------------------------------
 #       USEFUL FUNCTIONS OTHER THAN WRAPPERS
 #------------------------------------------------------------

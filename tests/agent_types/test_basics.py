@@ -1,3 +1,7 @@
+import os
+import sys
+sys.path.append("../../")
+
 import unittest
 
 from IoTPy.core.stream import Stream, StreamArray, _multivalue, run 
@@ -14,17 +18,20 @@ from IoTPy.agent_types.split import split_element_f, split_window_f, split_eleme
 from IoTPy.agent_types.split import split_element, split_window
 from IoTPy.agent_types.multi import multi_element_f, multi_window_f, multi_element, multi_window
 from IoTPy.agent_types.sink import sink_element, sink_window
-from IoTPy.agent_types.basics import *
+from IoTPy.agent_types.basics import f_mul
 
 
 class test_basics(unittest.TestCase):
 
     def test_f_mul(self):
         x = Stream()
+        print ('f_mul ', f_mul)
         y = f_mul(x, 2)
         x.extend(list(range(5)))
         run()
         assert recent_values(y) == [0, 2, 4, 6, 8]
+
+class test_temp():
         
     def test_r_mul(self):
         x = Stream()

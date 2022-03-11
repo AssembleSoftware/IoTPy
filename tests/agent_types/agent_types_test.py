@@ -1,3 +1,7 @@
+import os
+import sys
+sys.path.append("../")
+
 import unittest
 from .element_test import test_element
 from .list_test import test_list
