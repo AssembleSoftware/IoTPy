@@ -278,7 +278,8 @@ def stream_to_list(
         ext_kw = kwargs
         ext_kw['target_list'] = target_list
         ext_kw['element_function'] = element_function
-        sink(function_stateful_append, in_stream, state, **ext_kw) 
+        # function_stateful_append returns the next state of the agent
+        state = sink(function_stateful_append, in_stream, state, **ext_kw) 
 
 # -----------------------------
 def stream_to_json(in_stream, filename):
@@ -318,7 +319,8 @@ def stream_to_file(
         ext_kw = kwargs
         ext_kw['filename'] = filename
         ext_kw['element_function'] = element_function
-        sink(function_stateful_append, in_stream, state, **ext_kw)
+        # function_stateful_append returns the next state of the agent
+        state = sink(function_stateful_append, in_stream, state, **ext_kw)
 
 #----------------------------------------------------
 def stream_to_queue(
@@ -414,7 +416,7 @@ def sink_window(func, in_stream,
             if state is None:
                 func(window, *args, **kwargs)
             else:
-                func(window, state, *args, **kwargs)
+                state = func(window, state, *args, **kwargs)
         # return output_list which is empty, next state, new starting indexes.
         return ([], state, [in_list.start+num_steps*step_size])
     # Finished transition
