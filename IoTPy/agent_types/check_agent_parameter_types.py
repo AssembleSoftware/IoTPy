@@ -4,6 +4,15 @@ from inspect import signature
 from ..core.stream import StreamArray, Stream 
 from ..core.agent import InList
 
+def get_args_and_defaults(f):
+    args, defaults = [], []
+    for param in signature(f).parameters.values():
+        if param.default is param.empty:
+            args.append(str(param))
+        else:
+            defaults.append(str(param))
+    return [args, defaults]
+
 def check_list_of_streams_type(list_of_streams, agent_name, parameter_name):
     """ Helper function to check the types of streams used by an agent.
     Used by: check_agent_arguments()
@@ -54,9 +63,9 @@ def check_in_lists_type(name, in_lists, num_in_streams):
 
 def check_num_args_in_func_no_state(name, func, func_args, func_kwargs):
     if isinstance(func, types.FunctionType):
-        args_and_defaults = signature(func)
-        args = args_and_defaults.args
-        defaults = args_and_defaults.defaults
+        args_and_defaults = get_args_and_defaults(func)
+        args = args_and_defaults[0]
+        defaults = args_and_defaults[1]
         if defaults is None:
             assert len(args) <= 1+len(func_args)+len(func_kwargs), \
                     ' Error in agent named {0}. \n '\
@@ -73,9 +82,9 @@ def check_num_args_in_func_with_state(name, func, func_args, func_kwargs):
     assert (isinstance(func, types.FunctionType) or
             isinstance(func, types.MethodType)), \
       ' func is {0}, but it must be a function or method'.format(func)
-    args_and_defaults = signature(func)
-    args = args_and_defaults.args
-    defaults = args_and_defaults.defaults
+    args_and_defaults = get_args_and_defaults(func)
+    args = args_and_defaults[0]
+    defaults = args_and_defaults[1]
     assert len(args) <= 2+len(func_args)+len(func_kwargs), \
       'Error in agent named {0}. \n'\
       ' State is not None; so func, {1}, should have exactly 2 arguments, \n'\
