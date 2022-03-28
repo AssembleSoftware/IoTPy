@@ -115,6 +115,9 @@ def sink_element(
     # Create agent
     return Agent([in_stream], [], transition, state, call_streams, name)
 
+
+
+
 #-----------------------------------------------------------------------
 def sink_conditional(
         func, in_stream, state=None, call_streams=None, name=None,
@@ -187,7 +190,14 @@ def sink_conditional(
     # Create agent
     return Agent([in_stream], [], transition, state, call_streams, name)
 
-
+#-----------------------------------------------------------------------
+# SINK: SINGLE INPUT STREAM, NO OUTPUT
+#-----------------------------------------------------------------------
+def f_stream(
+        func, in_stream, state=None, call_streams=None, name=None,
+        *args, **kwargs):
+    sink_element(func, in_stream, state=None, call_streams=None,
+                     name=None, *args, **kwargs)
 #-----------------------------------------------------------------------
 def signal_sink(
         func, in_stream, state=None, name=None,
@@ -359,6 +369,7 @@ def stream_to_buffer(in_stream, target_buffer):
     sink(append_target_buffer, in_stream)
     return
 
+#------------------------------------------------------------------
 def sink_window(func, in_stream,
                 window_size, step_size=1,
                 state=None, call_streams=None, name=None,
@@ -423,8 +434,21 @@ def sink_window(func, in_stream,
 
     # Create agent
     # This agent has no output streams, and so out_streams is [].
-    return Agent([in_stream], [], transition, state, call_streams, name)
+    return Agent([in_stream], [], transition, state, call_streams,
+                     name)
 
+
+def f_window(func, in_stream,
+                window_size, step_size=1,
+                state=None, call_streams=None, name=None,
+                *args, **kwargs):
+    sink_window(func, in_stream, window_size, step_size=1,
+                    state=None, call_streams=None, name=None,
+                    *args, **kwargs)
+
+
+
+#------------------------------------------------------------------
 def sink_list(func, in_stream, state=None,
                     call_streams=None, name=None,
                     *args, **kwargs):
