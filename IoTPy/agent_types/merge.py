@@ -349,7 +349,68 @@ def merge_asynch(
         return ([output_list], state, [v.stop for v in in_lists])
 
     # Create agent
-    return Agent(in_streams, [out_stream], transition, state, call_streams, name)
+    return Agent(in_streams, [out_stream], transition, state,
+                     call_streams, name) 
+
+#----------------------------------------------------------------------------
+def f_join_asynch(
+        func, in_streams, state=None, call_streams=None, name='f_join_asynch',
+        **kwargs):
+    """
+    Parameters
+    ----------
+        func: function
+           function on elements of ANY input stream
+        in_streams: list of Stream
+           The list of input streams of the agent
+        out_stream=None
+        state=None
+        name: str
+           Name of the agent created by this function.
+    Returns
+    -------
+        Agent.
+         The agent created by this function.
+
+    """
+    def transition(in_lists, state):
+        for v in in_lists:
+            # loop through each in_stream with one in_list
+            # per in_stream
+            if v.stop > v.start:
+                # In the following, input_list is the list of new 
+                # values on an in_stream
+                input_list = v.list[v.start:v.stop]
+        
+        # If the input data is empty, i.e., if v.stop == v.start for all
+        # v in in_lists, then return empty lists for  each output stream, 
+        # and leave the state and the starting point for each input
+        # stream unchanged.
+        if all(v.stop <= v.start for v in in_lists):
+            return ([], state, [v.start for v in in_lists])
+
+        # Assert at least one input stream has unprocessed data.
+        for v in in_lists:
+            # if v.stop <= v.start then skip this input stream
+            # because no new messages have arrived on this stream.
+            if v.stop > v.start:
+                # In the following,input_list is the list of new values
+                # on the input stream with index stream_number
+                input_list = v.list[v.start:v.stop]
+
+                if state is None:
+                    for element in input_list:
+                        func(element, **kwargs)
+                else:
+                    for element in input_list:
+                        state = func(element, state, **kwargs)
+
+        return ([], state, [v.stop for v in in_lists])
+
+    # Create agent
+    return Agent(in_streams, [], transition, state, call_streams, name)
+
+#----------------------------------------------------------------------------
 
 def merge_asynch_f(
         func, in_streams, state=None, *args, **kwargs):
