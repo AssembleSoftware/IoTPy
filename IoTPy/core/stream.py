@@ -559,6 +559,10 @@ class Stream(object):
             print ('value =', {}).format(value)
             raise
 
+    def _create_recent(self, size):
+        # Overloaded by StreamArray
+        return [0]*size
+
     def _set_up_next_recent(self):
         """
         This step deletes elements of recent that are
@@ -577,24 +581,28 @@ class Stream(object):
         # The number of elements that we are retaining is
         # num_retain_in_memory
         num_retain_in_memory = 1 + self.stop - min_start
-        assert num_retain_in_memory > 0
+
         # If we want to retain more elements in memory than
         # there is space available, then we can only
         # retain elements that fill the space.
         if num_retain_in_memory > self.num_in_memory:
-            num_retain_in_memory = self.num_in_memory 
+            num_retain_in_memory = self.num_in_memory
+            
+        assert num_retain_in_memory > 0
+        
         # Shift the most recent num_retain_in_memory elements in
         # the stream to start of the buffer.
         num_shift = self.stop - num_retain_in_memory
         self.recent[:num_retain_in_memory] = \
-          self.recent[num_shift : self.stop]
+          self.recent[num_shift:self.stop]
         self.offset += num_shift
         self.stop = num_retain_in_memory
         # Zero out the unused part of self.recent. This step isn't
         # necessary; however, doing so helps in debugging. If an
         # agent reads a list of zeros then the agent is probably
-        # reading an uninitialized part of the stream
-        self.recent[self.stop:] = [0]*(len(self.recent) - self.stop)
+        # reading an uninitialized part of the stream.
+        # This step is overloaded in StreamArray.
+        self.recent[self.stop:] = self._create_recent(len(self.recent)-self.stop)
 
         # A reader reading the value in a slot j in the old recent
         # will now read the same value in slot (j - num_shift) in the
@@ -763,6 +771,7 @@ class StreamArray(Stream):
             d = list(self.dimension)
             d.insert(0, size)
             return np.zeros(d, self.dtype)
+        self.recent[self.stop:] = [0]*(len(self.recent) - self.stop)
         
     def append(self, value):
         """
@@ -886,8 +895,6 @@ class StreamArray(Stream):
         self.recent[self.stop: self.stop+len(output_array)] = output_array
         self.stop += len(output_array)
         self.wakeup_subscribers()
-        ## for subscriber in self.subscribers_set:
-        ##     subscriber.next()
 
     def length(self):
         return self.offset + self.stop
