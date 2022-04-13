@@ -69,6 +69,21 @@ class join_timed(object):
                     in_stream.start[self.callback] += 1
             self.out_stream.append((min_time, output,))
 
+class sliding_window(object):
+    def __init__(self, in_stream, out_stream, window_size, step_size, func, **kwargs):
+        self.in_stream = in_stream
+        self.out_stream = out_stream
+        self.window_size = window_size
+        self.step_size = step_size
+        self.func = func
+        self.in_stream.subscribe(self.callback)
+        self.kwargs = kwargs
+    def callback(self):
+        while self.in_stream.start[self.callback] + self.window_size < self.in_stream.stop:
+            start = self.in_stream.start[self.callback] 
+            window = self.in_stream.recent[start : start + self.window_size]
+            self.out_stream.extend([self.func(window, **self.kwargs)])
+            self.in_stream.start[self.callback] += self.step_size
 
 #------------------------------------------------------------------------
 # Tests
@@ -179,6 +194,16 @@ def example_join_timed():
     y.print_recent()
     z.print_recent()
 
+
+def example_sliding_window():
+    x, y = Stream(name='x'), Stream(name='y')
+    sliding_window(in_stream=x, out_stream=y, window_size=3, step_size=2, func=sum)
+
+    x.extend(list(range(10)))
+    run()
+    x.print_recent()
+    y.print_recent()
+
     
 
 if __name__ =='__main__':
@@ -193,3 +218,6 @@ if __name__ =='__main__':
     print('')
     print('example_join_timed')
     example_join_timed()
+    print('')
+    print('example_sliding_window')
+    example_sliding_window()
