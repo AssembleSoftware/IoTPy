@@ -85,6 +85,7 @@ class sliding_window(object):
             self.out_stream.extend([self.func(window, **self.kwargs)])
             self.in_stream.start[self.callback] += self.step_size
 
+
 #------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------
