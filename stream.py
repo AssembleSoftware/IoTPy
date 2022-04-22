@@ -489,7 +489,6 @@ class StreamArray(Stream):
         
         # output_array should be an array.
         if isinstance(output_array, list) or isinstance(output_array, tuple):
-            output_array = remove_novalue_and_open_multivalue(output_array)
             output_array = np.array(output_array)
 
         assert(isinstance(output_array, np.ndarray)), 'Exending stream array, {0}, ' \

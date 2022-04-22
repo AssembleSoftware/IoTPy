@@ -1,60 +1,55 @@
-from stream import Stream, run
+from stream import Stream, StreamArray, run
 
-class map_stream(object):
-    def __init__(self, in_stream, out_stream, func, **kwargs):
+class single_item(object):
+    def __init__(self, in_stream, func, **kwargs):
         self.in_stream = in_stream
-        self.out_stream = out_stream
         self.func = func
-        self.in_stream.subscribe(self.callback)
         self.kwargs = kwargs
+        self.in_stream.subscribe(self.callback)
     def callback(self):
-        self.out_stream.extend(
-            [self.func(v, **self.kwargs) for v in self.in_stream.recent[
-                self.in_stream.start[self.callback] : self.in_stream.stop]])
+        for v in self.in_stream.recent[self.in_stream.start[self.callback] : self.in_stream.stop]:
+            self.func(v, **self.kwargs)
         self.in_stream.start[self.callback] = self.in_stream.stop
 
+
 class join_synch(object):
-    def __init__(self, in_streams, out_stream, func, **kwargs):
+    def __init__(self, in_streams, func, **kwargs):
         self.in_streams = in_streams
-        self.out_stream = out_stream
         self.func = func
-        for in_stream in self.in_streams:
-            in_stream.subscribe(self.callback)
         self.kwargs = kwargs
+        for in_stream in self.in_streams: 
+            in_stream.subscribe(self.callback)
     def callback(self):
         slices = [in_stream.recent[in_stream.start[self.callback] : in_stream.stop]
                   for in_stream in self.in_streams]
-        output = [self.func(v, **self.kwargs) for v in zip(*slices)]
-        self.out_stream.extend(output)
-        L = len(output)
+        zipped_slices = list(zip(*slices))
+        for v in zipped_slices: self.func(v, **self.kwargs)
         for in_stream in self.in_streams:
-            in_stream.start[self.callback] += L
+            in_stream.start[self.callback] += len(zipped_slices)
+
 
 class join_asynch(object):
-    def __init__(self, in_streams, out_stream, func, **kwargs):
+    def __init__(self, in_streams, func, **kwargs):
         self.in_streams = in_streams
-        self.out_stream = out_stream
         self.func = func
+        self.kwargs = kwargs
         for in_stream in self.in_streams:
             in_stream.subscribe(self.callback)
-        self.kwargs = kwargs
     def callback(self):
         for in_stream in self.in_streams:
-            self.out_stream.extend(
-                [self.func(v, **self.kwargs) for v in in_stream.recent[
-                    in_stream.start[self.callback]: in_stream.stop]])
+            for v in in_stream.recent[in_stream.start[self.callback]: in_stream.stop]:
+                self.func(v, **self.kwargs)
             in_stream.start[self.callback] = in_stream.stop
 
 
 class join_timed(object):
-    def __init__(self, in_streams, out_stream, get_time, func, **kwargs):
+    def __init__(self, in_streams, get_time, func, **kwargs):
         self.in_streams = in_streams
-        self.out_stream = out_stream
         self.get_time = get_time
         self.func = func
+        self.kwargs = kwargs
         for in_stream in self.in_streams:
             in_stream.subscribe(self.callback)
-        self.kwargs = kwargs
     def callback(self):
         while all([in_stream.start[self.callback] < in_stream.stop 
                    for in_stream in self.in_streams]):        
@@ -62,69 +57,106 @@ class join_timed(object):
                      for in_stream in self.in_streams]
             times = [self.get_time(item) for item in items]
             min_time = min(times)
-            output = [None for in_stream in self.in_streams]
+            operand = [None for in_stream in self.in_streams]
             for i, in_stream in enumerate(self.in_streams):
                 if times[i] == min_time:
-                    output[i] = self.func(items[i])
+                    operand[i] = items[i]
                     in_stream.start[self.callback] += 1
-            self.out_stream.append((min_time, output,))
+            self.func((min_time, operand), **self.kwargs)
+
 
 class sliding_window(object):
-    def __init__(self, in_stream, out_stream, window_size, step_size, func, **kwargs):
+    def __init__(self, in_stream, window_size, step_size, func, **kwargs):
         self.in_stream = in_stream
-        self.out_stream = out_stream
         self.window_size = window_size
         self.step_size = step_size
         self.func = func
-        self.in_stream.subscribe(self.callback)
         self.kwargs = kwargs
+        self.in_stream.subscribe(self.callback)
     def callback(self):
-        while self.in_stream.start[self.callback] + self.window_size < self.in_stream.stop:
+        while self.in_stream.start[self.callback] + self.window_size <= self.in_stream.stop:
             start = self.in_stream.start[self.callback] 
             window = self.in_stream.recent[start : start + self.window_size]
-            self.out_stream.extend([self.func(window, **self.kwargs)])
+            self.func(window, **self.kwargs)
             self.in_stream.start[self.callback] += self.step_size
+
+
+
+import numpy as np
+class detect_anomaly(object):
+    def __init__(self, in_stream, window_size, anomaly_size, anomaly_factor, quench_size, cloud_func, **kwargs):
+        self.in_stream = in_stream
+        self.window_size = window_size
+        self.anomaly_size = anomaly_size
+        self.anomaly_factor = anomaly_factor
+        self.quench_size = quench_size
+        self.cloud_func = cloud_func
+        self.kwargs = kwargs
+        self.in_stream.subscribe(self.callback)
+    def callback(self):
+        while self.in_stream.start[self.callback] + self.window_size <= self.in_stream.stop:
+            start = self.in_stream.start[self.callback] 
+            window = self.in_stream.recent[start : start + self.window_size]
+            if np.mean(window[-self.anomaly_size: ]) > np.mean(window)*self.anomaly_factor:
+                self.cloud_func(window, **self.kwargs)
+                self.in_stream.start[self.callback] += self.quench_size+1
+            else:
+                self.in_stream.start[self.callback] += 1
 
 
 #------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------
+def example_single_item():
 
-def example_map_stream():
     x, y, z = Stream(name='x'), Stream(name='y'), Stream(name='z')
 
     # Examples of functions passed to map_stream objects below
-    # Function ff has a a single parameter: an item v of a stream.
-    def f(v): return 2*v
-        
-    # Function h has two parameters: the first is an item v of a
-    # stream and the second is a keyword argument (see kwargs)
-    def h(v, multiplier): return multiplier*v
+    # Function f has two parameters: an item v of the input stream
+    # and a keyword parameter, out_stream, which is the output stream.
+    def f(v, out_stream): 
+        out_stream.append(2*v)
 
-    # Create map_stream objects
-    map_stream(in_stream=x, out_stream=y, func=f)
-    map_stream(in_stream=x, out_stream=z, func=h, multiplier=3)
+    # This function has three parameters: the first is an item v of the
+    # input stream, the second is a keyword argument (see kwargs) out_stream,
+    # which is the output stream, and another keyword argument, multiplier.
+    def h(v, out_stream, multiplier): 
+        out_stream.append(multiplier*v)
+
+    # Set up the agent with input stream x and output stream y.
+    single_item(in_stream=x, out_stream=y, func=f)
+    # Set up the agent with input stream x and output stream z.
+    single_item(in_stream=x, out_stream=z, func=h, multiplier=3)
 
     # Put values into input stream x.
     x.extend([0, 1, 2])
+    # Run agents until all streams have been processed.
     run()
-
     # Functions f and h are called when stream x is extended.
+    
+    # Print the streams.
+    x.print_recent()
+    y.print_recent()
+    z.print_recent()
+    # y[i] = 2*x[i]), and z[i] = multiplier*x[i])
+
+    # Put more values into input stream x.
+    x.extend([3, 4])
+    run()
+    # Functions f and h are called when stream x is extended.
+    
     # Print the output streams.
     x.print_recent()
     y.print_recent()
     z.print_recent()
-    # y[i] = f(x[i]), and z[i] = h(x[i])
-
-    # Put values into input stream x.
-    x.extend([3, 4])
-    run()
-    x.print_recent()
-    y.print_recent()
-    z.print_recent()
+    
 
 def example_join_synch():
-    def f(v, multiplier): return sum(v) * multiplier
+
+    def f(v, out_stream, multiplier):
+        out_stream.append(sum(v) * multiplier)
+        return
+
     x, y, z = Stream(name='x'), Stream(name='y'), Stream(name='z')
     join_synch(in_streams=[x, y], out_stream=z, func=f, multiplier=3)
 
@@ -140,11 +172,14 @@ def example_join_synch():
     run()
     x.print_recent()
     y.print_recent()
-    z.print_recent()
+
+
 
 def example_join_asynch():
-    def f(v, multiplier): return v * multiplier
-        
+    def f(v, out_stream, multiplier):
+        out_stream.append(v * multiplier)
+        return
+
     x, y, z = Stream(name='x'), Stream(name='y'), Stream(name='z')
     join_asynch(in_streams=[x, y], out_stream=z, func=f, multiplier=3)
 
@@ -167,14 +202,17 @@ def example_join_asynch():
     y.print_recent()
     z.print_recent()
 
+
 def example_join_timed():
-    
-    def get_time(v): return v[0]
-        
-    def f(v): return v
-        
+    def get_time(v):
+        return v[0]
+
+    def f(v, out_stream):
+        out_stream.append(v)
+        return
+
     x, y, z = Stream(name='x'), Stream(name='y'), Stream(name='z')
-    join_timed(in_streams=[x, y], out_stream=z, func=f, get_time=get_time)
+    join_timed(in_streams=[x, y], func=f, get_time=get_time, out_stream=z)
 
     x.extend([(1, 0), (10, 1)])
     y.extend([(2, 'A'), (4, 'B')])
@@ -197,19 +235,52 @@ def example_join_timed():
 
 
 def example_sliding_window():
+    def g(window, out_stream):
+        out_stream.append(sum(window))
+        return
+
     x, y = Stream(name='x'), Stream(name='y')
-    sliding_window(in_stream=x, out_stream=y, window_size=3, step_size=2, func=sum)
+    sliding_window(in_stream=x, window_size=3, step_size=2, func=g, out_stream=y)
 
     x.extend(list(range(10)))
     run()
     x.print_recent()
     y.print_recent()
 
+
+def example_detect_anomaly():
+    def cloud_func(window, ):
+        print ('window ', window)
+        return
+
+    x = Stream(name='x')
+    detect_anomaly(in_stream=x, window_size=4, anomaly_size=2, anomaly_factor=1.1, quench_size=2,
+                       cloud_func=cloud_func)
+    x.extend([1, 1, 2, 2, 3, 4, 7, 6, 11, 0, 3, 5, 5, 11, 11, 19, 19, 31])
+    run()
+    x.print_recent()
+
+
+def example_detect_anomaly_with_StreamArray():
+    def cloud_func(window, ):
+        print ('window ', window)
+        return
+
+    x = StreamArray(name='x', dtype='float', dimension=2)
     
+    detect_anomaly(in_stream=x, window_size=3, anomaly_size=1, anomaly_factor=1.1, quench_size=1,
+                       cloud_func=cloud_func)
+
+    x.extend([[1.0, 1.0], [2.0, 2.0], [3.0, 3.0], [7.0, 6.0], [11.0, 6.0], [2.0, 1.0], [18.0, 16.0], [2.0, 4.0]])
+    run()
+
+    x.extend([[0.0, 1.0], [8.0, 9.0], [12.0, 15.0], [1.0, 2.0], [21.0, 31.0], [0.0, 0.0]])
+    run()
+
 
 if __name__ =='__main__':
-    print('example_map_stream')
-    example_map_stream()
+    print('example_single_item')
+    example_single_item()
     print('')
     print('example_join_synch')
     example_join_synch()
@@ -222,3 +293,9 @@ if __name__ =='__main__':
     print('')
     print('example_sliding_window')
     example_sliding_window()
+    print('')
+    print('example_detect_anomaly')
+    example_detect_anomaly()
+    print('')
+    print('example_detect_anomaly_with_StreamArray')
+    example_detect_anomaly_with_StreamArray()
