@@ -81,6 +81,40 @@ class sliding_window(object):
             self.in_stream.start[self.callback] += self.step_size
 
 
+class subtract_mean_from_stream(object):
+    def __init__(self, in_stream, window_size, func, **kwargs):
+        self.in_stream = in_stream
+        self.window_size = window_size
+        self.func = func
+        self.kwargs = kwargs
+        self.in_stream.subscribe(self.callback)
+        self.midpoint = int(self.window_size/2)
+    def callback(self):
+        while self.in_stream.start[self.callback] + self.window_size <= self.in_stream.stop:
+            start = self.in_stream.start[self.callback] 
+            window = self.in_stream.recent[start : start + self.window_size]
+            item = window[self.midpoint] - np.mean(window)
+            self.func(item, **self.kwargs)
+            self.in_stream.start[self.callback] += 1
+
+
+class subtract_mean_from_StreamArray(object):
+    def __init__(self, in_stream, window_size, func, **kwargs):
+        self.in_stream = in_stream
+        self.window_size = window_size
+        self.func = func
+        self.kwargs = kwargs
+        self.in_stream.subscribe(self.callback)
+        self.midpoint = int(self.window_size/2)
+    def callback(self):
+        while self.in_stream.start[self.callback] + self.window_size <= self.in_stream.stop:
+            start = self.in_stream.start[self.callback] 
+            window = self.in_stream.recent[start : start + self.window_size]
+            item = window[self.midpoint] - np.mean(window, axis=0)
+            self.func(item, **self.kwargs)
+            self.in_stream.start[self.callback] += 1
+
+
 
 import numpy as np
 class detect_anomaly(object):
@@ -248,6 +282,50 @@ def example_sliding_window():
     y.print_recent()
 
 
+
+# EXAMPLE OF subtract_mean_from_StreamArray
+
+def append_item_to_StreamArray(v, out_stream):
+    out_stream.append(np.stack(v, axis=0))
+
+from stream import StreamArray
+
+def example_subtract_mean_from_StreamArray():
+    xx = StreamArray(name='xx', dtype=float, dimension=2)
+    yy = StreamArray(name='yy', dtype=float, dimension=2)
+    subtract_mean_from_StreamArray(
+        in_stream=xx, out_stream=yy, window_size=3, 
+        func=append_item_to_StreamArray)
+    
+    xx.extend([np.array([0., 1.]), np.array([2., 1.]), 
+               np.array([1., 1.]), np.array([2., 2.]), 
+               np.array([2., 1.])])
+    run()
+    xx.print_recent()
+    yy.print_recent()
+
+
+
+# EXAMPLE ILLUSTRATING example_subtract_mean_from_stream
+
+import numpy as np
+
+def append_item_to_stream(v, out_stream): out_stream.append(v)
+
+def example_subtract_mean_from_stream():
+    x, y = Stream(name='x'), Stream(name='y')
+        
+    subtract_mean_from_stream(
+        in_stream=x, window_size=3, 
+        func=append_item_to_stream, out_stream=y)
+    
+    x.extend([0, 1, 2, 1, 1, 1, 2, 2, 2, 1])
+    run()
+    x.print_recent()
+    y.print_recent()
+
+
+
 def example_detect_anomaly():
     def cloud_func(window, ):
         print ('window ', window)
@@ -294,8 +372,15 @@ if __name__ =='__main__':
     print('example_sliding_window')
     example_sliding_window()
     print('')
+    print('example_subtract_mean_from_stream')
+    example_subtract_mean_from_stream()
+    print('')
+    print('example_subtract_mean_from_StreamArray')
+    example_subtract_mean_from_StreamArray()
+    print('')
     print('example_detect_anomaly')
     example_detect_anomaly()
     print('')
     print('example_detect_anomaly_with_StreamArray')
     example_detect_anomaly_with_StreamArray()
+
