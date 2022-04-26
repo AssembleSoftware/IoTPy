@@ -88,12 +88,11 @@ class subtract_mean_from_stream(object):
         self.func = func
         self.kwargs = kwargs
         self.in_stream.subscribe(self.callback)
-        self.midpoint = int(self.window_size/2)
     def callback(self):
         while self.in_stream.start[self.callback] + self.window_size <= self.in_stream.stop:
             start = self.in_stream.start[self.callback] 
             window = self.in_stream.recent[start : start + self.window_size]
-            item = window[self.midpoint] - np.mean(window)
+            item = window[-1] - np.mean(window)
             self.func(item, **self.kwargs)
             self.in_stream.start[self.callback] += 1
 
@@ -105,12 +104,11 @@ class subtract_mean_from_StreamArray(object):
         self.func = func
         self.kwargs = kwargs
         self.in_stream.subscribe(self.callback)
-        self.midpoint = int(self.window_size/2)
     def callback(self):
         while self.in_stream.start[self.callback] + self.window_size <= self.in_stream.stop:
             start = self.in_stream.start[self.callback] 
             window = self.in_stream.recent[start : start + self.window_size]
-            item = window[self.midpoint] - np.mean(window, axis=0)
+            item = window[-1] - np.mean(window, axis=0)
             self.func(item, **self.kwargs)
             self.in_stream.start[self.callback] += 1
 
@@ -118,24 +116,38 @@ class subtract_mean_from_StreamArray(object):
 
 import numpy as np
 class detect_anomaly(object):
-    def __init__(self, in_stream, window_size, anomaly_size, anomaly_factor, quench_size, cloud_func, **kwargs):
+    def __init__(self, in_stream, window_size, anomaly_size,
+                     anomaly_factor, cloud_data_size,
+                     cloud_func, **kwargs): 
         self.in_stream = in_stream
-        self.window_size = window_size
-        self.anomaly_size = anomaly_size
-        self.anomaly_factor = anomaly_factor
-        self.quench_size = quench_size
+        self.W = window_size
+        self.A = anomaly_size
+        self.F = anomaly_factor
+        self.C = cloud_data_size
         self.cloud_func = cloud_func
         self.kwargs = kwargs
         self.in_stream.subscribe(self.callback)
+        self.anomaly = False
     def callback(self):
-        while self.in_stream.start[self.callback] + self.window_size <= self.in_stream.stop:
-            start = self.in_stream.start[self.callback] 
-            window = self.in_stream.recent[start : start + self.window_size]
-            if np.mean(window[-self.anomaly_size: ]) > np.mean(window)*self.anomaly_factor:
-                self.cloud_func(window, **self.kwargs)
-                self.in_stream.start[self.callback] += self.quench_size+1
+        start = self.in_stream.start[self.callback]
+        stop = self.in_stream.stop
+        R = self.in_stream.recent
+
+        while ((self.anomaly and stop - start >= self.C) or
+                   (not self.anomaly and start + self.W <= stop)):
+            if self.anomaly:
+                data_to_cloud = R[start : start+self.C]
+                self.anomaly = False
+                start += self.C
+                self.cloud_func(data_to_cloud, **self.kwargs)
             else:
-                self.in_stream.start[self.callback] += 1
+                window = R[start : start + self.W]
+                if (np.mean(window[-self.A: ]) >
+                        np.mean(window)*self.F):
+                    self.anomaly = True
+                    start += self.W - self.A
+                else:
+                    start += 1
 
 
 #------------------------------------------------------------------------
@@ -332,7 +344,8 @@ def example_detect_anomaly():
         return
 
     x = Stream(name='x')
-    detect_anomaly(in_stream=x, window_size=4, anomaly_size=2, anomaly_factor=1.1, quench_size=2,
+    detect_anomaly(in_stream=x, window_size=4, anomaly_size=2,
+                       anomaly_factor=1.1, cloud_data_size=2,
                        cloud_func=cloud_func)
     x.extend([1, 1, 2, 2, 3, 4, 7, 6, 11, 0, 3, 5, 5, 11, 11, 19, 19, 31])
     run()
@@ -346,13 +359,15 @@ def example_detect_anomaly_with_StreamArray():
 
     x = StreamArray(name='x', dtype='float', dimension=2)
     
-    detect_anomaly(in_stream=x, window_size=3, anomaly_size=1, anomaly_factor=1.1, quench_size=1,
+    detect_anomaly(in_stream=x, window_size=3, anomaly_size=1,
+                       anomaly_factor=1.1, cloud_data_size=2,
                        cloud_func=cloud_func)
 
     x.extend([[1.0, 1.0], [2.0, 2.0], [3.0, 3.0], [7.0, 6.0], [11.0, 6.0], [2.0, 1.0], [18.0, 16.0], [2.0, 4.0]])
     run()
 
-    x.extend([[0.0, 1.0], [8.0, 9.0], [12.0, 15.0], [1.0, 2.0], [21.0, 31.0], [0.0, 0.0]])
+    x.extend([[0.0, 1.0], [8.0, 9.0], [12.0, 15.0], [1.0, 2.0], [21.0,
+    31.0], [0.0, 0.0], [0., 0.]])
     run()
 
 

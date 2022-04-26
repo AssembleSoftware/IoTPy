@@ -35,7 +35,7 @@ accelerometers = ['i2c1_0x53', 'i2c1_0x1d']
 NUM_ACCELEROMETERS = len(accelerometers)
 NUM_AXES=3
 
-DEMEAN_WINDOW_SIZE = 10
+DEMEAN_WINDOW_SIZE = 4
 
 
 def append_item_to_stream(v, out_stream):
@@ -45,6 +45,8 @@ def append_item_to_StreamArray(v, out_stream):
     out_stream.append(np.stack(v, axis=0))
 
 def cloud_func(window, ):
+    print ('')
+    print ('anomaly!')
     print ('window ', window)
 
 # Specify acceleration streams, one stream for
@@ -85,13 +87,52 @@ join_synch(in_streams=zero_mean_streams,
                func=append_item_to_StreamArray)
 
 # Detect anomaly in joined zero-mean streams, and upload to cloud.
-detect_anomaly(in_stream=joined_stream, window_size=4, anomaly_size=2,
-                   anomaly_factor=1.1, quench_size=2,
+detect_anomaly(in_stream=joined_stream, window_size=2, anomaly_size=1,
+                   anomaly_factor=1.01, cloud_data_size=2,
                    cloud_func=cloud_func)
 
 
 
 
 if __name__ == '__main__':
-    def test():
+    acceleration_streams[0].extend(np.array(
+        [
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [2.0, 2.0, 2.0],
+            [2.0, 2.0, 2.0],
+            [2.0, 2.0, 2.0],
+            [3.0, 3.0, 3.0],
+            [101.0, 121.0, 201.0]
+        ]
+    ))
+    acceleration_streams[1].extend(np.array(
+        [
+            [1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [2.0, 2.0, 2.0],
+            [2.0, 2.0, 2.0],
+            [2.0, 2.0, 2.0],
+            [3.0, 3.0, 3.0],
+            [201.0, 221.0, 301.0]
+        ]
+    ))
+
+    run()
+
+    print()
+    print ("acceleration_streams")
+    for acceleration_stream in acceleration_streams:
+        acceleration_stream.print_recent()
+
+    print()
+    print ("zero_mean_streams")
+    for zero_mean_stream in zero_mean_streams:
+        zero_mean_stream.print_recent()
+
+    print()
+    print ("joined_stream")
+    joined_stream.print_recent()
+            
+        
     
