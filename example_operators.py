@@ -142,8 +142,20 @@ class detect_anomaly(object):
                 self.cloud_func(data_to_cloud, **self.kwargs)
             else:
                 window = R[start : start + self.W]
-                if (np.mean(window[-self.A: ]) >
-                        np.mean(window)*self.F):
+                window_mean = np.mean(window[:self.A])
+                window_std = np.std(window[:self.A])
+                anomaly_mean = np.mean(window[-self.A: ])
+                # if (np.abs(np.mean(window[-self.A: ])) >
+                #         np.abs(np.mean(window)*self.F)):
+                if (np.abs(anomaly_mean - window_mean) > self.F * window_std):
+                    # print(window[-self.A: ].shape)
+                    # print(window.shape)
+
+                    # print(window[-self.A: ])
+                    # print(window)
+
+                    # print(window_mean, window_std, anomaly_mean, np.abs(anomaly_mean - window_mean))
+                    # print()
                     self.anomaly = True
                     start += self.W - self.A
                 else:
