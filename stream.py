@@ -2,6 +2,9 @@
 
 """
 import numpy as np
+#import multiprocessing
+import threading
+import pickle
 import queue
 
 DEFAULT_NUM_IN_MEMORY = 64000
@@ -11,13 +14,28 @@ DEFAULT_NUM_IN_MEMORY = 64000
 # ----------------------------- CallbackQueue ---------------------------------
 #------------------------------------------------------------------------------
 
-class CallbackQueue(object):
+class Scheduler(object):
     """
-    Manages the queue of callback functions scheduled for execution.
-    The same as SimpleQueue except that this class has a set, 
+    Manages the queue of callback functions scheduled for execution,
+    and the input queue which feeds data to streams.
+    The queue of callback functions is the same as SimpleQueue except 
+    that this class has a set, 
          scheduled_callbacks
-    which is used to ensure that a callback function appears at most
-    once in a queue.
+    in addition to the queue of callback functions; the set
+    scheduled_callbacks is used to ensure that a callback function 
+    appears at most once in the queue of callback functions.
+
+    The data input queue is fed by external sources such as sensors.
+    Each item in the data input queue is a pair 
+               (stream_name, stream_item)
+    This stream_item is appended to the stream with name stream_name.
+    The scheduler gets data from the data input queue until the queue
+    becomes empty at which point the scheduler executes step() which
+    continues calling all executable callback functions until none
+    remain. Then the scheduler gets more data from the data input
+    queue. 
+
+    The scheduler halts if the attribute halted is set to True.
 
     Attributes
     ----------
@@ -27,11 +45,22 @@ class CallbackQueue(object):
        A callback function is in the set if and only if it is
        in the queue, q_callbacks. This set is used to ensure
        that each callback function appears at most once in the queue.
+    name_to_stream: dict
+       key: stream_name
+       value: stream
+    input_queue: multiprocessing.SimpleQueue
+       queue of input data for streams.
+    halted: Boolean
+       Initially False.
+       Scheduler stops after halted becomes True
 
     """
     def __init__(self):
         self.q_callbacks = queue.SimpleQueue()
         self.scheduled_callbacks = set()
+        self.name_to_stream = dict()
+        self.halted = False
+        self.input_queue = queue.Queue()
         
     def schedule_subscriber(self, f):
         """
@@ -42,6 +71,9 @@ class CallbackQueue(object):
             self.scheduled_callbacks.add(f)
             self.q_callbacks.put(f)
 
+    def register_stream(self, stream_name, stream):
+        self.name_to_stream[stream_name] = stream
+        
     def step(self):
         """
         Continues calling callback functions until there are
@@ -54,6 +86,19 @@ class CallbackQueue(object):
             if f in self.scheduled_callbacks:
                 self.scheduled_callbacks.discard(f)
                 f()
+
+
+    def start(self):
+        while not self.halted:
+            data = pickle.loads(self.input_queue.get())
+            stream_name, stream_item = data
+            print ('data ', data)
+            if stream_name == 'scheduler' and stream_item == 'halt':
+                self.halted = True
+                return
+            stream = self.name_to_stream[stream_name]
+            stream.extend(stream_item)
+            self.step()
 
 
 #------------------------------------------------------------------------------
@@ -148,18 +193,17 @@ class Stream(object):
     between min_start and stop need to be retained
     in self.recent. These elements are shifted down
     by _set_up_next_recent() elements.
-
     """
     # SCHEDULER
     # The scheduler is a Class attribute. It is not an
     # object instance attribute. All instances of Stream
     # use the same scheduler.
-    scheduler = CallbackQueue()
+    scheduler = Scheduler()
     
-    def __init__(self, name="UnnamedStream", 
+    
+    def __init__(self, name,
                  initial_value=[],
-                 num_in_memory=DEFAULT_NUM_IN_MEMORY,
-                 discard_None=True):
+                 num_in_memory=DEFAULT_NUM_IN_MEMORY):
         self.name = name
         self.num_in_memory = num_in_memory
         self.offset = 0
@@ -169,6 +213,10 @@ class Stream(object):
         self.subscribers_set = set()
         # The length of recent is num_in_memory.
         self.recent = [0] * self.num_in_memory
+        # Register stream with scheduler
+        print ('Stream.scheduler.register_stream')
+        print ('name ', name)
+        Stream.scheduler.register_stream(stream_name=name, stream=self)
         # Set up the initial value of the stream.
         self.extend(initial_value)
         
@@ -184,7 +232,7 @@ class Stream(object):
         self.subscribers_set.add(f)
         # Schedule f for execution. When f is called, if
         # start_index = 0 at that point, then f is a no-op.
-        self.scheduler.schedule_subscriber(f)
+        #self.scheduler.schedule_subscriber(f)
 
     def delete_subscriber(self, f):
         """
@@ -421,8 +469,9 @@ class StreamArray(Stream):
         self.stop = 0
         self.start = dict()
         self.subscribers_set = set()
-        if initial_value is not None:
-            self.extend(initial_value)
+        # Register stream with scheduler
+        Stream.scheduler.register_stream(stream_name=name, stream=self)
+        if initial_value is not None: self.extend(initial_value)
 
     def _create_recent(self, size):
         """Returns an array of np.zeros of the appropriate type

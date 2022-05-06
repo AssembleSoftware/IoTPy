@@ -1,101 +1,98 @@
-'''
-This file generates samples for determining whether the door is opening or not.
-'''
-import time
 import numpy as np
-from datetime import datetime
+import pickle
+import threading
+import time
 
 from stream import Stream, StreamArray, run
-from example_operators import subtract_mean_from_StreamArray
-from example_operators import join_synch, detect_anomaly
 
-"""
-import board
-import adafruit_bitbangio as bitbangio
-import adafruit_adxl34x
-
-i2c1 = bitbangio.I2C(board.SCL, board.SDA)
-i2c2 = bitbangio.I2C(board.D24, board.D23)
-
-# 83 is default 0x53
-# 0x1d for alt
-
-# Amount of time to wait before readings
-TIME_UNIT = 0.01
-
-accelerometers = [
-    adafruit_adxl34x.ADXL345(i2c1, address=0x53),
-    adafruit_adxl34x.ADXL345(i2c1, address=0x1d),
-    adafruit_adxl34x.ADXL345(i2c2, address=0x53),
-    adafruit_adxl34x.ADXL345(i2c2, address=0x1d)
-    ]
-"""
-accelerometers = ['i2c1_0x53', 'i2c1_0x1d']
-                      
-NUM_ACCELEROMETERS = len(accelerometers)
-NUM_AXES=3
-
-DEMEAN_WINDOW_SIZE = 4
+def door_example():
+    #from stream import Stream, StreamArray, run
+    from example_operators import subtract_mean_from_StreamArray
+    from example_operators import join_synch, detect_anomaly
+    from example_operators import append_item_to_StreamArray
+    
 
 
-def append_item_to_stream(v, out_stream):
-    out_stream.append(v)
+    accelerometers = ['i2c1_0x53', 'i2c1_0x1d']
+    NUM_ACCELEROMETERS = len(accelerometers)
+    NUM_AXES=3
 
-def append_item_to_StreamArray(v, out_stream):
-    out_stream.append(np.stack(v, axis=0))
+    DEMEAN_WINDOW_SIZE = 4
 
-def cloud_func(window, ):
-    print ('')
-    print ('anomaly!')
-    print ('window ', window)
 
-# Specify acceleration streams, one stream for
-# each accelerometers.
-# Each accel
-acceleration_streams = [StreamArray(
-    name='acceleration_streams '+str(i),
-    dtype=float,
-    dimension=NUM_AXES)
-    for i in range(NUM_ACCELEROMETERS)
-    ]
+    def cloud_func(window, ):
+        print ('')
+        print ('anomaly!')
+        print ('window ', window)
+
+    #-------------------------------------------
+    # SPECIFY STREAMS
+    #-------------------------------------------
+    
+    # Specify acceleration streams, one stream for
+    # each accelerometer.
+    acceleration_streams = [StreamArray(
+        name='acceleration_streams['+ str(i) + ']',
+        dtype=float,
+        dimension=NUM_AXES)
+            for i in range(NUM_ACCELEROMETERS)
+        ]
                                         
+    # Specify zero_mean_streams streams, one stream for
+    # each accelerometer. These are the acceleration
+    # streams after subtracting the mean.
+    zero_mean_streams = [StreamArray(
+        name='zero_mean_streams '+str(i),
+        dtype=float,
+        dimension=NUM_AXES)
+            for i in range(NUM_ACCELEROMETERS)
+        ]
 
-zero_mean_streams = [StreamArray(
-    name='zero_mean_streams '+str(i),
-    dtype=float,
-    dimension=NUM_AXES)
-    for i in range(NUM_ACCELEROMETERS)
-    ]
-
-joined_stream = StreamArray(
-    name="joined_stream", dtype="float",
-    dimension=(NUM_ACCELEROMETERS, NUM_AXES))
-
-# Create agent to subtract mean from each acceleration_stream.
-for i in range(NUM_ACCELEROMETERS):
-    subtract_mean_from_StreamArray(
-        in_stream=acceleration_streams[i],
-        window_size=DEMEAN_WINDOW_SIZE,
-        func=append_item_to_stream,
-        out_stream=zero_mean_streams[i]
-        )
+    # Specify joined_stream which is the stream after
+    # joining the inputs from all accelerometers.
+    joined_stream = StreamArray(
+        name="joined_stream", dtype="float",
+        dimension=(NUM_ACCELEROMETERS, NUM_AXES))
 
     
-# Join zero_mean_streams from all accelerometers
-join_synch(in_streams=zero_mean_streams,
-               out_stream=joined_stream,
-               func=append_item_to_StreamArray)
+    #-------------------------------------------
+    # SPECIFY AGENTS
+    #-------------------------------------------
 
-# Detect anomaly in joined zero-mean streams, and upload to cloud.
-detect_anomaly(in_stream=joined_stream, window_size=2, anomaly_size=1,
-                   anomaly_factor=1.01, cloud_data_size=2,
-                   cloud_func=cloud_func)
+    # Create an agent to subtract mean from each acceleration_stream
+    # and generate zero_mean_streams
+    for i in range(NUM_ACCELEROMETERS):
+        subtract_mean_from_StreamArray(
+            in_stream=acceleration_streams[i],
+            window_size=DEMEAN_WINDOW_SIZE,
+            func=append_item_to_StreamArray,
+            out_stream=zero_mean_streams[i]
+            )
+
+    # Create an agent to join zero_mean_streams from all
+    # accelerometers and generate joined_stream
+    join_synch(in_streams=zero_mean_streams,
+                   out_stream=joined_stream,
+                   func=append_item_to_StreamArray)
+
+    # Create an agent to input joined_stream and to detect anomalies
+    # in the stream. Detected anomalies are passed to cloud_func which
+    # prints the anomalies or puts them in the cloud.
+    detect_anomaly(in_stream=joined_stream, window_size=2,
+                       anomaly_size=1, anomaly_factor=1.01,
+                       cloud_data_size=2, cloud_func=cloud_func)
+
+    Stream.scheduler.start()
+    return
 
 
-
-
-if __name__ == '__main__':
-    acceleration_streams[0].extend(np.array(
+#------------------------------------------------
+# TEST BY PUTTING DATA INTO ACCELEROMETER STREAMS
+#-------------------------------------------------
+def put_data_into_accelerometer_0():
+    pickled_data = pickle.dumps((
+        'acceleration_streams[0]',
+        np.array(
         [
             [1.0, 1.0, 1.0],
             [1.0, 1.0, 1.0],
@@ -104,9 +101,32 @@ if __name__ == '__main__':
             [2.0, 2.0, 2.0],
             [3.0, 3.0, 3.0],
             [101.0, 121.0, 201.0]
-        ]
-    ))
-    acceleration_streams[1].extend(np.array(
+        ])))
+    Stream.scheduler.input_queue.put(
+        pickled_data)
+
+    # Sleep for some time
+    time.sleep(2)
+
+    pickled_data = pickle.dumps((
+        'acceleration_streams[0]',
+        np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [1.0, 1.0, 1.0],
+            [0.0, 0.0, 0.0],
+            [2.0, 2.0, 2.0],
+            [0.0, 0.0, 0.0],
+            [3.0, 3.0, 3.0],
+            [80.0, 80.0, 80.0]
+        ])))
+    Stream.scheduler.input_queue.put(
+        pickled_data)
+
+def put_data_into_accelerometer_1():
+    pickled_data = pickle.dumps((
+        'acceleration_streams[1]',
+        np.array(
         [
             [1.0, 1.0, 1.0],
             [1.0, 1.0, 1.0],
@@ -115,24 +135,60 @@ if __name__ == '__main__':
             [2.0, 2.0, 2.0],
             [3.0, 3.0, 3.0],
             [201.0, 221.0, 301.0]
-        ]
-    ))
+        ])))
+    Stream.scheduler.input_queue.put(
+        pickled_data)
 
-    run()
+    # Sleep for some time
+    time.sleep(1)
+    
+    pickled_data = pickle.dumps((
+        'acceleration_streams[1]',
+        np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [1.0, 1.0, 1.0],
+            [0.0, 0.0, 0.0],
+            [2.0, 2.0, 2.0],
+            [0.0, 0.0, 0.0],
+            [3.0, 3.0, 3.0],
+            [90.0, 90.0, 90.0]
+        ])))
+    Stream.scheduler.input_queue.put(
+        pickled_data)
 
-    print()
-    print ("acceleration_streams")
-    for acceleration_stream in acceleration_streams:
-        acceleration_stream.print_recent()
+    # Sleep and then shut down
+    time.sleep(3)
+    pickled_data = pickle.dumps((
+        'scheduler', 'halt'))
+    Stream.scheduler.input_queue.put(
+        pickled_data)
+    
+    return
 
-    print()
-    print ("zero_mean_streams")
-    for zero_mean_stream in zero_mean_streams:
-        zero_mean_stream.print_recent()
 
-    print()
-    print ("joined_stream")
-    joined_stream.print_recent()
-            
+if __name__ == '__main__':
+    # This is the compute thread that identifies
+    # anomalies
+    main_thread = threading.Thread(
+        target=door_example, args=())
+
+    # This thread puts data into accelerometer_0
+    accelerometer_0_thread = threading.Thread(
+        target=put_data_into_accelerometer_0, args=())
+
+    # This thread puts data into accelerometer_1
+    accelerometer_1_thread = threading.Thread(
+        target=put_data_into_accelerometer_1, args=())
+
+    # Start threads in any order
+    accelerometer_0_thread.start()
+    accelerometer_1_thread.start()
+    main_thread.start()
+
+    # Join threads.
+    accelerometer_0_thread.join()
+    accelerometer_1_thread.join()
+    main_thread.join()
         
     
