@@ -1,5 +1,8 @@
 from stream import Stream, StreamArray, run
 
+class feed_streams(object):
+    pass
+
 class single_item(object):
     def __init__(self, in_stream, func, **kwargs):
         self.in_stream = in_stream
@@ -160,6 +163,14 @@ class detect_anomaly(object):
                     start += self.W - self.A
                 else:
                     start += 1
+
+
+def append_item_to_stream(v, out_stream):
+    out_stream.append(v)
+
+def append_item_to_StreamArray(v, out_stream):
+    out_stream.append(np.stack(v, axis=0))
+
 
 
 #------------------------------------------------------------------------

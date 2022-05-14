@@ -1,12 +1,10 @@
 import numpy as np
 import pickle
-import threading
 import time
-
-from stream import Stream, StreamArray, run
+import multiprocessing as mp
 
 def door_example():
-    #from stream import Stream, StreamArray, run
+    from stream import Stream, StreamArray, run
     from example_operators import subtract_mean_from_StreamArray
     from example_operators import join_synch, detect_anomaly
     from example_operators import append_item_to_StreamArray
@@ -86,109 +84,41 @@ def door_example():
     return
 
 
-#------------------------------------------------
-# TEST BY PUTTING DATA INTO ACCELEROMETER STREAMS
-#-------------------------------------------------
-def put_data_into_accelerometer_0():
-    pickled_data = pickle.dumps((
-        'acceleration_streams[0]',
-        np.array(
-        [
-            [1.0, 1.0, 1.0],
-            [1.0, 1.0, 1.0],
-            [2.0, 2.0, 2.0],
-            [2.0, 2.0, 2.0],
-            [2.0, 2.0, 2.0],
-            [3.0, 3.0, 3.0],
-            [101.0, 121.0, 201.0]
-        ])))
-    Stream.scheduler.input_queue.put(
-        pickled_data)
-
-    # Sleep for some time
-    time.sleep(2)
-
-    pickled_data = pickle.dumps((
-        'acceleration_streams[0]',
-        np.array(
-        [
-            [0.0, 0.0, 0.0],
-            [1.0, 1.0, 1.0],
-            [0.0, 0.0, 0.0],
-            [2.0, 2.0, 2.0],
-            [0.0, 0.0, 0.0],
-            [3.0, 3.0, 3.0],
-            [80.0, 80.0, 80.0]
-        ])))
-    Stream.scheduler.input_queue.put(
-        pickled_data)
-
-def put_data_into_accelerometer_1():
-    pickled_data = pickle.dumps((
-        'acceleration_streams[1]',
-        np.array(
-        [
-            [1.0, 1.0, 1.0],
-            [1.0, 1.0, 1.0],
-            [2.0, 2.0, 2.0],
-            [2.0, 2.0, 2.0],
-            [2.0, 2.0, 2.0],
-            [3.0, 3.0, 3.0],
-            [201.0, 221.0, 301.0]
-        ])))
-    Stream.scheduler.input_queue.put(
-        pickled_data)
-
-    # Sleep for some time
-    time.sleep(1)
-    
-    pickled_data = pickle.dumps((
-        'acceleration_streams[1]',
-        np.array(
-        [
-            [0.0, 0.0, 0.0],
-            [1.0, 1.0, 1.0],
-            [0.0, 0.0, 0.0],
-            [2.0, 2.0, 2.0],
-            [0.0, 0.0, 0.0],
-            [3.0, 3.0, 3.0],
-            [90.0, 90.0, 90.0]
-        ])))
-    Stream.scheduler.input_queue.put(
-        pickled_data)
-
-    # Sleep and then shut down
-    time.sleep(3)
-    pickled_data = pickle.dumps((
-        'scheduler', 'halt'))
-    Stream.scheduler.input_queue.put(
-        pickled_data)
-    
-    return
-
-
 if __name__ == '__main__':
-    # This is the compute thread that identifies
+    from accel_0 import put_data_into_accelerometer_0
+    from accel_1 import put_data_into_accelerometer_1
+
+    # This is the compute process that identifies
     # anomalies
-    main_thread = threading.Thread(
+    
+    main_process = mp.Process(
         target=door_example, args=())
 
-    # This thread puts data into accelerometer_0
-    accelerometer_0_thread = threading.Thread(
-        target=put_data_into_accelerometer_0, args=())
+    q = Stream.scheduler.input_queue
 
-    # This thread puts data into accelerometer_1
-    accelerometer_1_thread = threading.Thread(
-        target=put_data_into_accelerometer_1, args=())
+    # This process puts data into accelerometer_0
+    accelerometer_0_process = mp.Process(
+        target=put_data_into_accelerometer_0, args=(q,))
 
-    # Start threads in any order
-    accelerometer_0_thread.start()
-    accelerometer_1_thread.start()
-    main_thread.start()
+    # This process puts data into accelerometer_1
+    accelerometer_1_process = mp.Process(
+        target=put_data_into_accelerometer_1, args=(q,))
 
-    # Join threads.
-    accelerometer_0_thread.join()
-    accelerometer_1_thread.join()
-    main_thread.join()
+    accelerometer_0_process.daemon = True
+    accelerometer_1_process.daemon = True
+
+    # Start process in any order
+    print ('starting processes')
+    accelerometer_0_process.start()
+    print ('finished starting accelerometer_0_process')
+    accelerometer_1_process.start()
+    print ('finished starting accelerometer_1_process')
+    main_process.start()
+    print ('finished starting main_process')
+
+    # Join process.
+    accelerometer_0_process.join()
+    accelerometer_1_process.join()
+    main_process.join()
         
     
