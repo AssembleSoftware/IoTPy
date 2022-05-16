@@ -19,9 +19,6 @@ def door_example():
     def cloud_func(window):
         print ('')
         print ('anomaly!')
-        curr_time = time.time()
-        filename = f'anomaly_{curr_time}'
-        np.save(filename, window)
         # print ('window ', window)
 
     #-------------------------------------------
@@ -53,7 +50,7 @@ def door_example():
     #-------------------------------------------
 
     # TEST: Should print out every time something is inserted
-    # single_item(in_stream=acceleration_streams[1], func=(lambda x: print('a')))
+    single_item(in_stream=acceleration_streams[1], func=print)
 
     # Create an agent to subtract mean from each acceleration_stream
     # and generate zero_mean_streams
@@ -88,31 +85,21 @@ def door_example():
 
     return
 
-def read_acceleromters(q, accelerometers, i2c_num):
+def read_acceleromters_synthetic(q, i2c_num):
     NUM_AXES=3
     NUM_ACCELEROMETERS_PER_I2C = 2
-    assert NUM_ACCELEROMETERS_PER_I2C == len(accelerometers)
 
-    for i in range(1000):
-        for j, accelerometer in enumerate(accelerometers):
-            # Time of measurment takes about 0.02s (without sleep)
+    for i in range(10):
+        for j in range(NUM_ACCELEROMETERS_PER_I2C):
+            # Synthetic x,y,z measurement
+            measurement_synthetic = [1.0, 2.0, 3.0]
             accelerometer_num = (NUM_ACCELEROMETERS_PER_I2C * i2c_num) + j
-            measurement_sucess = False
-            while not measurement_sucess:
-                try:
-                    measurement = accelerometer.acceleration
-                except:
-                    measurement_sucess = False
-                    print(f'Failed to get reading from accelerometer i2c{i2c_num}_{j}')
-                    print('Trying Again')
-                else:
-                    measurement_sucess = True
 
             # Data needs to be a list because streams are extended
             for k in range(NUM_AXES):
                 pickled_data = pickle.dumps((
                 f'acceleration_streams[{NUM_AXES*accelerometer_num + k}]',
-                [measurement[k]]))
+                [measurement_synthetic[k]]))
                 q.put(pickled_data)
 
     print('Done reading')
@@ -122,27 +109,6 @@ def read_acceleromters(q, accelerometers, i2c_num):
     return
 
 if __name__ == '__main__':
-    import board
-    import adafruit_bitbangio as bitbangio
-    import adafruit_adxl34x
-
-    i2c0 = bitbangio.I2C(board.SCL, board.SDA)
-    i2c1 = bitbangio.I2C(board.D24, board.D23)
-
-    accelerometers_i2c0 = [
-        adafruit_adxl34x.ADXL343(i2c0, address=0x53),
-        adafruit_adxl34x.ADXL343(i2c0, address=0x1d)
-    ]
-
-    accelerometers_i2c1 = [
-        adafruit_adxl34x.ADXL343(i2c1, address=0x53),
-        adafruit_adxl34x.ADXL343(i2c1, address=0x1d)
-    ]
-
-    print(accelerometers_i2c0[0].acceleration)
-    print(accelerometers_i2c0[1].acceleration)
-    print(accelerometers_i2c1[0].acceleration)
-    print(accelerometers_i2c1[1].acceleration)
 
     # This is the compute process that identifies anomalies
     main_process = mp.Process(
@@ -152,11 +118,11 @@ if __name__ == '__main__':
 
     # This process puts data into i2c0's accelerometers
     i2c0_process = mp.Process(
-        target=read_acceleromters, args=(q, accelerometers_i2c0, 0))
+        target=read_acceleromters_synthetic, args=(q, 0))
 
     # This process puts data into i2c1's accelerometers
     i2c1_process = mp.Process(
-        target=read_acceleromters, args=(q, accelerometers_i2c1, 1))
+        target=read_acceleromters_synthetic, args=(q, 1))
 
     i2c0_process.daemon = True
     i2c1_process.daemon = True
@@ -179,3 +145,5 @@ if __name__ == '__main__':
     i2c0_process.terminate()
     i2c1_process.terminate()
     main_process.terminate()
+        
+    
