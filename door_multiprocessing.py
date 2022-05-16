@@ -10,15 +10,18 @@ def door_example():
     from example_operators import append_item_to_StreamArray, append_item_to_stream
     from example_operators import single_item
 
-    accelerometers = ['i2c1_0x53', 'i2c1_0x1d']
+    accelerometers = ['i2c0_0x53', 'i2c0_0x1d', 'i2c1_0x53', 'i2c1_0x1d']
     NUM_ACCELEROMETERS = len(accelerometers)
     NUM_AXES=3
 
     DEMEAN_WINDOW_SIZE = 4
 
-    def cloud_func(window, ):
+    def cloud_func(window):
         print ('')
         print ('anomaly!')
+        curr_time = time.time()
+        filename = f'anomaly_{name}_{curr_time}'
+        np.save(filename, window)
         # print ('window ', window)
 
     #-------------------------------------------
@@ -50,7 +53,7 @@ def door_example():
     #-------------------------------------------
 
     # TEST: Should print out every time something is inserted
-    single_item(in_stream=acceleration_streams[1], func=(lambda x: print('a')))
+    # single_item(in_stream=acceleration_streams[1], func=(lambda x: print('a')))
 
     # Create an agent to subtract mean from each acceleration_stream
     # and generate zero_mean_streams
@@ -67,38 +70,54 @@ def door_example():
     join_synch(in_streams=zero_mean_streams,
                    out_stream=joined_stream,
                    func=append_item_to_StreamArray)
+    
+    # single_item(in_stream=joined_stream, func=print)
 
     # Create an agent to input joined_stream and to detect anomalies
     # in the stream. Detected anomalies are passed to cloud_func which
     # prints the anomalies or puts them in the cloud.
-    detect_anomaly(in_stream=joined_stream, window_size=25, anomaly_size=2,
-                anomaly_factor=1.0, cloud_data_size=50,
+
+    # window_size is size of entire window under consideration
+    # The last anomaly_size elements are analyzed in relation to the REST 
+    # of the window_size - anomaly_size elements.
+    detect_anomaly(in_stream=joined_stream, window_size=50, anomaly_size=5,
+                anomaly_factor=1.5, cloud_data_size=1,
                 cloud_func=cloud_func)
 
     Stream.scheduler.start()
+
     return
 
-def read_acceleromter(q, accelerometer, index):
+def read_acceleromters(q, accelerometers, i2c_num):
     NUM_AXES=3
-    for i in range(10):
-        # Time of measurment takes about 0.02s (without sleep)
-        measurement = accelerometer.acceleration
-        # print(measurement)
+    NUM_ACCELEROMETERS_PER_I2C = 2
+    assert NUM_ACCELEROMETERS_PER_I2C == len(accelerometers)
 
-        pickled_data_0 = pickle.dumps((
-        f'acceleration_streams[{NUM_AXES*index + 0}]',
-        measurement[0]))
-        pickled_data_1 = pickle.dumps((
-        f'acceleration_streams[{NUM_AXES*index + 1}]',
-        measurement[1])) 
-        pickled_data_2 = pickle.dumps((
-        f'acceleration_streams[{NUM_AXES*index + 2}]',
-        measurement[2]))
+    for i in range(1000):
+        for j, accelerometer in enumerate(accelerometers):
+            # Time of measurment takes about 0.02s (without sleep)
+            accelerometer_num = (NUM_ACCELEROMETERS_PER_I2C * i2c_num) + j
+            measurement_sucess = False
+            while not measurement_sucess:
+                try:
+                    measurement = accelerometer.acceleration
+                except:
+                    measurement_sucess = False
+                    print(f'Failed to get reading from accelerometer i2c{i2c_num}_{j}')
+                    print('Trying Again')
+                else:
+                    measurement_sucess = True
 
-        q.put(pickled_data_0)
-        q.put(pickled_data_1)
-        q.put(pickled_data_2)
-        time.sleep(0.1)
+            # Data needs to be a list because streams are extended
+            for k in range(NUM_AXES):
+                pickled_data = pickle.dumps((
+                f'acceleration_streams[{NUM_AXES*accelerometer_num + k}]',
+                [measurement[k]]))
+                q.put(pickled_data)
+
+    print('Done reading')
+    pickled_data = pickle.dumps(('scheduler', 'halt'))
+    q.put(pickled_data)
         
     return
 
@@ -107,17 +126,23 @@ if __name__ == '__main__':
     import adafruit_bitbangio as bitbangio
     import adafruit_adxl34x
 
-    i2c1 = bitbangio.I2C(board.SCL, board.SDA)
-    i2c2 = bitbangio.I2C(board.D24, board.D23)
+    i2c0 = bitbangio.I2C(board.SCL, board.SDA)
+    i2c1 = bitbangio.I2C(board.D24, board.D23)
 
-    accelerometers = [
-        adafruit_adxl34x.ADXL343(i2c1, address=0x53),
-        #adafruit_adxl34x.ADXL343(i2c1, address=0x1d)
-        adafruit_adxl34x.ADXL343(i2c2, address=0x53)
-        # adafruit_adxl34x.ADXL343(i2c2, address=0x1d)
+    accelerometers_i2c0 = [
+        adafruit_adxl34x.ADXL343(i2c0, address=0x53),
+        adafruit_adxl34x.ADXL343(i2c0, address=0x1d)
     ]
-    print(accelerometers[0].acceleration)
-    print(accelerometers[1].acceleration)
+
+    accelerometers_i2c1 = [
+        adafruit_adxl34x.ADXL343(i2c1, address=0x53),
+        adafruit_adxl34x.ADXL343(i2c1, address=0x1d)
+    ]
+
+    print(accelerometers_i2c0[0].acceleration)
+    print(accelerometers_i2c0[1].acceleration)
+    print(accelerometers_i2c1[0].acceleration)
+    print(accelerometers_i2c1[1].acceleration)
 
     # This is the compute process that identifies anomalies
     main_process = mp.Process(
@@ -125,34 +150,32 @@ if __name__ == '__main__':
 
     q = Stream.scheduler.input_queue
 
-    # This process puts data into accelerometer_0
-    accelerometer_0_process = mp.Process(
-        target=read_acceleromter, args=(q, accelerometers[0], 0))
+    # This process puts data into i2c0's accelerometers
+    i2c0_process = mp.Process(
+        target=read_acceleromters, args=(q, accelerometers_i2c0, 0))
 
-    # This process puts data into accelerometer_1
-    accelerometer_1_process = mp.Process(
-        target=read_acceleromter, args=(q, accelerometers[1], 1))
+    # This process puts data into i2c1's accelerometers
+    i2c1_process = mp.Process(
+        target=read_acceleromters, args=(q, accelerometers_i2c1, 1))
 
-    accelerometer_0_process.daemon = True
-    accelerometer_1_process.daemon = True
+    i2c0_process.daemon = True
+    i2c1_process.daemon = True
 
     # Start process in any order
     print ('starting processes')
-    accelerometer_0_process.start()
-    print ('finished starting accelerometer_0_process')
-    accelerometer_1_process.start()
-    print ('finished starting accelerometer_1_process')
+    i2c0_process.start()
+    print ('finished starting i2c0_process')
+    i2c1_process.start()
+    print ('finished starting i2c1_process')
     main_process.start()
     print ('finished starting main_process')
 
     # Join process.
-    accelerometer_0_process.join()
-    accelerometer_1_process.join()
+    i2c0_process.join()
+    i2c1_process.join()
     main_process.join()
 
     # Terminate process
-    # accelerometer_0_process.terminate()
-    # accelerometer_1_process.terminate()
-    # main_process.terminate()
-        
-    
+    i2c0_process.terminate()
+    i2c1_process.terminate()
+    main_process.terminate()

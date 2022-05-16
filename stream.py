@@ -2,7 +2,7 @@
 
 """
 import numpy as np
-#import multiprocessing
+from multiprocessing import Queue
 import threading
 import pickle
 import queue
@@ -60,7 +60,7 @@ class Scheduler(object):
         self.scheduled_callbacks = set()
         self.name_to_stream = dict()
         self.halted = False
-        self.input_queue = queue.Queue()
+        self.input_queue = Queue()
         
     def schedule_subscriber(self, f):
         """
@@ -89,10 +89,11 @@ class Scheduler(object):
 
 
     def start(self):
+        print('Started!')
         while not self.halted:
             data = pickle.loads(self.input_queue.get())
             stream_name, stream_item = data
-            print ('data ', data)
+            # print ('data ', data)
             if stream_name == 'scheduler' and stream_item == 'halt':
                 self.halted = True
                 return

@@ -142,6 +142,7 @@ class detect_anomaly(object):
                 data_to_cloud = R[start : start+self.C]
                 self.anomaly = False
                 start += self.C
+                self.in_stream.set_start(self.callback, start)
                 self.cloud_func(data_to_cloud, **self.kwargs)
             else:
                 window = R[start : start + self.W]
@@ -160,9 +161,15 @@ class detect_anomaly(object):
                     # print(window_mean, window_std, anomaly_mean, np.abs(anomaly_mean - window_mean))
                     # print()
                     self.anomaly = True
+                    # print(window)
+                    print('window_mean:', window_mean)
+                    print('window_std: ', window_std)
+                    print('anomaly_mean: ', anomaly_mean)
                     start += self.W - self.A
+                    self.in_stream.set_start(self.callback, start)
                 else:
                     start += 1
+                    self.in_stream.set_start(self.callback, start)
 
 
 def append_item_to_stream(v, out_stream):
