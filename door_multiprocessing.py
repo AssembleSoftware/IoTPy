@@ -2,6 +2,8 @@ import numpy as np
 import pickle
 import time
 import multiprocessing as mp
+
+from requests import ReadTimeout
 from stream import Stream, StreamArray, run
 
 def door_example():
@@ -9,6 +11,20 @@ def door_example():
     from example_operators import join_synch, detect_anomaly
     from example_operators import append_item_to_StreamArray, append_item_to_stream
     from example_operators import single_item
+    import requests
+    import json
+
+    # Set this true if generating data for labeling
+    # Otherwise, will be sent to cloud for inference
+    LABELLING = False
+
+    # Initialize Twilio SMS info
+    from twilio.rest import Client
+    account_sid = ''
+    auth_token = ''
+    from_number = ''
+    to_number = ''
+    client = Client(account_sid, auth_token)
 
     accelerometers = ['i2c0_0x53', 'i2c0_0x1d', 'i2c1_0x53', 'i2c1_0x1d']
     NUM_ACCELEROMETERS = len(accelerometers)
@@ -17,11 +33,44 @@ def door_example():
     DEMEAN_WINDOW_SIZE = 4
 
     def cloud_func(window):
-        print ('')
-        print ('anomaly!')
         curr_time = time.time()
-        filename = f'anomaly_{curr_time}'
-        np.save(filename, window)
+        print ('')
+        print ('anomaly!', curr_time)
+        if LABELLING:
+            filename = f'../data/{curr_time}.npy'
+            np.save(filename, window)
+            message = client.messages \
+                    .create(
+                        body=f"New Detection: {curr_time}",
+                        from_=from_number,
+                        to=to_number
+                    )
+        else:
+            print("Uploading to Azure for inference...")
+            uri = ""
+            headers = {"Content-Type": "application/json"}
+            data = json.dumps(window.tolist())
+            try:
+                response = requests.post(uri, data=data, headers=headers, timeout=5.0)
+                ans = response.text
+            except ReadTimeout:
+                print('Inference request timed out')
+                ans = '1'
+
+            if ans == '1':
+                prediction = 'Anish has entered the room at ' + str(curr_time)
+            else:
+                prediction = 'Kevin has entered the room at ' + str(curr_time)
+            print(prediction)
+            
+            message = client.messages \
+                    .create(
+                        body=prediction,
+                        from_=from_number,
+                        to=to_number
+                    )
+            
+
         # print ('window ', window)
 
     #-------------------------------------------
@@ -80,8 +129,8 @@ def door_example():
     # window_size is size of entire window under consideration
     # The last anomaly_size elements are analyzed in relation to the REST 
     # of the window_size - anomaly_size elements.
-    detect_anomaly(in_stream=joined_stream, window_size=50, anomaly_size=5,
-                anomaly_factor=1.5, cloud_data_size=1,
+    detect_anomaly(in_stream=joined_stream, window_size=20, anomaly_size=2,
+                anomaly_factor=1.75, cloud_data_size=500,
                 cloud_func=cloud_func)
 
     Stream.scheduler.start()
@@ -89,13 +138,23 @@ def door_example():
     return
 
 def read_acceleromters(q, accelerometers, i2c_num):
+    import signal
+
+    def handler(signum, frame):
+        print("Ctrl-c was pressed.")
+        print('Done reading')
+        pickled_data = pickle.dumps(('scheduler', 'halt'))
+        q.put(pickled_data)
+        exit(0)
+
+    signal.signal(signal.SIGINT, handler)
+
     NUM_AXES=3
     NUM_ACCELEROMETERS_PER_I2C = 2
     assert NUM_ACCELEROMETERS_PER_I2C == len(accelerometers)
 
-    for i in range(1000):
+    while True:
         for j, accelerometer in enumerate(accelerometers):
-            # Time of measurment takes about 0.02s (without sleep)
             accelerometer_num = (NUM_ACCELEROMETERS_PER_I2C * i2c_num) + j
             measurement_sucess = False
             while not measurement_sucess:
@@ -114,10 +173,7 @@ def read_acceleromters(q, accelerometers, i2c_num):
                 f'acceleration_streams[{NUM_AXES*accelerometer_num + k}]',
                 [measurement[k]]))
                 q.put(pickled_data)
-
-    print('Done reading')
-    pickled_data = pickle.dumps(('scheduler', 'halt'))
-    q.put(pickled_data)
+        time.sleep(0.01)
         
     return
 
@@ -139,10 +195,12 @@ if __name__ == '__main__':
         adafruit_adxl34x.ADXL343(i2c1, address=0x1d)
     ]
 
+    print("Testing Accelerometers...")
     print(accelerometers_i2c0[0].acceleration)
     print(accelerometers_i2c0[1].acceleration)
     print(accelerometers_i2c1[0].acceleration)
     print(accelerometers_i2c1[1].acceleration)
+    print()
 
     # This is the compute process that identifies anomalies
     main_process = mp.Process(
