@@ -21,6 +21,7 @@ IoTPy is distributed under the 3-Clause BSD license. Collaborations are welcome.
 Look at AssembleSoftware.com for documentation and tutorials.
 
 ## Installation
+Clone the GitHub repository.
 
 ### Dependencies
 * Python (>=3.5)
@@ -31,7 +32,9 @@ For distributed applications, additional dependencies include the following:
 Note that Pika may require other software to run.
 
 ### User Installation
-The easiest way to install IoTPy is using ```pip3``` as shows below.
+You can clone the GitHub repository.
+
+Another easy way to install IoTPy is using ```pip3``` as shows below.
 ```bash
 pip3 install IoTPy
 ```
@@ -49,17 +52,14 @@ python3 setup.py install
 
 ## Documentation
 
-* Our project website is [AssembleSoftware](https://www.assemblesoftware.com/). We request anyone using IoTPy to visit the website to develop a better understading of IoTPy and its aims. 
+A good way to understand the code is to read the examples in the
+Jupyter notebooks, Stream.ipynb and ExampleOperators.ipynb, in GitHub.
 
-* Documentation for the Code will be released soon. 
+* Our project website is [AssembleSoftware](https://www.assemblesoftware.com/). 
 
 ## Contributors
 
 Several people have contributed to IoTPy. To view the list of contributors, please visit [this](https://www.assemblesoftware.com/people-k-mani-chandy) link on AssembleSoftware.
-
-## Contributing
-
-* We will soon create specific instructions for contributing to IoTPy.
 
 
 
