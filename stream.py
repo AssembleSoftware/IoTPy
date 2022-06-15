@@ -89,11 +89,9 @@ class Scheduler(object):
 
 
     def start(self):
-        print('Started!')
         while not self.halted:
             data = pickle.loads(self.input_queue.get())
             stream_name, stream_item = data
-            # print ('data ', data)
             if stream_name == 'scheduler' and stream_item == 'halt':
                 self.halted = True
                 return
@@ -215,8 +213,6 @@ class Stream(object):
         # The length of recent is num_in_memory.
         self.recent = [0] * self.num_in_memory
         # Register stream with scheduler
-        print ('Stream.scheduler.register_stream')
-        print ('name ', name)
         Stream.scheduler.register_stream(stream_name=name, stream=self)
         # Set up the initial value of the stream.
         self.extend(initial_value)
