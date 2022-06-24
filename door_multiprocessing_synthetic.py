@@ -68,7 +68,7 @@ def door_example():
                    out_stream=joined_stream,
                    func=append_item_to_StreamArray)
     
-    # single_item(in_stream=joined_stream, func=print)
+    single_item(in_stream=joined_stream, func=print)
 
     # Create an agent to input joined_stream and to detect anomalies
     # in the stream. Detected anomalies are passed to cloud_func which

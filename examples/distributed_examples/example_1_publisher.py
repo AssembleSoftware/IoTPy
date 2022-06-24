@@ -28,7 +28,7 @@ sys.path.append(os.path.abspath("../../IoTPy/agent_types"))
 sys.path.append(os.path.abspath("../../IoTPy/helper_functions"))
 sys.path.append(os.path.abspath("../timing"))
 
-from multicore import shared_memory_process
+from ../../../multicore import shared_memory_process
 from distributed import distributed_process
 from VM import VM
 from op import map_element

@@ -11,7 +11,7 @@ class PikaPublisher(object):
         self.exchange = exchange
         self.host = host
         self.connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=self.host))
+            pika.ConnectionParameters('127.0.0.1'))
         self.channel = self.connection.channel()
         self.channel.exchange_declare(
             exchange=self.exchange, exchange_type='direct')

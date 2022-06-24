@@ -4,7 +4,7 @@
 import numpy as np
 from multiprocessing import Queue
 import threading
-import json
+import pickle
 import queue
 
 DEFAULT_NUM_IN_MEMORY = 64000
@@ -91,8 +91,10 @@ class Scheduler(object):
 
 
     def start(self):
+        print ('starting scheduler')
+        print ('self.input_queue ', self.input_queue)
         while not self.halted:
-            data = json.loads(self.input_queue.get())
+            data = pickle.loads(self.input_queue.get())
             stream_name, stream_item = data
             if stream_name == 'scheduler' and stream_item == 'halt':
                 print ('HALTING')
