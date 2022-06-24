@@ -3,13 +3,15 @@ import multiprocessing as mp
 from stream import Stream
 from example_operators import single_item
     
-def process_target_x(d):
+def process_target_x(dict_queues):
     
     #-------------------------------------------
-    # 1. SPECIFY INPUT QUEUE FOR THIS PROCESS
+    # 1. SPECIFY INPUT QUEUES FOR THE PROCESSES
     #-------------------------------------------
-    q_x = d['x']
-    q_y = d['y']
+    q_x = dict_queues['x']
+    q_y = dict_queues['y']
+    # Specify that the input stream for THIS process
+    # is q_x
     Stream.scheduler.input_queue = q_x
     
     #-------------------------------------------
@@ -18,7 +20,7 @@ def process_target_x(d):
     x = Stream(name='x')
     
     #-------------------------------------------
-    # 3. SPECIFY AGENTS IN THIS PROCESS
+    # 3. SPECIFY CALLBACK FUNCTIONS IN THIS PROCESS
     #-------------------------------------------
     def callback_x(stream_item):
         """
@@ -26,17 +28,21 @@ def process_target_x(d):
         process_y
         """
         receiver_stream_name = 'y'
-        print('message received by process x ', stream_item)
+        print('message received by process x: ', stream_item)
         message = (receiver_stream_name, [stream_item+1])
         json_message = json.dumps(message)
         # Send message to process_y by putting it process_y's
         # input queue
         q_y.put(json_message)
+    
+    #-------------------------------------------
+    # 4. SPECIFY AGENTS IN THIS PROCESS
+    #-------------------------------------------
         
     single_item(in_stream=x, func=callback_x)
     
     #-------------------------------------------
-    # 4. START SCHEDULER AND THUS START THIS PROCESS
+    # 5. START SCHEDULER AND THUS START THIS PROCESS
     #-------------------------------------------
     Stream.scheduler.start()
 

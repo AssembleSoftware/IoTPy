@@ -95,7 +95,6 @@ class Scheduler(object):
             data = json.loads(self.input_queue.get())
             stream_name, stream_item = data
             if stream_name == 'scheduler' and stream_item == 'halt':
-                print ('HALTING')
                 self.halted = True
                 if self.halting_signal:
                     self.halting_signal(**self.kwargs)
