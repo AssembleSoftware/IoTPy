@@ -5,14 +5,14 @@ import example_multiprocessing_merge_root
 
 if __name__ == '__main__':
     #----------------------------------------------------------- 
-    # CREATE DICT OF INPUT QUEUES OF PROCESSES FED BY EXTERNAL
+    # 1. CREATE DICT OF INPUT QUEUES OF PROCESSES FED BY EXTERNAL
     # STREAMS.
     #----------------------------------------------------------- 
     q_root = mp.Queue()
     dict_queues = {'q_root': q_root}
     
     #----------------------------------------------------------- 
-    # CREATE PROCESSES
+    # 2. CREATE PROCESSES
     #----------------------------------------------------------- 
     num_messages = 4
 
@@ -39,7 +39,7 @@ if __name__ == '__main__':
         name='process_merge')
     
     #----------------------------------------------------------- 
-    # START, JOIN, TERMINATE PROCESSES
+    # 3. START, JOIN, TERMINATE PROCESSES
     #----------------------------------------------------------- 
     process_x.daemon = True
     process_y.daemon = True
