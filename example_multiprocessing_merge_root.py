@@ -1,53 +1,48 @@
-from stream import Stream, ExternalStream
-from example_operators import single_item
+import json
+from stream import Stream
+from example_operators import join_synch, single_item
 
 class Count(object):
-    """
-    Persistent integer used in callbacks.
-    """
-    
-    def __init__(self, n):  self.n = n
+    def __init__(self, n):
+        self.n = n
 
-def process_target_y(dict_queues):
+def process_target_merge(dict_queues):
     
     #-------------------------------------------
     # 1. SPECIFY INPUT QUEUES FOR THE PROCESSES
     #-------------------------------------------
-    Stream.scheduler.input_queue = dict_queues['y']
+    # Specify that the input stream for THIS process
+    # is dict_queues['q_root']
+    Stream.scheduler.input_queue = dict_queues['q_root']
     
     #-------------------------------------------
     # 2. SPECIFY STREAMS IN THIS PROCESS
     #-------------------------------------------
-    y = Stream(name='y')
+    x, y = Stream('x'), Stream('y')
     
     #-------------------------------------------
     # 3. SPECIFY EXTERNAL STREAMS 
     #-------------------------------------------
-    x = ExternalStream(name='x', queue=dict_queues['x'])
+    # This process does not modify external streams.
     
     #-------------------------------------------
     # 4. SPECIFY CALLBACK FUNCTIONS IN THIS PROCESS
     #-------------------------------------------
-    
-    count = Count(3)
-            
-    def callback_y(stream_item, count):
-        if not count.n > 0:
-            x.append('__halt__')
-            Stream.scheduler.halted = True
-            return
-        print('message received by process y: ', stream_item)
-        x.append(stream_item+1)
+    def callback(alist, count):
+        print ('merge ', sum(alist))
         count.n -= 1
+        if count.n <= 0:
+            Stream.scheduler.halted = True
+        
+    #-------------------------------------------
+    # 5. SPECIFY AGENTS IN THIS PROCESS
+    #-------------------------------------------
+    join_synch(in_streams=[x, y], func=callback, count=Count(4))
     
     #-------------------------------------------
-    # 5. CREATE AGENTS IN THIS PROCESS
-    #-------------------------------------------
-    single_item(in_stream=y, func=callback_y, count = count)
-    # Initiate computation by sending 1 on external stream x
-    x.append(1)
-    
-    #-------------------------------------------
-    # 6. START SCHEDULER
+    # 6. START SCHEDULER AND THUS START THIS PROCESS
     #-------------------------------------------
     Stream.scheduler.start()
+
+    
+    
