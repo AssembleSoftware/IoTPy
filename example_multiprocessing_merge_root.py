@@ -1,6 +1,5 @@
-import json
 from stream import Stream
-from example_operators import join_synch, single_item
+from example_operators import join_synch
 
 class Count(object):
     def __init__(self, n):
