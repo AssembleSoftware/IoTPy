@@ -94,7 +94,7 @@ class Scheduler(object):
         while not self.halted:
             data = json.loads(self.input_queue.get())
             stream_name, stream_item = data
-            if stream_name == 'scheduler' and stream_item == 'halt':
+            if stream_item == ['__halt__']:
                 self.halted = True
                 if self.halting_signal:
                     self.halting_signal(**self.kwargs)
@@ -632,3 +632,16 @@ class StreamArray(Stream):
 #------------------------------------------------------------------------------
 def run(): Stream.scheduler.step()
 #------------------------------------------------------------------------------
+
+class ExternalStream(object):
+    def __init__(self, name, queue):
+        self.name = name
+        self.queue = queue
+    def extend(self, list_of_items):
+        message = (self.name, list_of_items)
+        json_message = json.dumps(message)
+        self.queue.put(json_message)
+    def append(self, item):
+        self.extend([item])
+    def send_halt_signal(self):
+        self.append(('scheduler', 'halt'))

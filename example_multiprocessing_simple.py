@@ -9,9 +9,7 @@ import example_multiprocessing_simple_process_y
 
 if __name__ == '__main__':
 
-    # q_x is the input queue for process x
-    # q_y is the input queue for process y
-    # put the queues into a dict that is passed to processes x, y.
+    # Put the input queues into a dict that is passed to processes x, y.
     # Don't pass queues directly to external files.
     q_x, q_y = mp.Queue(), mp.Queue()
     dict_queues = {'x': q_x, 'y': q_y}
