@@ -204,7 +204,7 @@ class Stream(object):
     scheduler = Scheduler()
     
     
-    def __init__(self, name,
+    def __init__(self, name='None',
                  initial_value=[],
                  num_in_memory=DEFAULT_NUM_IN_MEMORY):
         self.name = name
@@ -399,6 +399,8 @@ class Stream(object):
                 # to this function.
                 self.num_elements_lost[function] -= self.start[function]
                 self.start[function] = 0
+                
+    def recent_values(self): return self.recent[:self.stop]
 
     
 #----------------------------------------------------------------------------------
